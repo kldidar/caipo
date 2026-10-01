@@ -83,7 +83,7 @@ Two evidence kinds, retrieved differently.
 
 - **Unit of retrieval:** the RetrievalChunk. Chunks are derived from Segments under a versioned chunking configuration. Segments are never changed.
 - **Eligible set:** chunks built from Segments of the current extraction of document versions whose review status is `approved` and whose current rights permit transmission to an external AI provider, where an external provider is used (rule I-7).
-- **Lexical search:** PostgreSQL full-text search plus trigram matching over the chunk's derived search text. Which language configurations the pinned PostgreSQL version provides must be verified at dependency lock time. For any corpus language without one, lexical search starts with unstemmed matching. The effect on recall is unknown and must be measured.
+- **Lexical search:** PostgreSQL full-text search plus trigram matching over the chunk's derived search text. PostgreSQL 18.6, the version pinned for development, provides `english` and `russian` text search configurations and none for Turkmen or Uzbek (verified 2026-10-02). For a corpus language without one, lexical search starts with unstemmed matching. The effect on recall is unknown and must be measured.
 - **Vector search:** the query is embedded with the same model version as the ChunkEmbeddings and searched in pgvector. Model undecided.
 - **Filters:** country, period, document type, language, applied from query analysis.
 - Both retrievers return ranked candidates with scores. Each candidate is recorded as a RetrievalHit that names its Segment span, so the record survives chunk regeneration.

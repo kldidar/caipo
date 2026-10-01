@@ -2,6 +2,8 @@
 
 How to set up and run the local development baseline. It provides a pinned Python environment and two backing services, PostgreSQL and Redis. There is no application code yet.
 
+Last verified end to end on 2026-10-02. What was verified, and what was not, is recorded in [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §9.
+
 ## Development is not production
 
 `docker-compose.yml` is for local development and CI only. It publishes database and broker ports on the loopback interface so that tools on the host can reach them, and it runs no application containers. The production deployment ([ADR-0008](adr/0008-deployment-strategy.md), Proposed) will be a separate configuration with network zones, TLS, backups, and no published data ports. Do not deploy this file.
@@ -84,7 +86,7 @@ uv lock --check                       # verify the lockfile matches pyproject.to
 
 Do not use `pip install`. Every new dependency needs the justification described in [CLAUDE.md](../CLAUDE.md).
 
-The `redis` client is capped below 6.5 on purpose: Celery's transport library requires it. See the comment in `pyproject.toml`.
+The `redis` client is capped below 6.5 on purpose: Celery's transport library requires it. See the comment in `pyproject.toml`. Celery itself is not installed yet; its support for Python 3.14 is an open question (ADR-0004).
 
 ## Tests and checks
 

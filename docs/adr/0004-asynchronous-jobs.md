@@ -40,7 +40,7 @@ Redis is not used as a cache until a measurement shows a need for one. **AI budg
 ## Alternatives considered
 
 - **A PostgreSQL-backed task queue.** Would remove the broker and give transactional enqueueing. A reasonable choice at this scale. Not proposed because the project brief names Redis and Celery, and Celery's queue routing maps directly onto the security zones. It remains the fallback if ADR-0011's spike shows the isolation requirement cannot be met with a Redis broker.
-- **A task interface built into Django with a third-party backend.** Whether the Django release chosen at lock time provides one is to be verified then. Routing and isolation features would need to be assessed.
+- **A task interface built into Django with a third-party backend.** The locked release, Django 5.2.17, does not contain one (verified 2026-10-02). It would require a newer Django series, and its routing and isolation features would need to be assessed.
 - **Synchronous processing.** Not viable for fetching and parsing, and it would put untrusted file parsing in the web process.
 - **Cron scripts.** No retries, no routing, weak visibility.
 
@@ -53,7 +53,10 @@ Redis is not used as a cache until a measurement shows a need for one. **AI budg
 
 ## Open points
 
-Acceptance of the fetch and parse queues as described depends on ADR-0011. The rest needs owner ratification only.
+1. Acceptance of the fetch and parse queues as described depends on ADR-0011.
+2. **Python 3.14 support is not declared by Celery 5.6.3 or kombu 5.6.2**, which list support up to Python 3.13 (package metadata checked 2026-10-01). A one-off smoke test on the same day passed a message through Redis 8.10.2 on Python 3.14.4, which is not the same as upstream support. Celery is not yet in the lockfile. The owner must decide whether this is acceptable before Phase 2 (blocker B4). The Redis client is already capped below 6.5 in `pyproject.toml` because kombu requires it.
+
+The rest needs owner ratification only.
 
 ## Revisit when
 

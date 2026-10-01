@@ -10,7 +10,7 @@ This applies to human contributors and AI agents. AI agents must also follow [CL
 
 ## Tooling
 
-The toolchain is deliberately small. Versions are pinned in `pyproject.toml` and `uv.lock` once implementation starts.
+The toolchain is deliberately small. Versions are pinned in `pyproject.toml` and `uv.lock`. Setup and commands are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 | Purpose | Tool | Notes |
 |---|---|---|
@@ -23,11 +23,11 @@ The toolchain is deliberately small. Versions are pinned in `pyproject.toml` and
 | Secret scanning | `gitleaks` | Pre-commit and CI |
 | Container image scanning | `trivy` | CI, on built images |
 | Git hooks | `pre-commit` | Runs ruff and gitleaks locally |
-| CI | GitHub Actions | Assumes the repository is hosted on GitHub (unconfirmed, blocker B2) |
+| CI | GitHub Actions | The repository is hosted on GitHub. CI is not configured yet. |
 
-None of these is installed yet. Tool choices and their compatibility with the chosen Python version are to be verified when dependencies are first locked (blocker B4).
+**Installed and locked:** `uv`, `ruff`, `mypy`, `pytest`. **Not yet set up:** `django-stubs`, `pytest-django`, and `import-linter` (they need a Django project to act on and are added with it), `pip-audit` (run on demand through `uvx`, not yet in CI), `gitleaks`, `trivy`, `pre-commit`, and CI. Each is checked against the pinned Python version when added (blocker B4).
 
-No task runner (`make`, `just`) is adopted. Commands are run through `uv run` and documented here once they exist. This will be reconsidered if the command list becomes hard to remember.
+No task runner (`make`, `just`) is adopted. Commands are run through `uv run` and `docker compose` and are documented in docs/DEVELOPMENT.md. This will be reconsidered if the command list becomes hard to remember.
 
 ## Workflow
 
@@ -39,7 +39,7 @@ No task runner (`make`, `just`) is adopted. Commands are run through `uv run` an
 
 ### Bootstrap exception
 
-The repository starts empty, so the first commits cannot arrive by pull request. The foundation documents, and the minimal setup needed to make pull requests and CI possible (repository creation, CI configuration), may be committed directly to `main` by the project owner. This exception ends when CI is running. Each direct commit states in its message that it is a bootstrap commit.
+The repository starts empty, so the first commits cannot arrive by pull request. The foundation documents, and the minimal setup needed to make pull requests and CI possible (repository creation, CI configuration), may be committed directly to `main` by the project owner. This exception ends when CI is running. Each direct commit states in its message that it is a bootstrap commit. The first two commits, the foundation documents and the development environment, were made under this exception; their messages do not say so, and this note records it instead.
 
 ### Solo operation
 

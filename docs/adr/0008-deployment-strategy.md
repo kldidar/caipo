@@ -5,7 +5,7 @@
 
 ## Context
 
-Expected load is low and the team is small. The system needs several processes with different privileges and network access (ADR-0009, ADR-0011), a database, Redis, and an artifact store. The hosting target, budget, and any jurisdictional requirements for data location are unknown. Docker is required by the project brief but is not yet usable in the development environment.
+Expected load is low and the team is small. The system needs several processes with different privileges and network access (ADR-0009, ADR-0011), a database, Redis, and an artifact store. The hosting target, budget, and any jurisdictional requirements for data location are unknown. Docker is required by the project brief. Docker and Docker Compose work in the development environment (verified 2026-10-02), and a development-only `docker-compose.yml` with PostgreSQL and Redis exists. That file is not the deployment this ADR describes: it publishes data ports on the loopback interface and runs no application containers.
 
 ## Decision (proposed)
 
@@ -40,12 +40,12 @@ Expected load is low and the team is small. The system needs several processes w
 
 Acceptance requires:
 
-1. Docker working in the development environment (blocker B1).
-2. A hosting target, with any data-location or institutional requirements stated (blocker B17).
-3. Server size, informed by the embedding model decision (ADR-0006).
-4. Choice of reverse proxy, error tracking service, and backup destination.
-5. Confirmation that GitHub hosts the repository (blocker B2).
-6. The isolation mechanism from ADR-0011, which determines the network and volume layout.
+1. A hosting target, with any data-location or institutional requirements stated (blocker B17).
+2. Server size, informed by the embedding model decision (ADR-0006).
+3. Choice of reverse proxy, error tracking service, and backup destination.
+4. The isolation mechanism from ADR-0011, which determines the network and volume layout.
+
+Resolved since this ADR was written: Docker works in the development environment (B1, closed), and the repository is hosted on GitHub (B2, closed). CI itself is not configured yet.
 
 ## Revisit when
 

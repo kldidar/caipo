@@ -1,6 +1,6 @@
 # Architecture
 
-Status: Draft for owner review · Last updated: 2026-10-01
+Status: Draft for owner review · Last updated: 2026-10-02
 
 This document describes the target architecture. No part of it is implemented yet. Decisions are recorded in [adr/](adr/README.md). **All ADRs are currently Proposed**; none has been ratified by the project owner. Where this document and an ADR differ, the ADR governs.
 
@@ -231,13 +231,14 @@ Full threat model: [SECURITY.md](../SECURITY.md). Decisions: [ADR-0009](adr/0009
 | Container registry and package index | Builds | Builds fail. Running system unaffected. Images are pinned by digest. |
 | Error tracking service (optional) | Alerts | Logs remain the source of truth. |
 
-Software baseline. **Every version-specific statement in this project's documents is to be verified when dependencies are first locked (blocker B4).**
+Software baseline. Dependencies were first locked on 2026-10-01. What has and has not been verified is recorded in [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §9; blocker B4 remains partly open.
 
-- Python: a currently supported release. 3.14.4 is installed locally.
-- Django: the current long-term-support release is preferred for a multi-year research project. Which release that is, and its support for the chosen Python, is to be verified at lock time.
-- PostgreSQL: a current major version with the pgvector extension, if ADR-0003 is accepted.
-- Redis, Celery.
-- Document parsing libraries: chosen in Phase 2, as few as possible, each justified.
+- Python 3.14, pinned in `.python-version` and `pyproject.toml`. Locked and tested on 3.14.4.
+- Django 5.2, the long-term-support series, locked at 5.2.17. It declares support for Python 3.14.
+- PostgreSQL 18.6 in development, from the official image. That image has no vector extension; if ADR-0003 is accepted, the image changes.
+- Redis 8.10.2 in development.
+- Celery is proposed (ADR-0004) but not yet locked. It does not declare Python 3.14 support.
+- Document parsing libraries: chosen in Phase 2, as few as possible, each justified. Each is verified against the pinned Python when added.
 
 The core research functions (browse, code, claim, compare, export) depend on no external service at runtime.
 
@@ -290,8 +291,8 @@ The module boundaries keep extraction into separate services possible. No such e
 
 Proposed in [ADR-0008](adr/0008-deployment-strategy.md); hosting target undecided (blocker B17).
 
-- **Local development:** Docker Compose runs PostgreSQL, Redis, and the application containers. Docker is not yet available in the development environment (blocker B1).
-- **CI:** lint, types, import layers, tests against real PostgreSQL and Redis services, dependency audit, secret scan, image build and scan. CI uses only the synthetic fixture corpus.
+- **Local development:** Docker Compose runs PostgreSQL and Redis today (`docker-compose.yml`, documented in [DEVELOPMENT.md](DEVELOPMENT.md)); application containers are added when application code exists. That file is for development only and is not the production configuration.
+- **CI:** not configured yet. Planned: lint, types, import layers, tests against real PostgreSQL and Redis services, dependency audit, secret scan, image build and scan. CI uses only the synthetic fixture corpus.
 - **Staging and production:** the same images on a single server with Docker Compose, behind a reverse proxy with TLS. Secrets and addresses through environment variables; result-affecting settings from the repository.
 - **Releases:** images tagged with the git commit. Migrations run as an explicit deploy step. Rollback is redeploying the previous image. A migration that the previous image cannot run against is flagged in its pull request with a rollback plan, which may be restoring the pre-deploy backup; zero-downtime deployment is not a goal.
 - **Backups:** scheduled, **encrypted** backups of the database and artifact store to a separate location, with keys held separately from the backups, and a periodic restore test. A backup that has not been restored is not counted as a backup.

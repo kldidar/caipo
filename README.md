@@ -6,9 +6,9 @@ CAIPO combines policy and legal documents, economic and socioeconomic indicators
 
 ## Status
 
-**Architecture and research foundation phase. There is no application code yet.**
+**Architecture and research foundation phase. There is no application code yet.** The foundation documents and a reproducible development environment are committed.
 
-The architecture gate is currently **NOT READY**. The blocking issues are listed in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate). Implementation must not start on a phase until that phase's blockers are closed.
+The architecture gate is currently **NOT READY**: no architecture decision has been ratified yet, and research, security, and licensing questions are open. The blocking issues are listed in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate). Implementation must not start on a phase until that phase's blockers are closed.
 
 ## What makes this project different
 
@@ -54,4 +54,4 @@ Full instructions are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The Compose
 
 ## License
 
-Not yet decided. Until a license is added, no reuse rights are granted.
+Not yet decided. The repository is public, but until a license is added, no reuse rights are granted.

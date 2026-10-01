@@ -8,7 +8,7 @@ CAIPO (Central Asia AI Policy Observatory) is the research platform for the stud
 
 ## Current phase
 
-Architecture and research foundation. **Do not write application code until the architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY for the phase you are working on.** All ADRs are currently Proposed; none is ratified. Only the project owner accepts an ADR. If a task requires a decision that is listed as unresolved, ask; do not decide it yourself.
+Architecture and research foundation. The foundation documents and the development environment (`docs/DEVELOPMENT.md`) are committed; there is no application code. **Do not write application code until the architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY for the phase you are working on.** All ADRs are currently Proposed; none is ratified. Only the project owner accepts an ADR. If a task requires a decision that is listed as unresolved, ask; do not decide it yourself.
 
 ## Read before working
 

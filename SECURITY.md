@@ -2,7 +2,9 @@
 
 ## Reporting a vulnerability
 
-Do not open a public issue for a security problem. A private reporting channel has not yet been set up; this is tracked as gate blocker B18 in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate) and must be resolved before the repository is made public. The intended channel is GitHub private vulnerability reporting plus a monitored contact address.
+Do not open a public issue for a security problem. **A private reporting channel has not yet been set up, although the repository is already public** (checked 2026-10-02: GitHub private vulnerability reporting is disabled). This is tracked as blocker B18 in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate) and is overdue. The intended channel is GitHub private vulnerability reporting plus a monitored contact address.
+
+The repository currently contains documentation and a development environment only. No application is deployed.
 
 ## Security posture in one paragraph
 

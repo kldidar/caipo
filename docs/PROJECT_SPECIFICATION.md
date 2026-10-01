@@ -1,6 +1,6 @@
 # Project Specification
 
-Status: Draft for owner review · Last updated: 2026-10-01
+Status: Draft for owner review · Last updated: 2026-10-02
 
 ## 1. Purpose
 
@@ -154,6 +154,8 @@ It must not require new tables or columns, new apps, or conditional code. This i
 
 Each phase has its own gate check: its blockers in §10 must be closed before it starts.
 
+**Current position (2026-10-02):** Phase 0 documents are committed. One part of Phase 1, the reproducible development environment (locked Python dependencies, lint, type, and test tooling, and local PostgreSQL and Redis services), was built on the project owner's instruction before the Phase 1 gate opened. It contains no application code. The rest of Phase 1 has not started and remains blocked (§10).
+
 ## 8. Decisions made and open
 
 Decisions are recorded as ADRs in [adr/](adr/README.md). **No ADR has been ratified by the project owner. All are Proposed.** They differ in what stands between them and acceptance:
@@ -167,53 +169,92 @@ Decisions are recorded as ADRs in [adr/](adr/README.md). **No ADR has been ratif
 | 0005 | Evidence and provenance model | Proposed | Owner ratification |
 | 0006 | AI provider abstraction | Proposed | Provider, model, and budget decisions (B14) |
 | 0007 | Authentication and access model | Proposed | Access model decision (B5) |
-| 0008 | Deployment strategy | Proposed | Docker (B1); hosting decision (B17) |
+| 0008 | Deployment strategy | Proposed | Hosting decision (B17); isolation mechanism (ADR-0011) |
 | 0009 | Untrusted content handling: principles | Proposed | Owner ratification |
 | 0010 | Web interface and API style | Proposed | Owner confirmation (B6) |
 | 0011 | Worker isolation mechanism | Proposed | Spike (B21) |
 
 ## 9. Environment baseline
 
-Inspected on 2026-10-01 with the commands shown. Values are as reported by the tools.
+First inspected on 2026-10-01; re-verified on 2026-10-02 with the commands shown. Values are as reported by the tools.
+
+### Workstation
 
 | Item | Command | Result |
 |---|---|---|
-| Repository | `git status`, `git log` | Was an empty directory. Git initialised on branch `main` in this phase. 26 files staged at the time of inspection. No commits. |
-| Git identity | `git config user.name`, `git config user.email` | Not configured |
-| Remote | `git remote` | None. GitHub CLI is authenticated, so GitHub hosting is possible. |
+| Repository | `git log`, `git status` | Initialised on branch `main`, two commits, working tree clean at the time of inspection |
+| Git identity | `git config user.name`, `git config user.email` | Configured |
+| Remote | `git remote -v`, `git branch -vv`, `gh repo view` | `origin` is `github.com/kldidar/caipo`; `main` tracks `origin/main`. **The repository is public.** |
 | OS | `/etc/os-release`, `uname -r` | Ubuntu 26.04.1 LTS on WSL2, kernel 6.18.40.1-microsoft-standard-WSL2 |
 | CPU | `nproc` | 20 |
-| Memory | `free -h` | Total 7.4 GiB, available 6.6 GiB; swap 2.0 GiB. **This is the memory allocated to WSL, not the machine's physical memory.** The WSL allocation is configurable on the Windows side. Host memory was not inspected. |
-| GPU | `nvidia-smi --query-gpu=name,memory.total --format=csv,noheader` | NVIDIA GeForce RTX 5070 Ti Laptop GPU, 12227 MiB. Visible from WSL. |
+| Memory | `free -h` | Total 7.4 GiB, available 6.6 GiB; swap 2.0 GiB (measured 2026-10-01). **This is the memory allocated to WSL, not the machine's physical memory.** The WSL allocation is configurable on the Windows side. Host memory was not inspected. |
+| GPU | `nvidia-smi --query-gpu=name,memory.total --format=csv,noheader` | NVIDIA GeForce RTX 5070 Ti Laptop GPU, 12227 MiB. Visible from WSL (measured 2026-10-01). |
 | Python | `python3 --version` | Python 3.14.4 (system) |
 | `uv` | `uv --version` | 0.12.21 |
-| Docker | `docker compose version` | **Not usable.** "The command 'docker' could not be found in this WSL 2 distro." A Docker Desktop shim exists on the Windows side; WSL integration is not active for this distribution. |
-| Not installed | `command -v` | `pip`, `make`, `node`, `psql`, `redis-cli`, `jq`, `pre-commit`, linters, scanners, OCR and PDF command-line tools |
-| Existing project configuration | | None |
+| Docker | `docker --version`, `docker compose version` | Docker 29.8.1 and Compose v5.5.1, working from this WSL distribution through Docker Desktop |
+| Host port 5432 | PowerShell `Get-NetTCPConnection` | Occupied by a PostgreSQL installed on Windows (observed 2026-10-01). The development services therefore publish on 15432 and 16379. |
+| Not installed system-wide | `command -v` | `pip`, `make`, `node`, `psql`, `redis-cli`, `jq`, `pre-commit`, `gitleaks`, `trivy`, OCR and PDF command-line tools |
 
-Consequences:
+### Project environment
 
-- Docker must be enabled before Phase 1 (blocker B1).
-- **Feasibility of running embedding or generation models locally has not been assessed.** A GPU with 12227 MiB is present and the WSL memory allocation is adjustable, so no hardware limitation is asserted. The production server is not yet specified. This is part of blocker B14.
-- Whether GPU access works from inside Docker containers on this machine is unknown until Docker is enabled.
-- Python development tools will be installed per project through `uv`, so their absence system-wide is not a problem.
-- Compatibility of the chosen Django release and of every parser and database library with the chosen Python version must be confirmed when dependencies are first locked (blocker B4). The same applies to every version-specific statement in these documents.
-- Mermaid diagrams in these documents could not be rendered locally (no Node toolchain). Their syntax was checked by script only.
+Defined by `pyproject.toml`, `uv.lock`, `.python-version`, `docker-compose.yml`, and `.env.example`. Usage is documented in [DEVELOPMENT.md](DEVELOPMENT.md).
+
+| Item | Command | Result on 2026-10-02 |
+|---|---|---|
+| Lockfile | `uv lock --check` | Up to date; 21 packages |
+| Install | `uv sync --locked` | Succeeds on Python 3.14.4 |
+| Locked runtime versions | `uv pip list` | Django 5.2.17, psycopg 3.3.6 (binary), redis client 6.4.0 |
+| Locked tool versions | `uv pip list` | pytest 9.1.1, ruff 0.16.10, mypy 2.3.1 |
+| Lint | `uv run ruff check .` | Passes |
+| Formatting | `uv run ruff format --check .` | Passes |
+| Types | `uv run mypy` | Passes. It covers the only Python source that exists, `tests/test_dev_services.py`. |
+| Dependency audit | `pip-audit` on the exported lockfile, run through `uvx` | No known vulnerabilities |
+| Services | `docker compose up -d --wait`, `docker compose ps` | PostgreSQL 18.6 and Redis 8.10.2 start and report healthy |
+| Service tests | `uv run --env-file <env> pytest` | 4 passed: each service accepts the configured credentials and rejects a client without them |
+
+The service checks were run with a temporary environment file holding generated passwords, which was deleted afterwards, together with the containers and the database volume. No `.env` file exists in the repository.
+
+### Version-specific facts verified
+
+| Statement | How verified | Result |
+|---|---|---|
+| Django LTS supports the chosen Python | Package metadata on PyPI; install and import | Django 5.2.17 declares Python 3.14 |
+| psycopg supports the chosen Python | Package metadata; connection test | psycopg 3.3.6 declares Python 3.14 and has a wheel for it |
+| Text search configurations in the pinned PostgreSQL | `SELECT cfgname FROM pg_ts_config` on 18.6 | `english`, `russian`, `simple`, and `turkish` are among those present. **None exists for Turkmen or Uzbek.** |
+| Trigram extension | `pg_available_extensions` | `pg_trgm` 1.6 is available |
+| Vector extension | `pg_available_extensions` | `vector` is **not** in the official PostgreSQL image now used. Adopting ADR-0003 means changing the image. |
+| Task interface built into Django | `importlib.util.find_spec("django.tasks")` | Not present in Django 5.2.17 |
+
+### Not verified
+
+- **Celery on Python 3.14.** Celery 5.6.3 and kombu 5.6.2 declare support up to Python 3.13 only. A one-off smoke test outside the project passed a message through Redis 8.10.2 on Python 3.14.4. That is not upstream support. Celery is not in the lockfile.
+- **redis client 6.4.0 on Python 3.14.** It does not declare 3.14 support. It is held below 6.5 because kombu requires that. The service tests pass with it.
+- **Dependencies not yet locked:** `pytest-django`, `django-stubs`, `import-linter`, the pgvector client, and every document-parsing library.
+- **Tools not yet set up:** `pre-commit`, `gitleaks`, `trivy`, and CI. No secret-scanning tool has been run; only a targeted search for the temporary verification passwords was done.
+- **GPU access from inside containers** has not been tested.
+- **Local model feasibility** has not been assessed. A GPU with 12227 MiB is present and the WSL memory allocation is adjustable, so no hardware limitation is asserted. The production server is not yet specified. This is part of blocker B14.
+- **Mermaid diagrams** have not been rendered locally (no Node toolchain). Their syntax was checked by script only.
+- **PostgreSQL locale.** The database is created with the built-in `C.UTF-8` collation provider. The operating-system locale fields still take the image default. The collation choice should be confirmed before the first migration, because it is fixed when the database is created.
 
 ## 10. Architecture gate
 
 **Status: NOT READY**
 
-The architecture is described well enough to review and ratify. The gate is closed because of the items below. Each names the earliest phase it blocks.
+The architecture is described well enough to review and ratify. The gate is closed because of the open items below. Each names the earliest phase it blocks. A working development environment does not close any research, security, methodology, licensing, AI-provider, OCR, or isolation blocker.
+
+### Closed
+
+| ID | Was | Closed on | Evidence |
+|---|---|---|---|
+| B1 | Docker was not available in the development environment | 2026-10-02 | Docker 29.8.1 and Compose v5.5.1 work from WSL; `docker compose up -d --wait` brings PostgreSQL and Redis to healthy; the service tests pass |
+| B2 | No git identity, no remote, repository visibility undecided | 2026-10-02 | Identity configured; `origin` is `github.com/kldidar/caipo` with `main` tracking it; the repository is public. Being public makes B7 and B18 urgent; see those rows. |
 
 ### Blocks Phase 1 (project skeleton)
 
 | ID | Issue | Needed |
 |---|---|---|
-| B1 | Docker is not available in the development environment | Enable Docker Desktop WSL integration and confirm `docker compose` works |
-| B2 | No git identity, no remote, repository visibility undecided | Configure identity; decide host and public or private |
-| B3 | No ADR is ratified | Owner ratifies or rejects ADR-0001, 0002, 0004, 0005, and 0009, which need nothing but that decision |
-| B4 | Python and Django versions not confirmed | Choose versions and confirm all planned dependencies support them; verify every version-specific statement |
+| B3 | No ADR is ratified | Owner ratifies or rejects ADR-0001, 0002, 0005, and 0009, which need nothing but that decision, and ADR-0004, whose isolated queues additionally depend on ADR-0011 |
+| B4 | **Partly resolved.** Verified: Python 3.14.4, Django 5.2.17, psycopg 3.3.6, and redis client 6.4.0 lock, install, and pass the service tests; PostgreSQL 18.6 and Redis 8.10.2 run (§9). Open: Celery and kombu do not declare Python 3.14 support; the tools and libraries listed under "Not verified" in §9 are not yet locked. | For Phase 1: lock and check `pytest-django`, `django-stubs`, and `import-linter` as its first step. Before Phase 2: decide whether Celery without declared Python 3.14 support is acceptable, which bears on ADR-0004. Each remaining library is verified when first added. |
 | B5 | Access model undecided: public readers or authenticated only | Decide; finalise ADR-0007 |
 | B6 | Web interface and API style undecided | Decide; finalise ADR-0010 |
 
@@ -221,7 +262,7 @@ The architecture is described well enough to review and ratify. The gate is clos
 
 | ID | Issue | Needed |
 |---|---|---|
-| B7 | No project license; no rights policy for storing, displaying, redistributing, and transmitting documents to an AI provider | Decide license; define the rights policy |
+| B7 | No project license; no rights policy for storing, displaying, redistributing, and transmitting documents to an AI provider. **The repository is public and has no license file**, so no reuse rights are granted to anyone who finds it. | Decide license; define the rights policy |
 | B8 | Research questions and study period are drafts | Researcher confirms or revises [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §2 and §3.3 |
 | B9 | Source inclusion criteria and initial source list are not finalised | Researcher provides and verifies the seed list |
 | B10 | Unknown share of scanned documents; OCR approach and language support undecided | Sample real documents; decide whether OCR is in scope |
@@ -253,9 +294,9 @@ The architecture is described well enough to review and ratify. The gate is clos
 | B19 | No retention policy for stored user questions | Decide retention and disclosure to users |
 | B24 | Undecided whether approved research claims may be offered to the assistant as evidence | Decide, with a safety design; until then they are not |
 
-### Blocks Phase 6 (deployment) or public release
+### Blocks Phase 6 (deployment); B18 is overdue
 
 | ID | Issue | Needed |
 |---|---|---|
 | B17 | Hosting target, jurisdiction, domain, and backup location undecided | Decide; finalise ADR-0008 |
-| B18 | No security contact or private reporting channel | Set up before the repository or site is public |
+| B18 | No security contact or private reporting channel. **Overdue: the repository is already public** and GitHub private vulnerability reporting is disabled (checked 2026-10-02). | Enable private vulnerability reporting and name a contact now; update SECURITY.md |

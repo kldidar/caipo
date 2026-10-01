@@ -30,7 +30,8 @@ PostgreSQL is the single system of record for all durable data.
 
 - One backup, one consistency model, one thing to operate.
 - Transactional consistency between source data and search index.
-- Which text search configurations the pinned PostgreSQL version provides for the corpus languages must be verified at dependency lock time. Lexical recall for every corpus language is unmeasured (blocker B15).
+- PostgreSQL 18.6, the version pinned for development, provides `english`, `russian`, and `simple` text search configurations and none for Turkmen or Uzbek (verified 2026-10-02). Lexical recall for every corpus language is unmeasured (blocker B15).
+- The development environment uses the official PostgreSQL image, which does not include the vector extension. If ADR-0003 is accepted, the image changes.
 - The database is a single point of failure. Encrypted backups and restore tests are mandatory.
 
 ## Open points

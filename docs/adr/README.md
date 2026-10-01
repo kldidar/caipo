@@ -15,7 +15,7 @@ An ADR records one architecturally significant decision: what was decided, why, 
 | [0005](0005-evidence-and-provenance-model.md) | Evidence and provenance model | Proposed | Owner ratification |
 | [0006](0006-ai-provider-abstraction.md) | AI provider abstraction | Proposed | Provider, model, and budget decisions (B14) |
 | [0007](0007-authentication.md) | Authentication and access model | Proposed | Access model decision (B5) |
-| [0008](0008-deployment-strategy.md) | Deployment strategy | Proposed | Docker (B1); hosting decision (B17) |
+| [0008](0008-deployment-strategy.md) | Deployment strategy | Proposed | Hosting decision (B17); isolation mechanism (ADR-0011) |
 | [0009](0009-untrusted-content-handling.md) | Untrusted content handling: principles | Proposed | Owner ratification |
 | [0010](0010-web-interface-and-api.md) | Web interface and API style | Proposed | Owner confirmation (B6) |
 | [0011](0011-worker-isolation-mechanism.md) | Worker isolation mechanism | Proposed | Spike (B21) |
