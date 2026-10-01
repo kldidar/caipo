@@ -30,6 +30,7 @@ The architecture gate is currently **NOT READY**. The blocking issues are listed
 | [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) | What is pinned, recorded, and replayable |
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What this research and system cannot support |
 | [docs/adr/](docs/adr/README.md) | Architecture decision records |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Local development environment |
 | [CLAUDE.md](CLAUDE.md) | Binding rules for AI implementation agents |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Workflow, tooling, Definition of Done |
 | [SECURITY.md](SECURITY.md) | Threat model and security requirements |
@@ -40,7 +41,16 @@ Proposed: Django modular monolith, PostgreSQL with pgvector, Redis, Celery for i
 
 ## Getting started
 
-There is nothing to run yet. Setup instructions will be added with the first implementation phase. Environment prerequisites and their current state are recorded in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#9-environment-baseline).
+There is no application to run yet. A reproducible development baseline exists: a locked Python environment and local PostgreSQL and Redis services.
+
+```sh
+uv sync
+cp .env.example .env          # then set the two passwords
+docker compose up -d --wait
+uv run --env-file .env pytest
+```
+
+Full instructions are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The Compose file is for local development only, not for deployment.
 
 ## License
 
