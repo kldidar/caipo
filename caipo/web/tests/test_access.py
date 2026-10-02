@@ -83,11 +83,13 @@ def test_every_routed_view_declares_its_access() -> None:
     assert undeclared == []
 
 
-def test_only_the_health_endpoints_are_public() -> None:
+def test_only_the_health_and_sign_in_endpoints_are_public() -> None:
     public_routes = {
         entry.name
         for entry in _patterns(get_resolver())
         if declared_access(entry.callback) == PUBLIC
     }
 
-    assert public_routes == {"health-live", "health-ready"}
+    # Signing in must be reachable by someone who is not signed in, and signing
+    # out when not signed in must be harmless.
+    assert public_routes == {"health-live", "health-ready", "login", "logout"}

@@ -176,3 +176,53 @@ def test_development_has_no_built_in_secret_key(monkeypatch: pytest.MonkeyPatch)
 
     with pytest.raises(ImproperlyConfigured, match="DJANGO_SECRET_KEY"):
         _load("development")
+
+
+def test_sessions_are_server_side_and_bounded() -> None:
+    assert settings.SESSION_ENGINE == "django.contrib.sessions.backends.db"
+    assert settings.SESSION_COOKIE_AGE == 12 * 60 * 60
+    assert settings.SESSION_EXPIRE_AT_BROWSER_CLOSE is True
+    assert settings.SESSION_COOKIE_SAMESITE == "Lax"
+    assert settings.CSRF_COOKIE_SAMESITE == "Lax"
+    assert settings.LOGIN_URL == "login"
+
+
+def test_csrf_and_session_middleware_are_in_place_and_in_order() -> None:
+    middleware = settings.MIDDLEWARE
+    session = middleware.index("django.contrib.sessions.middleware.SessionMiddleware")
+    csrf = middleware.index("django.middleware.csrf.CsrfViewMiddleware")
+    authentication = middleware.index("django.contrib.auth.middleware.AuthenticationMiddleware")
+    access = middleware.index("caipo.web.middleware.AccessDeclarationMiddleware")
+
+    assert session < csrf < authentication < access
+
+
+def _settings_that_differ_from_base(environment: str) -> set[str]:
+    loaded = _load(environment)
+    names = {name for name in loaded if name.isupper()} | {
+        name for name in vars(base) if name.isupper()
+    }
+    missing = object()
+    return {name for name in names if loaded.get(name, missing) != getattr(base, name, missing)}
+
+
+@pytest.mark.usefixtures("deployment_environment")
+def test_development_relaxes_only_what_local_http_requires() -> None:
+    assert _settings_that_differ_from_base("development") == {
+        "SECRET_KEY",
+        "DATABASES",
+        "ALLOWED_HOSTS",
+        "DEBUG",
+        # The development server speaks plain HTTP.
+        "SESSION_COOKIE_SECURE",
+        "CSRF_COOKIE_SECURE",
+    }
+
+
+@pytest.mark.usefixtures("deployment_environment")
+def test_production_changes_nothing_but_what_comes_from_the_environment() -> None:
+    assert _settings_that_differ_from_base("production") == {
+        "SECRET_KEY",
+        "DATABASES",
+        "ALLOWED_HOSTS",
+    }

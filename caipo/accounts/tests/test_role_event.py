@@ -36,6 +36,7 @@ def test_an_event_records_user_role_type_actor_reason_and_time(event: RoleEvent)
     assert event.user.email.startswith("test.user")
     assert event.role == Role.READER
     assert event.event_type == RoleEventType.GRANTED
+    assert event.actor is not None
     assert event.actor.email == "test.seed@caipo.test"
     assert event.reason == "TEST fixture"
     assert event.created_at.utcoffset() == timedelta(0)
@@ -82,6 +83,7 @@ def test_events_cannot_be_deleted_in_bulk(event: RoleEvent) -> None:
 def test_a_user_with_role_events_cannot_be_deleted(event: RoleEvent) -> None:
     with pytest.raises(ProtectedError):
         event.user.delete()
+    assert event.actor is not None
     with pytest.raises(ProtectedError):
         event.actor.delete()
 
@@ -225,10 +227,43 @@ def test_the_database_rejects_an_event_in_which_a_user_changes_their_own_roles(
     assert not RoleEvent.objects.filter(user=user).exists()
 
 
-def test_the_database_rejects_an_event_without_an_actor(user_with_roles: UserFactory) -> None:
+def _insert_without_actor(user: User, role: str, event_type: str) -> None:
+    with transaction.atomic():
+        RoleEvent.objects.create(
+            user=user, role=role, event_type=event_type, actor=None, reason="TEST fixture"
+        )
+
+
+@pytest.mark.parametrize(
+    ("role", "event_type"),
+    [
+        (Role.READER, RoleEventType.GRANTED),
+        (Role.RESEARCHER, RoleEventType.GRANTED),
+        (Role.REVIEWER, RoleEventType.GRANTED),
+        (Role.ADMINISTRATOR, RoleEventType.REVOKED),
+        (Role.READER, RoleEventType.REVOKED),
+    ],
+)
+def test_the_database_rejects_an_event_without_an_actor_unless_it_is_the_bootstrap(
+    user_with_roles: UserFactory, role: str, event_type: str
+) -> None:
     user = user_with_roles()
 
-    with pytest.raises(IntegrityError, match="actor_id"), transaction.atomic():
-        RoleEvent.objects.create(
-            user=user, role=Role.READER, event_type=RoleEventType.GRANTED, reason="TEST fixture"
-        )
+    with pytest.raises(IntegrityError, match="accounts_roleevent_no_actor_only_for_bootstrap"):
+        _insert_without_actor(user, role, event_type)
+
+    assert not RoleEvent.objects.filter(user=user).exists()
+
+
+def test_the_database_accepts_one_bootstrap_event_and_never_a_second(
+    user_with_roles: UserFactory,
+) -> None:
+    first, second = user_with_roles(), user_with_roles()
+
+    _insert_without_actor(first, Role.ADMINISTRATOR, RoleEventType.GRANTED)
+    with pytest.raises(IntegrityError, match="accounts_roleevent_single_bootstrap"):
+        _insert_without_actor(second, Role.ADMINISTRATOR, RoleEventType.GRANTED)
+    with pytest.raises(IntegrityError, match="accounts_roleevent_single_bootstrap"):
+        _insert_without_actor(first, Role.ADMINISTRATOR, RoleEventType.GRANTED)
+
+    assert RoleEvent.objects.filter(actor__isnull=True).count() == 1

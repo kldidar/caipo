@@ -1,0 +1,14 @@
+{% load i18n %}{% get_current_language as language_code %}<!doctype html>
+<html lang="{{ language_code }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block title %}{% endblock %} · {% translate "CAIPO" %}</title>
+</head>
+<body>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

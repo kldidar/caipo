@@ -4,7 +4,7 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-Seven ADRs were accepted by the project owner on 2026-10-02. Five remain Proposed; the last column says what stands between each of those and acceptance.
+Eight ADRs were accepted by the project owner on 2026-10-02. Five remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
@@ -19,7 +19,8 @@ Seven ADRs were accepted by the project owner on 2026-10-02. Five remain Propose
 | [0009](0009-untrusted-content-handling.md) | Untrusted content handling: principles | Accepted | — |
 | [0010](0010-web-interface-and-api.md) | Web interface and API style | Accepted | — |
 | [0011](0011-worker-isolation-mechanism.md) | Worker isolation mechanism | Proposed | Spike (B21) |
-| [0012](0012-authorization-and-role-event-integrity.md) | Authorization and role event integrity | Accepted | — |
+| [0012](0012-authorization-and-role-event-integrity.md) | Authorization and role event integrity | Accepted | — (amended on 2026-10-02 for the first-Administrator bootstrap) |
+| [0013](0013-authentication-core-and-first-administrator-bootstrap.md) | Authentication core and first-Administrator bootstrap | Accepted | — |
 
 ## Statuses
 
@@ -40,7 +41,7 @@ An architect or an AI agent can propose. Only the project owner accepts.
 2. Start as Proposed. State what must be true for it to be accepted.
 3. Review in a pull request.
 4. On acceptance by the project owner, change the status and date, remove or resolve the open points, and update the index here and in the project specification.
-5. An accepted ADR's decision is not edited. To change a decision, write a new ADR that supersedes it. Typo fixes and added links are fine.
+5. An accepted ADR's decision is not edited. To change a decision, write a new ADR that supersedes it. Typo fixes and added links are fine. The one exception is an amendment decided by the project owner: it is added as a dated section, and each point it changes says so and says what it replaced.
 6. An accepted ADR has no unresolved open points. If part of a decision is unproven, split it into its own Proposed ADR.
 
 ## When an ADR is needed

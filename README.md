@@ -6,7 +6,7 @@ CAIPO combines policy and legal documents, economic and socioeconomic indicators
 
 ## Status
 
-**Phase 1, project skeleton.** The foundation documents, a reproducible development environment, and the Django application skeleton exist: settings, the User foundation, roles and the authorization layer, health endpoints, and structured logging. Nobody can sign in yet, and there is no research functionality: no documents, policies, indicators, claims, or AI assistant, and nothing is deployed.
+**Phase 1, project skeleton.** The foundation documents, a reproducible development environment, and the Django application skeleton exist: settings, the User foundation, roles and the authorization layer, sign-in and sign-out, health endpoints, and structured logging. There is no multi-factor authentication and no research functionality: no documents, policies, indicators, claims, or AI assistant, and nothing is deployed.
 
 The architecture gate is **READY for Phase 1** (project skeleton, authentication, countries and institutions) and **NOT READY for Phase 2 and later**: research, data-rights, isolation, and AI-provider questions are still open. They are listed in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate). Implementation must not start on a phase until that phase's blockers are closed.
 
@@ -54,7 +54,8 @@ cp .env.example .env          # then set the two passwords and DJANGO_SECRET_KEY
 docker compose up -d --wait
 uv run --env-file .env pytest
 uv run --env-file .env python manage.py migrate
-uv run --env-file .env python manage.py runserver
+uv run --env-file .env python manage.py create_first_administrator   # once, interactive
+uv run --env-file .env python manage.py runserver                    # then open http://127.0.0.1:8000/login/
 ```
 
 Full instructions are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The Compose file is for local development only, not for deployment.

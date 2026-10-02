@@ -182,15 +182,77 @@ What exists now, and what does not. Nothing here means authentication is complet
 
 **Not implemented**
 
-- Sign-in, sign-out, and any page a person can use. No one can authenticate through the application yet.
-- TOTP enrolment and verification, and therefore any working Reviewer or Administrator.
-- Creation of the first Administrator. Every role change requires an existing Administrator who is a different user, so the application cannot create the first one, and this is intended for now. The bootstrap procedure will be designed with the authentication and administration increment (ADR-0012). No environment variable, database flag, setting, or request parameter creates an Administrator, and none may be added as a shortcut.
-- Account creation by an Administrator, password reset, email verification, account recovery.
-- Throttling of sign-in, sign-in history, and assistant quotas.
-- The general audit record (AuditEvent) for authentication and administrative actions. Only role changes are recorded; a deactivation is logged, not yet recorded.
+- TOTP enrolment and verification, and therefore any working Reviewer or Administrator. The first Administrator can be created and can sign in, and still cannot manage roles or accounts.
+- Account creation by an Administrator, so the first Administrator is the only account the application can create. Password reset, email verification, account recovery.
+- Assistant quotas.
+- The general audit record (AuditEvent) for administrative actions. Role changes and sign-ins are recorded; a deactivation is logged, not yet recorded.
 - Reactivation of a deactivated account.
 - A least-privilege database role for the application (see "Role history cannot be rewritten" above).
 - The Django admin, which stays uninstalled until TOTP exists.
+
+### Authentication as implemented
+
+Sign-in with an email address and a password, on Django's own authentication and session machinery. The decisions are in [ADR-0013](docs/adr/0013-authentication-core-and-first-administrator-bootstrap.md). Multi-factor authentication, account creation, email verification, password reset, and account recovery are not implemented; they are later increments. Nothing here is a statement about production deployment.
+
+**Signing in and out**
+
+- **One answer for every refusal.** A wrong password, an unknown email address, and a deactivated account get the same page, the same status, and the same log line. Nothing tells the three apart, including throttling, which behaves the same whether or not an account exists.
+- **Credentials only by POST, with a CSRF token.** Signing out is POST-only with a CSRF token too, so a link or an image cannot sign anyone out. It takes no destination.
+- **The session key is replaced on sign-in**, so a key known beforehand is worth nothing afterwards, and the session is deleted on the server on sign-out. A deactivated account, or one whose password changes, loses its sessions on the next request.
+- **After sign-in, only a path on this site is followed.** Any other destination is ignored.
+- **Passwords are never logged, stored in an event, or sent back in a page.** Log lines name an account by identifier only, and a refusal names nobody.
+
+**Sessions**
+
+| Setting | Value | In development |
+|---|---|---|
+| Storage | Server-side, in PostgreSQL. The cookie carries an identifier only. | Same |
+| Session and CSRF cookie `Secure` | On | Off, because the development server speaks plain HTTP. This is the only relaxation. |
+| Session cookie `HttpOnly` | On | Same |
+| `SameSite` | `Lax` for both cookies | Same |
+| Lifetime | Until the browser closes, and at most 12 hours on the server | Same |
+
+**Sign-in records.** Each sign-in, refused sign-in, and sign-out is an AuthenticationEvent: type, time, the account if the email address belongs to one, and the request's correlation ID. The table is append-only and protected by a database trigger in the same way as role events. It holds no password, password hash, session identifier, header, or address. What was typed as the email address, and where the request came from, are stored only as keyed hashes, because people type passwords into the email field. A refused sign-in for an address that has no account names nobody.
+
+**Brute-force protection the application provides**
+
+- A refused sign-in counts against the email address it named and against the network address it came from, each identified by a keyed hash. The limits are exactly 5 refusals for one keyed email address in 15 minutes, and 20 refusals from one keyed source in 15 minutes. Once either is reached, further attempts are refused with status 429 without the password being looked at.
+- Nothing is locked permanently. The limit lifts by itself as refusals age out of the window, and a successful sign-in clears the count for that email address. It does not clear the count for the source, so one valid account does not buy a source fresh attempts at other accounts.
+- Attempts for the same email address, or from the same source, are handled one at a time, so attempts sent together cannot each be counted as the first.
+- A throttled attempt is logged and stores nothing. One source can therefore add at most 20 rows per window, and one email address at most 5, however many requests it sends.
+- The limits are in repository settings and are not read from the environment.
+- Redis is not used. The counts come from the sign-in records in PostgreSQL.
+
+**What that protection does not do**
+
+- This is application-level brute-force mitigation. It is not denial-of-service protection: each attempt still costs a request and database queries.
+- Anyone can keep a known email address throttled by failing five times every fifteen minutes. That is the price of limiting guesses per account.
+- An attacker using many source addresses and many email addresses is limited only per address. Limiting that needs controls in front of the application.
+- The source is the address the application process sees. Behind a reverse proxy that is the proxy's address, so every visitor would share one source and twenty refusals would throttle sign-in for everyone. Extracting the real client address from a trusted proxy header is a deployment concern, deferred to ADR-0008 (Proposed). No forwarded header is read until then, because a client can write one.
+- Request-rate limiting, connection limits, and filtering belong to the reverse proxy and are not built.
+- The sign-in page is served without a Content Security Policy header. The page contains no script or style. The production policy is deferred to the deployment increment, with ADR-0008.
+
+**Retention and secret rotation**
+
+- Sign-in records are append-only, and the table grows with use. How long they are kept is a future data-governance decision; no period has been set. Application code must not delete them, and the database refuses it. A future retention policy must preserve what security and audit need and meet the legal obligations that apply.
+- The keyed hashes are derived from `SECRET_KEY`. Rotating that key changes every hash, so refusals recorded before the rotation no longer count towards a limit, and earlier records can no longer be matched to later ones by email address or source. Throttling starts from zero at that moment. This is an accepted trade-off of storing no readable address.
+
+**The first Administrator**
+
+Every normal role change needs an existing Administrator who is a different user, and its record names that Administrator. The first Administrator is the one exception (ADR-0012, as amended): it is created by a command run by an operator at the server, and its role event is the only one without an acting user:
+
+```sh
+python manage.py create_first_administrator
+```
+
+- It works once. If any Administrator role event exists it refuses. The database allows a role event without an acting user only if it grants the Administrator role, and allows only one such event, ever.
+- It must be run by a person at a terminal. It asks for the email address, the password twice without showing it, and a phrase to be typed out as confirmation.
+- It has no option for an email address or password and no non-interactive mode, and it reads no credential from the environment.
+- The password must pass the password validators. The account and its role event are created together or not at all.
+- The role event records that it was made by this command and the operating-system account that ran it, taken from the process and not from an environment variable.
+- No web request, header, cookie, setting, environment variable, or database value creates an Administrator, nothing else in the application calls the bootstrap, and the role services refuse a change that names no actor. There is no second way to run this once it has been used.
+
+The Administrator role still grants nothing until TOTP exists and the account has enrolled. The first Administrator can sign in, holds the role on record, and can do nothing administrative. There is no production bypass of this.
 
 ### Web application threats
 

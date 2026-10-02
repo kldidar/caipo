@@ -8,6 +8,7 @@ Defaults here are the restrictive ones. An environment module loosens a value
 only where it must, and says why.
 """
 
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -24,6 +25,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "caipo.accounts",
+    "caipo.web",
 ]
 
 MIDDLEWARE = [
@@ -69,6 +71,25 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+LOGIN_URL = "login"
+
+# Sign-in throttling. A failed sign-in counts against the email address it
+# named and against the address it came from. Once either count is reached
+# within the window, further attempts are refused until earlier failures have
+# aged out of it; nothing is locked permanently. Repository-versioned on
+# purpose: these are not read from the environment.
+LOGIN_THROTTLE_WINDOW = timedelta(minutes=15)
+LOGIN_THROTTLE_ACCOUNT_FAILURES = 5
+LOGIN_THROTTLE_SOURCE_FAILURES = 20
+
+# Sessions are held on the server; the cookie carries only an identifier. A
+# session ends when the browser closes and, whatever the browser does, twelve
+# hours after sign-in.
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_COOKIE_AGE = 60 * 60 * 12
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = False
 
 # Cookies are sent over TLS only, unless an environment says otherwise.
 SESSION_COOKIE_SECURE = True

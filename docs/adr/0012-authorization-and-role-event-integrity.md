@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-02
+- Amended: 2026-10-02, by decision of the project owner (see "Amendment: the first-Administrator bootstrap")
 
 ## Context
 
@@ -10,6 +11,8 @@
 Those choices carry most of the risk in an access system. A role kept as a field can be overwritten without trace. Role checks written into views drift apart from the checks in services. An Administrator who can change their own roles, or who can be removed when no other exists, turns one mistake or one compromised session into a loss of control. A history that the application can edit is not evidence of anything.
 
 The project owner decided the points below on 2026-10-02, while the identity and access foundation was being built. This ADR records them. It adds to ADR-0007 and changes none of its decisions.
+
+Points 7, 13, and 14 were amended on the same day, when the bootstrap of the first Administrator was designed. The amendment is set out in its own section below, and the amended points say so.
 
 ## Decision
 
@@ -27,7 +30,7 @@ The project owner decided the points below on 2026-10-02, while the identity and
 
 ### Role events
 
-7. **RoleEvent is append-only.** A role is held because an event grants it and no later event revokes it. An event records the target user, the role, whether it was a grant or a revocation, the actor, the reason, and the time. There is no current-role record that could be overwritten.
+7. **RoleEvent is append-only.** A role is held because an event grants it and no later event revokes it. An event records the target user, the role, whether it was a grant or a revocation, the actor, the reason, and the time. There is no current-role record that could be overwritten. *Amended: one event, and only one, has no actor. See the amendment.*
 8. **PostgreSQL protects RoleEvent against UPDATE and DELETE.** A trigger refuses both, for every row and every database role, however the statement was sent. It is created by the same migration that creates the table.
 9. **Application guards remain.** The model and its query interface also refuse to update or delete an event. The database is the final boundary; the guards fail earlier and say why.
 
@@ -39,8 +42,30 @@ The project owner decided the points below on 2026-10-02, while the identity and
 
 ### The first Administrator
 
-13. **Creating the first Administrator is intentionally not implemented.** Every normal role change requires an existing Administrator who is a different user, so the application cannot create the first one. The bootstrap procedure will be designed together with the authentication and administration increment.
-14. **There is no shortcut.** No environment variable, database flag, setting, or request parameter may create an Administrator or grant a role. The bootstrap, when designed, must leave an attributable record like any other role change.
+13. **The first Administrator is created by a controlled bootstrap, outside the normal role-change path.** Every normal role change requires an existing Administrator who is a different user, so the normal path cannot create the first one. *Amended: as first accepted, this point said that creating the first Administrator was intentionally not implemented and would be designed with the authentication increment. It has been; see the amendment and [ADR-0013](0013-authentication-core-and-first-administrator-bootstrap.md).*
+14. **There is no shortcut.** No environment variable, database flag, setting, or request parameter may create an Administrator or grant a role. The bootstrap leaves an accountable record like any other role change. *Amended: "attributable" to an acting user became "accountable" through bootstrap metadata, because no acting user can exist; see the amendment.*
+
+## Amendment: the first-Administrator bootstrap
+
+Decided by the project owner on 2026-10-02. It narrows one statement of this ADR and weakens nothing else.
+
+Before the first Administrator exists there is no account that could be the actor of a role event. Recording the new Administrator as their own actor would break point 5, and recording an invented system account would state something untrue. The bootstrap grant is therefore the one legitimate exception to "every role event records an actor".
+
+1. **Normal role events require an actor.** Every grant and revocation made through the role services names the Administrator who made it, and that Administrator is never the target. Points 5 to 12 apply to them unchanged.
+2. **The single first-Administrator bootstrap grant is the only permitted actor-less role event.**
+3. **It can represent only the creation of the Administrator role.** An event without an actor that grants any other role, or that revokes anything, is refused.
+4. **It is created only by the controlled bootstrap command**, `create_first_administrator`, run by a person at a terminal on the server. Nothing else in the application calls the operation that writes it.
+5. **It carries bootstrap metadata sufficient for operational accountability.** Its reason states that it was made by that command and names the operating-system account that ran it, taken from the process and not from an environment variable. The command's use is also logged, under the account identifier it created.
+6. **No normal application input can create it.** No web request, environment variable, HTTP header, cookie, database value, setting, or other normal application input creates an actor-less Administrator event, and the role services refuse a role change that names no actor.
+7. **No second actor-less event may ever be created.** Once any Administrator role event exists, the bootstrap refuses to run, whatever has since happened to that account.
+
+How this is enforced:
+
+- **In the database.** One check constraint allows an event to be without an actor only if it is a grant of the Administrator role. One unique index allows at most one event without an actor in the whole table. Both hold for every writer, including SQL sent outside the application. The constraint that an actor is never the event's own subject, and the trigger that refuses UPDATE and DELETE, are unchanged, so the bootstrap event cannot be edited into something else or removed to make room for another.
+- **In the application.** The bootstrap operation runs under the same lock as every other role change, refuses if any Administrator role event exists, and creates the account and its event in one transaction. The command refuses to run without a terminal, takes no credential as an argument, and reads none from the environment.
+- **By tests.** Tests exercise each database constraint directly, each refusal of the command, and the absence of any other caller.
+
+The bootstrap does not make the first Administrator able to act. Point 4 of ADR-0007, that Reviewer and Administrator accounts cannot use their privileges until TOTP is enrolled, applies to it like any other.
 
 ## Alternatives considered
 
@@ -62,9 +87,10 @@ The project owner decided the points below on 2026-10-02, while the identity and
 - The role history can be trusted as far as the database can: the trigger does not stop TRUNCATE, and a database role that owns the table can drop or disable the trigger. The production application role must be able to do neither. That is set with the deployment decision (ADR-0008, Proposed). In development the application connects as the database owner.
 - A mistaken role event cannot be corrected in place. It is corrected by a further event.
 - Role changes cannot run in parallel. They are rare, administrative operations, so this is accepted.
-- Until the bootstrap is designed, no Administrator can exist in a real deployment, and so no role can be granted through the application.
+- Exactly one role event in the system has no acting user. Its accountability rests on the bootstrap metadata and on control of who can run commands on the server. *Amended: as first accepted, this point said that no Administrator could exist in a real deployment until the bootstrap was designed.*
+- If the only Administrator's credentials are lost, the bootstrap cannot be run again. Recovery would be a deliberate operation on the database by its owner, outside the application.
 - The general audit record (AuditEvent) is not part of this decision and is not built. A deactivation is logged, not yet recorded.
 
 ## Revisit when
 
-Contention on role changes is demonstrated and requires a more granular design than table-level serialization; the bootstrap of the first Administrator is designed; the general audit record is introduced; or least-privilege database roles are defined with the deployment decision.
+Contention on role changes is demonstrated and requires a more granular design than table-level serialization; the general audit record is introduced; or least-privilege database roles are defined with the deployment decision.

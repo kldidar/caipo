@@ -129,9 +129,27 @@ Both accept `GET` only and are reachable without signing in. Readiness does not 
 
 Logs are written to standard output as one JSON object per line, with `timestamp`, `level`, `logger`, `message`, and `correlation_id`. The start-up banner of `runserver` is printed by Django outside the logging system and is plain text.
 
+## Signing in
+
+```sh
+uv run --env-file .env python manage.py migrate
+uv run --env-file .env python manage.py create_first_administrator
+uv run --env-file .env python manage.py runserver        # then http://127.0.0.1:8000/login/
+```
+
+`create_first_administrator` creates the only account the application can create so far. It is interactive and works once; what it asks for, and why it has no options, is in [SECURITY.md](../SECURITY.md), "The first Administrator". To start again locally, recreate the development database (`docker compose down -v`).
+
+During an initial deployment it is run once, by the person installing the system, in a terminal on the server and under the settings of that environment, after `migrate` and before anyone needs to sign in. In a container that means an interactive session, for example `docker compose exec` with a terminal attached. It cannot be put in a start-up script, because it refuses to run without a terminal.
+
+The pages are `/login/` and `/logout/`. A view never checks a password itself: `caipo.accounts.services.sign_in` decides, throttles, and records, and the view only establishes the session. After 5 refused attempts for one email address, or 20 from one source, within 15 minutes, the page answers 429; signing in successfully from another address does not lift that, waiting does. The limits are `LOGIN_THROTTLE_*` in `caipo/config/settings/base.py`. The decisions, and what is deferred to later increments, are in [ADR-0013](adr/0013-authentication-core-and-first-administrator-bootstrap.md).
+
+The first Administrator can sign in but has no administrative privileges, because those require TOTP, which is not implemented. That is intended, and there is no setting that changes it.
+
+The sign-in tests use the real Argon2 hasher, which is why the suite takes about a minute.
+
 ## Authorization
 
-Sign-in does not exist yet, so none of this is reachable through a browser. It is the layer that views and services are written against.
+No page uses this yet apart from the sign-in pages, which are public. It is the layer that views and services are written against.
 
 **A view declares the access it requires**, outermost, with `public` or with `requires` and a permission. A view with no declaration answers 403.
 

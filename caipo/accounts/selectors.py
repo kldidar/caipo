@@ -17,7 +17,15 @@ from caipo.accounts import mfa
 from caipo.accounts.authorization import Permission, Role, permissions_for
 from caipo.accounts.models import RoleEvent, RoleEventType, User
 
-__all__ = ["Permission", "Role", "can", "permissions_of", "require_permission", "roles_of"]
+__all__ = [
+    "Permission",
+    "Role",
+    "an_administrator_was_ever_created",
+    "can",
+    "permissions_of",
+    "require_permission",
+    "roles_of",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +40,15 @@ def _granted_roles(user_id: int, *, active_accounts_only: bool) -> frozenset[Rol
     return frozenset(
         Role(role) for role, event_type in latest if event_type == RoleEventType.GRANTED
     )
+
+
+def an_administrator_was_ever_created() -> bool:
+    """Return whether any Administrator role event exists.
+
+    Once one does, the first-Administrator bootstrap is closed for good,
+    whatever has happened to that account since.
+    """
+    return RoleEvent.objects.filter(role=Role.ADMINISTRATOR).exists()
 
 
 def roles_of(user: User) -> frozenset[Role]:

@@ -82,7 +82,9 @@ erDiagram
 
 **User**, roles, and permissions. Roles are Reader, Researcher, Reviewer, Administrator; all are authenticated. An anonymous visitor to the public research site is not a role and has no User record (ADR-0007). A user may hold several roles. Permissions are not stored: which role holds which permission is a fixed table in code.
 
-**RoleEvent** (A-O). One change to a user's roles: user, role, event type (§4.7), acting user, reason, time. It is both the store of roles and their history: there is no current-role record to overwrite. The acting user is always recorded and is never the user whose role changes. Users referenced by a RoleEvent cannot be deleted. UPDATE and DELETE are refused by a database trigger as well as by the application. It records role changes only; the general AuditEvent below is not built yet.
+**RoleEvent** (A-O). One change to a user's roles: user, role, event type (§4.7), acting user, reason, time. It is both the store of roles and their history: there is no current-role record to overwrite. The acting user is recorded and is never the user whose role changes. The one exception, defined in [ADR-0012](adr/0012-authorization-and-role-event-integrity.md) as amended, is the grant that creates the first Administrator, which is made by an operator at the server before any account exists: it has no acting user, names the bootstrap command and the operator's operating-system account in its reason, can only be a grant of the Administrator role, and the database allows it only once. Users referenced by a RoleEvent cannot be deleted. UPDATE and DELETE are refused by a database trigger as well as by the application. It records role changes only; the general AuditEvent below is not built yet.
+
+**AuthenticationEvent** (A-O). One sign-in, refused sign-in, or sign-out: event type (§4.8), time, the user if the submitted email address belongs to an account, the request's correlation ID, and keyed hashes of the submitted email address and of the source address. No password, password hash, session identifier, header, or raw address. It is also what sign-in throttling counts. Retention is a future data-governance decision: no period is set, and until one is, nothing deletes these events ([ADR-0013](adr/0013-authentication-core-and-first-administrator-bootstrap.md)). The keyed hashes depend on the application's secret key, so rotating it makes earlier events unmatchable to later ones by address or source. It is not the general AuditEvent.
 
 **AuditEvent** (A-O). Actor, action, object reference by type and public identifier (not a foreign key, because targets live in higher layers), time, details.
 
@@ -364,6 +366,10 @@ DatasetRelease (`imported`, `withdrawn`), AnalysisRun and SearchRun (`valid`, `i
 ### 4.7 RoleEvent
 
 Event types: `granted`, `revoked`. A user holds a role when the latest RoleEvent for that user and that role is `granted`. Holding a role and being able to use it are different things: a deactivated account, and a Reviewer or Administrator account that has not enrolled TOTP, hold their roles on record and get nothing from them.
+
+### 4.8 AuthenticationEvent
+
+Event types: `login_success`, `login_failure`, `logout`. Only a `login_failure` can be without a user.
 
 ## 5. Conventions
 
