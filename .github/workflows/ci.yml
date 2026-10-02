@@ -1,0 +1,208 @@
+# Continuous integration: checks on the code, and nothing else.
+#
+# This workflow does not deploy, build or publish an image, or run migrations
+# against any real database, and it uses no repository secret. Deployment is
+# ADR-0008, which is Proposed. See CONTRIBUTING.md, "CI is not deployment".
+#
+# Pinning policy
+#   - Actions are pinned to a full commit SHA, with the release tag in a comment.
+#     A tag can be moved to different code; a commit cannot.
+#   - Only two actions are used: GitHub's own checkout and Astral's own uv setup.
+#   - Tools are pinned to an exact version, and container images to a digest.
+#   - The runner image is named by version, not "latest".
+#   Updating a pin is a reviewed change to this file.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# The token can read the repository and nothing else.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # Named explicitly so that every script runs with errexit and pipefail.
+    shell: bash
+
+env:
+  # The version the lockfile was produced and verified with (docs/DEVELOPMENT.md).
+  UV_VERSION: "0.12.21"
+
+jobs:
+  quality:
+    name: Code quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Lockfile matches pyproject.toml
+        run: uv lock --check
+
+      - name: Install the locked dependencies
+        id: install
+        run: uv sync --locked
+
+      - name: Python matches .python-version
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          uv run --no-sync python - <<'EOF'
+          import pathlib
+          import platform
+          import sys
+
+          expected = pathlib.Path(".python-version").read_text().strip()
+          actual = platform.python_version()
+          print(f".python-version: {expected}; interpreter: {actual}")
+          if actual != expected and not actual.startswith(expected + "."):
+              sys.exit("The interpreter does not match .python-version.")
+          EOF
+
+      # The checks below each run even if an earlier one failed, so that one
+      # run reports every problem.
+      - name: Lint (ruff check)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run --no-sync ruff check --output-format=github .
+
+      - name: Formatting (ruff format --check)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run --no-sync ruff format --check .
+
+      - name: Types (mypy)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run --no-sync mypy .
+
+      - name: App layering (import-linter)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run --no-sync lint-imports
+
+  tests:
+    name: Django checks and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DJANGO_SETTINGS_MODULE: caipo.config.settings.testing
+      # Names and addresses of the throwaway services started below. The two
+      # passwords are generated at run time and are not written here.
+      POSTGRES_DB: caipo_ci
+      POSTGRES_USER: caipo_ci
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "15432"
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "16379"
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install the locked dependencies
+        run: uv sync --locked
+
+      - name: Generate throwaway service passwords
+        run: |
+          for name in POSTGRES_PASSWORD REDIS_PASSWORD; do
+            value="$(openssl rand -hex 32)"
+            echo "::add-mask::${value}"
+            echo "${name}=${value}" >> "${GITHUB_ENV}"
+          done
+
+      # The services come from docker-compose.yml, the same file used for local
+      # development, so the images (pinned there by digest), the database
+      # encoding, and the collation are the ones developers test against.
+      # Redis is started because tests/test_dev_services.py tests it; the
+      # application itself does not use Redis yet.
+      - name: Start PostgreSQL and Redis
+        run: docker compose up --detach --wait
+
+      - name: Django system checks
+        run: uv run --no-sync python manage.py check
+
+      - name: Migrations match the models
+        run: uv run --no-sync python manage.py makemigrations --check --dry-run
+
+      - name: Test suite
+        run: uv run --no-sync pytest
+
+      - name: Service logs
+        if: ${{ failure() }}
+        run: docker compose logs --no-color --tail 200
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PIP_AUDIT_VERSION: "2.10.1"
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          # Nothing from the lockfile is installed in this job.
+          enable-cache: false
+
+      - name: Export the locked dependency set
+        run: >-
+          uv export --locked --no-emit-project --format requirements-txt
+          --output-file "${RUNNER_TEMP}/requirements.txt"
+
+      # Audits exactly the versions and hashes in uv.lock, runtime and
+      # development alike, without resolving or installing them.
+      - name: Known vulnerabilities (pip-audit)
+        run: >-
+          uvx "pip-audit==${PIP_AUDIT_VERSION}"
+          --require-hashes --disable-pip
+          --requirement "${RUNNER_TEMP}/requirements.txt"
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+    steps:
+      - name: Check out the repository with its full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Scans what is committed: every commit reachable in this checkout. It
+      # does not scan the working directory, so files that are documentation of
+      # variable names, such as .env.example, are judged by their committed
+      # content like any other file. A finding is reported with its rule, file,
+      # line, and commit, and with the secret itself redacted from the log. The
+      # container gets no network, and the repository read-only.
+      - name: Committed secrets (gitleaks)
+        run: >-
+          docker run --rm --network none --read-only --cap-drop ALL
+          --security-opt no-new-privileges
+          --volume "${GITHUB_WORKSPACE}:/repo:ro"
+          "${GITLEAKS_IMAGE}"
+          git /repo --redact=100 --no-banner --verbose

@@ -167,7 +167,7 @@ It must not require new tables or columns, new apps, or conditional code. This i
 
 Each phase has its own gate check: its blockers in §10 must be closed before it starts.
 
-**Current position (2026-10-02):** Phase 0 documents are committed. One part of Phase 1, the reproducible development environment (locked Python dependencies, lint, type, and test tooling, and local PostgreSQL and Redis services), was built on the project owner's instruction before the Phase 1 gate opened. It contains no application code. On 2026-10-02 the project owner made the Phase 1 decisions (§8, §10), and the Phase 1 gate is open. The Django application skeleton followed: settings, the User foundation, health endpoints, structured logging, and the access-declaration rule. The rest of Phase 1 (CI, roles and the authentication workflows, TOTP, countries and institutions) has not started.
+**Current position (2026-10-02):** Phase 0 documents are committed. One part of Phase 1, the reproducible development environment (locked Python dependencies, lint, type, and test tooling, and local PostgreSQL and Redis services), was built on the project owner's instruction before the Phase 1 gate opened. It contains no application code. On 2026-10-02 the project owner made the Phase 1 decisions (§8, §10), and the Phase 1 gate is open. The Django application skeleton followed: settings, the User foundation, health endpoints, structured logging, and the access-declaration rule. The CI workflow followed (`.github/workflows/ci.yml`). The rest of Phase 1 (roles and the authentication workflows, TOTP, countries and institutions) has not started.
 
 ## 8. Decisions made and open
 
@@ -245,7 +245,9 @@ The service checks were run with a temporary environment file holding generated 
 - **redis client 6.4.0 on Python 3.14.** It does not declare 3.14 support. It is held below 6.5 because kombu requires that. The service tests pass with it.
 - **django-stubs on Python 3.14.** django-stubs 5.2.9 does not declare Python 3.14 support. Type checking passes with it.
 - **Dependencies not yet locked:** the pgvector client and every document-parsing library.
-- **Tools not yet set up:** `pre-commit`, `gitleaks`, `trivy`, and CI. Secret scanning is not automated. gitleaks 8.30.1 was run once by hand on 2026-10-02, from its container image, over the files then awaiting commit and the four commits of history, and reported no leaks; nothing repeats that scan yet.
+- **Tools not yet set up:** `pre-commit` and `trivy`.
+- **CI on GitHub.** The workflow's commands were run locally on 2026-10-02 in a fresh clone and passed, and the workflow file passes `actionlint` 1.7.12. A run on GitHub's own runners had not been observed when this was written.
+- **Secret scanning before a commit.** gitleaks 8.30.1 runs in CI over the committed history. Nothing scans a change before it is committed.
 - **GPU access from inside containers** has not been tested.
 - **Local model feasibility** has not been assessed. A GPU with 12227 MiB is present and the WSL memory allocation is adjustable, so no hardware limitation is asserted. The production server is not yet specified. This is part of blocker B14.
 - **Mermaid diagrams** have not been rendered locally (no Node toolchain). Their syntax was checked by script only.

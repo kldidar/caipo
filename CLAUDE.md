@@ -33,7 +33,7 @@ Use the names in `docs/DATA_MODEL.md` exactly. In particular:
 ## Architecture rules
 
 1. **Modular monolith.** One Django project, one deployable codebase. No microservices, no new datastore, no new framework without an accepted ADR.
-2. **App layering is one-directional.** The layer order is defined in `docs/ARCHITECTURE.md` §2. An app may import only from apps in lower layers, and foreign keys point only downward. This will be enforced in CI by import-linter; do not add exceptions to make a build pass.
+2. **App layering is one-directional.** The layer order is defined in `docs/ARCHITECTURE.md` §2. An app may import only from apps in lower layers, and foreign keys point only downward. This is enforced in CI by import-linter; do not add exceptions to make a build pass.
 3. **Apps talk through public interfaces.** Cross-app calls go through the other app's `services.py` (writes) and `selectors.py` (reads). Do not import another app's models into views, tasks, or templates.
 4. **Business logic lives in services**, not in views, serializers, model `save()` overrides, signals, or Celery task bodies. Tasks are thin wrappers that call services.
 5. **No country-specific code paths.** Never branch on `"TM"` or `"UZ"`. Country differences are data.

@@ -19,17 +19,40 @@ The toolchain is deliberately small. Versions are pinned in `pyproject.toml` and
 | Type checking | `mypy` with `django-stubs` | Strict mode |
 | Tests | `pytest`, `pytest-django` | Coverage reported; no numeric target is a substitute for testing failure paths |
 | Module boundaries | `import-linter` | Enforces the app layering |
-| Dependency vulnerabilities | `pip-audit` | Run in CI |
-| Secret scanning | `gitleaks` | Pre-commit and CI |
+| Dependency vulnerabilities | `pip-audit` | Run in CI through `uvx`, at a pinned version, against the lockfile |
+| Secret scanning | `gitleaks` | Run in CI from its container image, pinned by digest. Not yet a pre-commit hook. |
 | Container image scanning | `trivy` | CI, on built images |
 | Git hooks | `pre-commit` | Runs ruff and gitleaks locally |
-| CI | GitHub Actions | Approved by the project owner on 2026-10-02 as Phase 1 engineering tooling. Not configured yet. |
+| CI | GitHub Actions | Approved by the project owner on 2026-10-02 as Phase 1 engineering tooling. Defined in `.github/workflows/ci.yml`. |
 
-**Installed and locked:** `uv`, `ruff`, `mypy`, `django-stubs`, `pytest`, `pytest-django`, and `import-linter`. **Not yet set up:** `pip-audit` (run on demand through `uvx`, not yet in CI), `gitleaks`, `trivy`, `pre-commit`, and CI. Each is checked against the pinned Python version when added (blocker B4).
+**Installed and locked:** `uv`, `ruff`, `mypy`, `django-stubs`, `pytest`, `pytest-django`, and `import-linter`. **Run in CI without being installed in the project:** `pip-audit` and `gitleaks`. **Not yet set up:** `trivy` and `pre-commit`. Each is checked against the pinned Python version when added (blocker B4).
+
+### Continuous integration
+
+The workflow is `.github/workflows/ci.yml`. It runs on every push to `main` and on every pull request against `main`, so it also covers commits made directly to `main` under the bootstrap exception below. It has four jobs, which run in parallel and fail independently:
+
+| Job | Checks | Fails when |
+|---|---|---|
+| Code quality | `uv lock --check`, `uv sync --locked`, the interpreter against `.python-version`, `ruff check`, `ruff format --check`, `mypy`, `lint-imports` | The lockfile does not match `pyproject.toml`, or any check reports a problem. The four code checks all run even if one fails. |
+| Django checks and tests | `manage.py check`, `manage.py makemigrations --check`, `pytest` | A system check fails, a model change has no migration, or a test fails |
+| Dependency audit | `pip-audit` on the exported lockfile, with hashes | A locked package, runtime or development, has a known vulnerability |
+| Secret scan | `gitleaks` over the committed history | Secret material is found in any commit |
+
+How it is built:
+
+- **Services.** The tests job starts PostgreSQL and Redis with `docker compose up`, from the same `docker-compose.yml` used locally, so the images, encoding, and collation are identical. Redis is started only because `tests/test_dev_services.py` tests it; the application does not use Redis yet. Service passwords are generated in each run and masked in the log. Only the synthetic fixture corpus is used.
+- **Settings.** Django commands run under the testing settings. No signing key or other secret is configured in GitHub.
+- **Permissions.** The workflow token can read the repository and nothing else, and checkout does not leave it in the git configuration.
+- **Pinning.** The two actions used (GitHub's `checkout` and Astral's `setup-uv`) are pinned to a full commit SHA with the release tag in a comment. `uv`, `pip-audit`, and the runner image are pinned by version, and the `gitleaks` image by digest. Updating a pin is an ordinary reviewed change. Nothing updates them automatically yet.
+- **Caching.** Only the `uv` package cache, keyed on `uv.lock`.
+
+The secret scan reads commits, not the working directory. A secret that was ever committed keeps failing the scan after it is deleted, because it is still in the history: revoke the secret first, then decide with the project owner how to record it. Do not silence a finding to make the job pass.
+
+Commands to run the same checks locally are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#continuous-integration).
 
 ### CI is not deployment
 
-CI on GitHub Actions runs checks on the code: lint, formatting, types, import layers, tests against PostgreSQL and Redis service containers using only the synthetic fixture corpus, dependency audit, and secret scan. It does not deploy anything, holds no production credentials, and does not build or publish a deployable image. Deployment, hosting, and production infrastructure belong to ADR-0008, which is still Proposed, and stay deferred until it is decided.
+CI runs checks on the code and nothing else. It does not deploy anything, holds no production credentials, runs no migration against a real database, and does not build or publish a deployable image. Deployment, hosting, and production infrastructure belong to ADR-0008, which is still Proposed, and stay deferred until it is decided.
 
 No task runner (`make`, `just`) is adopted. Commands are run through `uv run` and `docker compose` and are documented in docs/DEVELOPMENT.md. This will be reconsidered if the command list becomes hard to remember.
 

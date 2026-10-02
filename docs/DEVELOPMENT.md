@@ -142,3 +142,52 @@ uv run lint-imports               # app layering (docs/ARCHITECTURE.md §2)
 ```
 
 Tests run under the testing settings whatever `DJANGO_SETTINGS_MODULE` says, against PostgreSQL, in a database named `test_<POSTGRES_DB>` that the run creates and removes. The development database is not touched. Tests for an app live in that app's `tests/` package; tests of the project as a whole live in `tests/`.
+
+## Continuous integration
+
+GitHub Actions runs `.github/workflows/ci.yml` on every push to `main` and every pull request against `main`. What each job checks, and how the workflow is pinned and permissioned, is described in [CONTRIBUTING.md](../CONTRIBUTING.md#continuous-integration). CI checks code only; it deploys nothing.
+
+### Reproducing CI locally
+
+With the services running, these are the commands CI runs, job by job.
+
+Code quality:
+
+```sh
+uv lock --check                   # lockfile matches pyproject.toml
+uv sync --locked                  # install exactly the lockfile
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy .
+uv run lint-imports
+```
+
+Django checks and tests:
+
+```sh
+uv run --env-file .env python manage.py check
+uv run --env-file .env python manage.py makemigrations --check --dry-run
+uv run --env-file .env pytest
+```
+
+Dependency audit:
+
+```sh
+uv export --locked --no-emit-project --format requirements-txt --output-file /tmp/caipo-requirements.txt
+uvx pip-audit==2.10.1 --require-hashes --disable-pip --requirement /tmp/caipo-requirements.txt
+```
+
+Secret scan:
+
+```sh
+docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+  --volume "$PWD:/repo:ro" \
+  ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+  git /repo --redact=100 --no-banner --verbose
+```
+
+Differences from CI to keep in mind:
+
+- CI starts from a fresh checkout with no `.env`. It takes service names and ports from the workflow, generates the two service passwords for each run, and runs the two `manage.py` commands under the testing settings. Locally, `.env` selects the development settings for them.
+- The secret scan covers commits only. Run it after committing and before pushing; it does not see uncommitted changes, and it does not read `.env`.
+- The pinned versions of `uv`, `pip-audit`, and `gitleaks` are in the workflow file. If you change one there, change it here.
