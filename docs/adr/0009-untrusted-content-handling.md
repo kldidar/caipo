@@ -1,15 +1,15 @@
 # ADR-0009: Untrusted content handling: principles
 
-- Status: Proposed
-- Date: 2026-10-01
+- Status: Accepted
+- Date: 2026-10-02
 
 ## Context
 
 CAIPO fetches documents and dataset files from the internet, parses complex file formats, stores the results, and places extracted text in language model prompts. Government and third-party sites can be compromised, files can be crafted to exploit parsers, and document text can contain instructions aimed at a language model. The full threat model is in [SECURITY.md](../../SECURITY.md).
 
-This ADR states the principles. How the fetch and parse workers are actually isolated is a separate, unproven question and is the subject of [ADR-0011](0011-worker-isolation-mechanism.md).
+This ADR states the principles. How the fetch and parse workers are actually isolated is a separate, unproven question and is the subject of [ADR-0011](0011-worker-isolation-mechanism.md), which remains Proposed. Accepting these principles does not accept any mechanism.
 
-## Decision (proposed)
+## Decision
 
 All external content is untrusted at every stage. This includes documents and dataset files (CSV, XLSX, and any other format). The defences are structural: they limit what a hostile input can reach, and do not depend on recognising it.
 
@@ -31,7 +31,7 @@ All external content is untrusted at every stage. This includes documents and da
 
 9. **Approved documents only.** Only document versions with review status `approved`, set by a Reviewer, are searchable or citable. A Reviewer can suspend a version.
 
-10. **Rights are enforced.** Text is sent to an external AI provider, quoted to users, or exported only where the document version's recorded rights permit.
+10. **Rights are enforced.** Text is sent to an external AI provider, shown to users, or exported only where the document version's recorded rights permit, independently of who is signed in.
 
 11. **Retrieved text is data.** It enters prompts in delimited blocks marked as untrusted.
 

@@ -1,13 +1,13 @@
 # ADR-0001: Modular monolith on Django
 
-- Status: Proposed
-- Date: 2026-10-01
+- Status: Accepted
+- Date: 2026-10-02
 
 ## Context
 
 CAIPO has several distinct domains (sources, policies, indicators, research claims, retrieval, AI assistant) that share data heavily: a claim references a passage in a document version and an observation in a dataset release. The team is small, expected load is low, and correctness and maintainability are the priorities. The project brief requires a modular Django architecture and rules out microservices without a demonstrated reason.
 
-## Decision (proposed)
+## Decision
 
 Build one Django project composed of apps with enforced boundaries.
 
@@ -29,10 +29,6 @@ Build one Django project composed of apps with enforced boundaries.
 - Boundaries exist only as long as they are enforced; the CI check is mandatory.
 - All components share a release cycle.
 - The fetch worker and parse worker share the codebase but run with far fewer privileges, which needs care in configuration (ADR-0009, ADR-0011).
-
-## Open points
-
-None beyond owner ratification.
 
 ## Revisit when
 

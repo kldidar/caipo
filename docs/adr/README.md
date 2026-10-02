@@ -4,20 +4,20 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-**No ADR has been ratified by the project owner. All are Proposed.** The last column says what stands between each one and acceptance.
+Six ADRs were accepted by the project owner on 2026-10-02. Five remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
-| [0001](0001-modular-monolith.md) | Modular monolith on Django | Proposed | Owner ratification |
-| [0002](0002-postgresql-system-of-record.md) | PostgreSQL as system of record | Proposed | Owner ratification |
+| [0001](0001-modular-monolith.md) | Modular monolith on Django | Accepted | — |
+| [0002](0002-postgresql-system-of-record.md) | PostgreSQL as system of record | Accepted | — |
 | [0003](0003-vector-search.md) | Vector search with pgvector and hybrid retrieval | Proposed | Embedding model decision; retrieval spike (B15) |
-| [0004](0004-asynchronous-jobs.md) | Celery with Redis for asynchronous jobs | Proposed | Owner ratification; isolated queues depend on ADR-0011 |
-| [0005](0005-evidence-and-provenance-model.md) | Evidence and provenance model | Proposed | Owner ratification |
+| [0004](0004-asynchronous-jobs.md) | Celery with Redis for asynchronous jobs | Proposed | Job-system spike before Phase 2 (B4, B21); Celery does not yet declare Python 3.14 support |
+| [0005](0005-evidence-and-provenance-model.md) | Evidence and provenance model | Accepted | — (amended before ratification) |
 | [0006](0006-ai-provider-abstraction.md) | AI provider abstraction | Proposed | Provider, model, and budget decisions (B14) |
-| [0007](0007-authentication.md) | Authentication and access model | Proposed | Access model decision (B5) |
-| [0008](0008-deployment-strategy.md) | Deployment strategy | Proposed | Hosting decision (B17); isolation mechanism (ADR-0011) |
-| [0009](0009-untrusted-content-handling.md) | Untrusted content handling: principles | Proposed | Owner ratification |
-| [0010](0010-web-interface-and-api.md) | Web interface and API style | Proposed | Owner confirmation (B6) |
+| [0007](0007-authentication.md) | Authentication and access model | Accepted | — |
+| [0008](0008-deployment-strategy.md) | Deployment strategy | Proposed | Hosting decision (B17); isolation mechanism (ADR-0011). CI on GitHub Actions was approved separately as Phase 1 tooling and does not depend on this ADR. |
+| [0009](0009-untrusted-content-handling.md) | Untrusted content handling: principles | Accepted | — |
+| [0010](0010-web-interface-and-api.md) | Web interface and API style | Accepted | — |
 | [0011](0011-worker-isolation-mechanism.md) | Worker isolation mechanism | Proposed | Spike (B21) |
 
 ## Statuses

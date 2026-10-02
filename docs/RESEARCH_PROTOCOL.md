@@ -197,8 +197,8 @@ Any quantitative association is run as a recorded analysis: inputs with release 
 
 1. **Draft.** A researcher writes a claim, assigns its type and confidence, and links evidence.
 2. **Automatic checks.** The system verifies that the evidence requirements for the type are met and that every evidence target resolves.
-3. **Review.** A reviewer other than the author checks that the evidence supports the claim as worded, that the type is correct, and that the language rules are met. Evidence is frozen from this point.
-4. **Approval or return.** Approved claims become visible to readers. Whether the assistant may use approved claims as evidence is undecided (blocker B24); until it is decided and its safety design ratified, the assistant does not use them.
+3. **Review.** A reviewer other than the author checks that the evidence supports the claim as worded, that the type is correct, and that the language rules are met. The claim and its evidence cannot be changed while it is in review. The text and evidence set as submitted are recorded with the review.
+4. **Approval or return.** A returned claim goes back to draft and can be corrected and resubmitted; the returned submission, its evidence set, and the reviewer's decision stay on record. Approved claims become publicly visible, with any quoted source text shown only where the document's rights allow. Whether the assistant may use approved claims as evidence is undecided (blocker B24); until it is decided and its safety design ratified, the assistant does not use them.
 5. **Dispute and withdrawal.** Approved claims can be marked disputed or withdrawn with a reason. They are not deleted.
 6. **Reassessment.** If evidence behind an approved claim is suspended, withdrawn, redacted, or invalidated, the claim is automatically marked as needing reassessment and is no longer presented as approved until a reviewer re-approves, supersedes, or withdraws it. Its history is preserved. See [DATA_MODEL.md](DATA_MODEL.md) §4.3.
 

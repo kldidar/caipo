@@ -1,13 +1,13 @@
 # ADR-0002: PostgreSQL as system of record
 
-- Status: Proposed
-- Date: 2026-10-01
+- Status: Accepted
+- Date: 2026-10-02
 
 ## Context
 
 The domain is relational: documents, versions, passages, policies, observations, claims, and evidence are densely linked, and the integrity of those links is the core of the product. The data volume is small.
 
-## Decision (proposed)
+## Decision
 
 PostgreSQL is the single system of record for all durable data.
 
@@ -33,10 +33,6 @@ PostgreSQL is the single system of record for all durable data.
 - PostgreSQL 18.6, the version pinned for development, provides `english`, `russian`, and `simple` text search configurations and none for Turkmen or Uzbek (verified 2026-10-02). Lexical recall for every corpus language is unmeasured (blocker B15).
 - The development environment uses the official PostgreSQL image, which does not include the vector extension. If ADR-0003 is accepted, the image changes.
 - The database is a single point of failure. Encrypted backups and restore tests are mandatory.
-
-## Open points
-
-None beyond owner ratification.
 
 ## Revisit when
 

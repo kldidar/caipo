@@ -86,7 +86,7 @@ uv lock --check                       # verify the lockfile matches pyproject.to
 
 Do not use `pip install`. Every new dependency needs the justification described in [CLAUDE.md](../CLAUDE.md).
 
-The `redis` client is capped below 6.5 on purpose: Celery's transport library requires it. See the comment in `pyproject.toml`. Celery itself is not installed yet; its support for Python 3.14 is an open question (ADR-0004).
+The `redis` client is capped below 6.5 on purpose: Celery's transport library requires it. See the comment in `pyproject.toml`. Celery itself is not installed, and must not be added yet: the job system is chosen by a spike at the Phase 2 gate (ADR-0004).
 
 ## Tests and checks
 

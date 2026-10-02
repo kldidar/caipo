@@ -8,7 +8,7 @@ CAIPO combines policy and legal documents, economic and socioeconomic indicators
 
 **Architecture and research foundation phase. There is no application code yet.** The foundation documents and a reproducible development environment are committed.
 
-The architecture gate is currently **NOT READY**: no architecture decision has been ratified yet, and research, security, and licensing questions are open. The blocking issues are listed in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate). Implementation must not start on a phase until that phase's blockers are closed.
+The architecture gate is **READY for Phase 1** (project skeleton, authentication, countries and institutions) and **NOT READY for Phase 2 and later**: research, data-rights, isolation, and AI-provider questions are still open. They are listed in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate). Implementation must not start on a phase until that phase's blockers are closed.
 
 ## What makes this project different
 
@@ -31,13 +31,18 @@ The architecture gate is currently **NOT READY**: no architecture decision has b
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What this research and system cannot support |
 | [docs/adr/](docs/adr/README.md) | Architecture decision records |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Local development environment |
+| [docs/RIGHTS_AND_LICENSING.md](docs/RIGHTS_AND_LICENSING.md) | Software license, and the separate rights in documents and data |
 | [CLAUDE.md](CLAUDE.md) | Binding rules for AI implementation agents |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Workflow, tooling, Definition of Done |
 | [SECURITY.md](SECURITY.md) | Threat model and security requirements |
 
 ## Technology baseline
 
-Proposed: Django modular monolith, PostgreSQL with pgvector, Redis, Celery for ingestion and embedding jobs, Docker Compose. Every one of these is recorded as a **Proposed** [ADR](docs/adr/README.md); none has been ratified by the project owner yet. Nothing is added to this list without an ADR.
+**Accepted:** a Django modular monolith; PostgreSQL as the system of record; server-rendered templates with HTMX and no separate frontend; a public research site, an authenticated research workspace, and restricted administration.
+
+**Proposed, not yet decided:** vector search with pgvector; the background job system (Celery with Redis is the working proposal); the AI provider; the deployment setup; the worker isolation mechanism.
+
+Each is recorded as an [ADR](docs/adr/README.md). Nothing is added to this list without one.
 
 ## Getting started
 
@@ -54,4 +59,6 @@ Full instructions are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The Compose
 
 ## License
 
-Not yet decided. The repository is public, but until a license is added, no reuse rights are granted.
+CAIPO's original software is released under the [MIT License](LICENSE).
+
+The MIT License covers the software only. It does not cover government documents, research papers, datasets, logos, or any other third-party material that CAIPO stores or processes, nor text extracted from them. Those remain subject to their own rights holders' terms. The licence for research data created by the project is not yet decided. See [docs/RIGHTS_AND_LICENSING.md](docs/RIGHTS_AND_LICENSING.md).

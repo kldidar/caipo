@@ -1,8 +1,8 @@
 # Data Model
 
-Status: Draft for owner and researcher review · Last updated: 2026-10-01
+Status: Draft for owner and researcher review · Last updated: 2026-10-02
 
-This is a conceptual domain model. Field lists name what must be captured; exact columns, types, and indexes are settled during implementation and reviewed with each migration. Decision record: [ADR-0005](adr/0005-evidence-and-provenance-model.md) (Proposed).
+This is a conceptual domain model. Field lists name what must be captured; exact columns, types, and indexes are settled during implementation and reviewed with each migration. Decision record: [ADR-0005](adr/0005-evidence-and-provenance-model.md) (Accepted).
 
 ## 1. Modelling principles
 
@@ -80,7 +80,7 @@ erDiagram
 
 ### 3.1 `accounts`
 
-**User**, roles, and permissions. Roles are Reader, Researcher, Reviewer, Administrator.
+**User**, roles, and permissions. Roles are Reader, Researcher, Reviewer, Administrator; all are authenticated. An anonymous visitor to the public research site is not a role and has no User record (ADR-0007).
 
 **AuditEvent** (A-O). Actor, action, object reference by type and public identifier (not a foreign key, because targets live in higher layers), time, details.
 
@@ -130,7 +130,7 @@ erDiagram
 
 **DocumentReview** (A-O). A review event for a document version: event type, actor, time, reason. The version's review status is derived from the latest event (§4.2).
 
-**RightsDetermination** (A-O). A recorded decision on what may be done with a document version: store, display in full, display excerpts, redistribute, transmit to an external AI provider. Actor, time, basis. The current rights are those of the latest determination. With no determination, every right except storage for review is denied.
+**RightsDetermination** (A-O). A recorded decision on what may be done with a document version. It answers six separate questions: store; workspace display (full text to authenticated research users); public excerpt display; public full display; redistribute; transmit to an external AI provider. Actor, time, basis. The current rights are those of the latest determination. With no determination, the version is available only to the Researcher who submitted it and to Reviewers, for the purpose of review, and every other use is denied. Rights are checked independently of authentication: a role never substitutes for a right, and a right never substitutes for a permission. See [RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md).
 
 **Extraction** (A-O). The result of running one parser configuration on one version.
 - Document version, parser name and version, configuration hash
@@ -215,11 +215,12 @@ PolicyEvent never records implementation. Funding, reported milestones, progress
 - Stance: supports, contradicts, provides context
 - Directness: direct statement, or indirect
 - Note by the researcher
-- Editable while the claim is a draft. **Frozen** (append-only) once the claim leaves draft.
+- Editable while the claim is `draft`. Cannot be changed while the claim is `in_review` or after it is `approved`.
+- Evidence that has been part of a submission for review is never deleted. In a claim returned to `draft` it can be **retired** from the current evidence set; the row remains, marked retired, and the submission it belonged to remains on record.
 
 **ClaimRelation.** Typed link between claims: builds on, contradicts, alternative to.
 
-**ClaimReview** (A-O). A review decision: reviewer, decision, comment, time, and whether it was self-review.
+**ClaimReview** (A-O). One submission for review and its outcome: the exact claim text and the evidence set as submitted, the reviewer, the decision (`approved` or `returned`), comment, time, and whether it was self-review. Because the submitted text and evidence set are stored here, a returned submission stays fully traceable after the claim is edited.
 
 **AnalysisRun** (A-O). A recorded quantitative analysis: method, parameters, inputs (series with their releases; PolicyEvents where the method is a temporal comparison), code version, result summary, output artifact hash. Can be marked invalidated by an append-only event with reason.
 
@@ -301,12 +302,26 @@ Derived from the latest DocumentReview event.
 
 | Status | Meaning |
 |---|---|
-| `draft` | Being written. Evidence editable. |
-| `in_review` | Submitted. Evidence frozen. |
-| `approved` | Passed review. Text and evidence frozen. |
+| `draft` | Being written, or returned by a reviewer. Text and evidence editable. |
+| `in_review` | Submitted. Text and evidence cannot be changed. |
+| `approved` | Passed review. Text and evidence permanently fixed. |
 | `needs_reassessment` | Was approved; one or more of its supporting evidence items has become unavailable. Set automatically. |
 | `disputed` | Approved but challenged, with a recorded reason |
 | `withdrawn` | No longer asserted, with a recorded reason. The record remains. |
+
+Permitted transitions:
+
+| From | To | How |
+|---|---|---|
+| `draft` | `in_review` | Author submits. A ClaimReview records the submitted text and evidence set. |
+| `in_review` | `approved` | Reviewer approves |
+| `in_review` | `draft` | Reviewer returns the claim. The ClaimReview with its decision and the submitted evidence set remains on record. |
+| `approved` | `needs_reassessment` | Automatic, when supporting evidence becomes unavailable |
+| `approved` | `disputed` | Recorded challenge |
+| `approved`, `needs_reassessment`, `disputed` | `withdrawn` | With a reason, including when a revised claim supersedes it |
+| `needs_reassessment`, `disputed` | `approved` | A new review approves it again |
+
+An approved claim never returns to `draft`. It is revised only by a new claim that supersedes it. No claim that has been submitted, returned, or approved is ever deleted.
 
 An evidence item is **unavailable** when its target is a Passage whose document version is `suspended` or `withdrawn` or has been redacted, an Observation whose release is withdrawn, or an AnalysisRun or SearchRun that has been invalidated.
 
@@ -378,7 +393,7 @@ Each rule is enforced in the service layer, by a database constraint where possi
 | I-8 | An observation is unique per series, period, and release |
 | I-9 | An AnswerCitation refers to a Passage whose Segment span, or an Observation, was a RetrievalHit in the same interaction |
 | I-10 | A claim is approved by someone other than its author, unless recorded as self-review |
-| I-11 | Evidence on a claim that has left `draft` cannot be changed or removed |
+| I-11 | Evidence cannot be changed while a claim is `in_review` or after it is `approved`. Evidence that has been part of a submission is never deleted, only retired from a draft. Every ClaimReview keeps the text and evidence set it reviewed. |
 | I-12 | A document version's fields do not change after creation |
 | I-13 | Every PolicyEvent, PolicyObjective, and PolicyInstrument links to a Passage. A PolicyEvent's type is one of the five formal lifecycle types. |
 | I-14 | Policy formal status is never stored; it is computed from PolicyEvents |

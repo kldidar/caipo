@@ -6,7 +6,7 @@ This applies to human contributors and AI agents. AI agents must also follow [CL
 
 1. Check the architecture gate in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate). Work on a phase starts only when its blockers are closed.
 2. Read the documents relevant to your change (table in [CLAUDE.md](CLAUDE.md#read-before-working)).
-3. If your change needs a decision that has not been made, open an ADR as **Proposed** first. Only the project owner accepts an ADR. See [docs/adr/README.md](docs/adr/README.md).
+3. If your change needs a decision that has not been made, open an ADR as **Proposed** first. Only the project owner accepts an ADR. Do not build on a Proposed ADR. See [docs/adr/README.md](docs/adr/README.md).
 
 ## Tooling
 
@@ -23,9 +23,13 @@ The toolchain is deliberately small. Versions are pinned in `pyproject.toml` and
 | Secret scanning | `gitleaks` | Pre-commit and CI |
 | Container image scanning | `trivy` | CI, on built images |
 | Git hooks | `pre-commit` | Runs ruff and gitleaks locally |
-| CI | GitHub Actions | The repository is hosted on GitHub. CI is not configured yet. |
+| CI | GitHub Actions | Approved by the project owner on 2026-10-02 as Phase 1 engineering tooling. Not configured yet. |
 
 **Installed and locked:** `uv`, `ruff`, `mypy`, `pytest`. **Not yet set up:** `django-stubs`, `pytest-django`, and `import-linter` (they need a Django project to act on and are added with it), `pip-audit` (run on demand through `uvx`, not yet in CI), `gitleaks`, `trivy`, `pre-commit`, and CI. Each is checked against the pinned Python version when added (blocker B4).
+
+### CI is not deployment
+
+CI on GitHub Actions runs checks on the code: lint, formatting, types, import layers, tests against PostgreSQL and Redis service containers using only the synthetic fixture corpus, dependency audit, and secret scan. It does not deploy anything, holds no production credentials, and does not build or publish a deployable image. Deployment, hosting, and production infrastructure belong to ADR-0008, which is still Proposed, and stay deferred until it is decided.
 
 No task runner (`make`, `just`) is adopted. Commands are run through `uv run` and `docker compose` and are documented in docs/DEVELOPMENT.md. This will be reconsidered if the command list becomes hard to remember.
 
@@ -90,6 +94,12 @@ Whoever reviews, the author included, checks in this order:
 ## Research content contributions
 
 Adding sources, coding policies, recording searches, entering claims, and building evaluation datasets are research activities governed by [docs/RESEARCH_PROTOCOL.md](docs/RESEARCH_PROTOCOL.md). They are done through the application, not through code or database edits, so that provenance and review are recorded.
+
+## Licensing of contributions
+
+CAIPO's original software is under the [MIT License](LICENSE). By contributing code, configuration, tests, or project documentation, you agree that your contribution is licensed under the same terms.
+
+The MIT License covers the software only. Do not add third-party documents, datasets, logos, or extracted text to the repository, and do not describe such material as covered by the project's license. See [docs/RIGHTS_AND_LICENSING.md](docs/RIGHTS_AND_LICENSING.md).
 
 ## What not to contribute
 

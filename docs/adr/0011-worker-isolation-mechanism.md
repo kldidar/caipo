@@ -61,7 +61,7 @@ Isolated workers receive and deliver files only through mounted volumes: the lan
 
 ## Open points
 
-Everything. Acceptance requires a spike that implements one candidate and passes tests for requirements 1 to 11. The spike is throwaway code in its own branch; it is not application code.
+Everything. Acceptance requires a spike that implements one candidate and passes tests for requirements 1 to 11. The same spike chooses the job system (ADR-0004), because the two cannot be decided separately; it takes place before Phase 2. The spike is throwaway code in its own branch; it is not application code.
 
 ## Revisit when
 

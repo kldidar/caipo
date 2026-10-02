@@ -18,7 +18,7 @@ Expected load is low and the team is small. The system needs several processes w
 - **Artifact store** on a local volume to begin with, accessed by trusted components through Django's storage interface.
 - **Isolated workers use mounted volumes only.** The fetch worker writes to a landing volume; the parse worker reads artifacts from a read-only mount. They hold no storage credentials and the parse worker has no network. If object storage is adopted later, trusted components can switch to it through the storage interface, but the isolated workers must still be given files through volumes staged by a trusted worker. Object storage is therefore not a drop-in change for the whole system.
 - **Backups** of the database and artifact store, **encrypted** before leaving the server, to a different location, with keys held separately and a scheduled restore test.
-- **CI pipeline** on GitHub Actions: lint, types, import layers, tests with real PostgreSQL and Redis against the synthetic fixture corpus, dependency audit, secret scan, image build, image scan.
+- **Image build and image scan** run in CI once this ADR is accepted. The CI platform itself is not decided here: on 2026-10-02 the project owner approved GitHub Actions as Phase 1 engineering tooling, separately from this ADR (see [CONTRIBUTING.md](../../CONTRIBUTING.md)). That approval covers code checks only. It does not ratify anything in this ADR, and building or publishing a deployable image, hosting, and production infrastructure remain deferred.
 - **Environments:** local, CI, staging, production. An evaluation database for AI evaluation lives on a development or staging machine; it is a separate database, not a separate service.
 - **Rollback** is redeploying the previous image. A migration that the previous image cannot run against is flagged in its pull request with a rollback plan.
 
@@ -45,7 +45,7 @@ Acceptance requires:
 3. Choice of reverse proxy, error tracking service, and backup destination.
 4. The isolation mechanism from ADR-0011, which determines the network and volume layout.
 
-Resolved since this ADR was written: Docker works in the development environment (B1, closed), and the repository is hosted on GitHub (B2, closed). CI itself is not configured yet.
+Resolved since this ADR was written: Docker works in the development environment (B1, closed), and the repository is hosted on GitHub (B2, closed). CI was approved separately as Phase 1 tooling and is not an open point of this ADR.
 
 ## Revisit when
 

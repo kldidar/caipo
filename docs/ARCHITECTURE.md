@@ -2,12 +2,13 @@
 
 Status: Draft for owner review · Last updated: 2026-10-02
 
-This document describes the target architecture. No part of it is implemented yet. Decisions are recorded in [adr/](adr/README.md). **All ADRs are currently Proposed**; none has been ratified by the project owner. Where this document and an ADR differ, the ADR governs.
+This document describes the target architecture. No part of it is implemented yet. Decisions are recorded in [adr/](adr/README.md). ADR-0001, 0002, 0005, 0007, 0009, and 0010 are Accepted; the others are Proposed and must not be built on. Where this document and an Accepted ADR differ, the ADR governs.
 
 ## 1. System context
 
 ```mermaid
 flowchart LR
+    visitor[Anonymous visitor]
     reader[Reader]
     researcher[Researcher / Reviewer]
     admin[Administrator]
@@ -20,6 +21,7 @@ flowchart LR
     data[(Indicator data<br/>providers)]
     llm[(AI model provider)]
 
+    visitor -->|read approved public material| app
     reader -->|browse, compare, ask| app
     researcher -->|submit, code, claim, review| app
     admin -->|operate| app
@@ -30,7 +32,8 @@ flowchart LR
 
 People:
 
-- **Readers** consume approved content and ask the assistant questions.
+- **Anonymous visitors** read approved, public material on the public research site. They have no account and can do nothing else.
+- **Readers** are authenticated accounts that browse approved content in the research workspace and ask the assistant questions.
 - **Researchers and Reviewers** build the evidence base.
 - **Administrators** operate the system.
 
@@ -81,6 +84,7 @@ Rules:
 
 - Other apps call `services` and `selectors` only. This is checked in CI for imports. Traversing a relation to another app's model inside a query cannot be checked mechanically and is a review matter.
 - Signals are not used for cross-app workflow. Control flow stays explicit.
+- Only `web` knows about HTTP. Services and selectors take and return plain Python values, never request or response objects. This is what allows a versioned API to be added later in `web` without touching the domain apps (ADR-0010).
 
 ### 2.3 Runtime components
 
@@ -211,9 +215,22 @@ Full threat model: [SECURITY.md](../SECURITY.md). Decisions: [ADR-0009](adr/0009
 5. **Isolation requirement.** Compromise of the fetch worker or the parse worker must not yield database credentials, AI credentials, access to internal services, or the ability to enqueue arbitrary tasks. Compromise of the parse worker must additionally not yield any outbound network access. The mechanism is the subject of ADR-0011 and blocker B21.
 6. **Stored text → prompt.** Retrieved text is data. It is delimited and never concatenated into instructions. Only text whose rights permit it is sent to an external provider.
 7. **Model output → page.** Output is parsed into a fixed structure, verified, and rendered escaped.
-8. **Browser → application.** Authentication, CSRF protection, permission checks in services, strict Content Security Policy.
+8. **Browser → application.** Every view declares the access it requires and is refused otherwise. Authentication, CSRF protection, permission checks in services, strict Content Security Policy.
+9. **Rights and authentication are separate checks.** A document right never follows from being signed in, and a permission never follows from a right. Both must pass.
 
-### 5.3 Privilege
+### 5.3 Access surfaces
+
+Decided in [ADR-0007](adr/0007-authentication.md) and [ADR-0010](adr/0010-web-interface-and-api.md).
+
+| Surface | Who | Content |
+|---|---|---|
+| Public research site | Anonymous visitors | Approved, public material; read-only; server-rendered, with stable citable URLs |
+| Research workspace | Reader, Researcher, Reviewer | Drafts, submission, coding, claims, review, the assistant |
+| Administration | Administrator | Operations; TOTP required |
+
+All three are served by the same Django application through server-rendered templates, with HTMX for interactive components. There is no separate frontend application and no API at launch. The interface launches in English with Django's internationalisation infrastructure enabled.
+
+### 5.4 Privilege
 
 - Each component **that connects to the database** has its own role with the minimum rights it needs. The fetch worker and parse worker do not connect.
 - Append-only tables are protected at the database level as well as in code, so an application bug cannot rewrite provenance. Redaction uses a separate role available only to the redaction operation.
@@ -237,7 +254,8 @@ Software baseline. Dependencies were first locked on 2026-10-01. What has and ha
 - Django 5.2, the long-term-support series, locked at 5.2.17. It declares support for Python 3.14.
 - PostgreSQL 18.6 in development, from the official image. That image has no vector extension; if ADR-0003 is accepted, the image changes.
 - Redis 8.10.2 in development.
-- Celery is proposed (ADR-0004) but not yet locked. It does not declare Python 3.14 support.
+- The job system is undecided. Celery with Redis is the working proposal (ADR-0004); it is not locked and does not declare Python 3.14 support. The choice is made by a spike at the Phase 2 gate.
+- HTMX, vendored at a pinned version when the first interactive page is built (ADR-0010). Django REST Framework is deferred.
 - Document parsing libraries: chosen in Phase 2, as few as possible, each justified. Each is verified against the pinned Python when added.
 
 The core research functions (browse, code, claim, compare, export) depend on no external service at runtime.
@@ -292,7 +310,7 @@ The module boundaries keep extraction into separate services possible. No such e
 Proposed in [ADR-0008](adr/0008-deployment-strategy.md); hosting target undecided (blocker B17).
 
 - **Local development:** Docker Compose runs PostgreSQL and Redis today (`docker-compose.yml`, documented in [DEVELOPMENT.md](DEVELOPMENT.md)); application containers are added when application code exists. That file is for development only and is not the production configuration.
-- **CI:** not configured yet. Planned: lint, types, import layers, tests against real PostgreSQL and Redis services, dependency audit, secret scan, image build and scan. CI uses only the synthetic fixture corpus.
+- **CI:** GitHub Actions, approved by the project owner on 2026-10-02 as Phase 1 engineering tooling, independently of ADR-0008. Not configured yet. Phase 1 scope: lint, formatting, types, import layers, tests against real PostgreSQL and Redis services, dependency audit, secret scan. CI uses only the synthetic fixture corpus. CI is separate from deployment: it deploys nothing and holds no production credentials. Image build and image scan are added only when ADR-0008 is accepted.
 - **Staging and production:** the same images on a single server with Docker Compose, behind a reverse proxy with TLS. Secrets and addresses through environment variables; result-affecting settings from the repository.
 - **Releases:** images tagged with the git commit. Migrations run as an explicit deploy step. Rollback is redeploying the previous image. A migration that the previous image cannot run against is flagged in its pull request with a rollback plan, which may be restoring the pre-deploy backup; zero-downtime deployment is not a goal.
 - **Backups:** scheduled, **encrypted** backups of the database and artifact store to a separate location, with keys held separately from the backups, and a periodic restore test. A backup that has not been restored is not counted as a backup.
@@ -329,6 +347,7 @@ A metrics stack and distributed tracing are deferred. One server and a handful o
 | Strict verification with abstention | Fewer unsupported statements | More "insufficient evidence" answers; higher latency and cost | A wrong cited answer is worse than no answer |
 | Model has no tools | Injection cannot trigger actions | No agentic multi-step research | Safety over capability at this stage |
 | Isolated fetch and parse workers | Contains exploits in the two components that touch hostile input | Operational complexity; mechanism unproven (B21) | External content is the main attack path |
-| Server-rendered interface (proposed) | No second toolchain, smaller attack surface | Less interactive | Fits the usage; revisit in ADR-0010 |
+| Server-rendered templates with HTMX, no separate frontend, API deferred | No second toolchain, smaller attack surface, indexable and citable public pages | Less rich interaction; no programmatic access at launch | Fits the usage; an API can be added in `web` later (ADR-0010) |
+| Public site, authenticated workspace, restricted administration | Reviewed research is checkable by anyone; unreviewed work and restricted text stay private | Two audiences to design and enforce for | Checkability is a goal; exposure must be narrow (ADR-0007) |
 | No metrics or tracing stack initially | Less to run | Less visibility under load | Load is low; domain tables carry the key signals |
 | Thin provider interface, no orchestration framework | Few dependencies, transparent prompts | Some code written by hand | The pipeline is fixed and small; auditability matters |

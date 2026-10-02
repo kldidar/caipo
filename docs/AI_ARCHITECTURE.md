@@ -55,7 +55,7 @@ Calls to models, all through the provider interface (§10):
 
 ## 3. Query analysis
 
-**Input guard.** Authentication as required by the access model, rate limit, budget check against PostgreSQL cost records, length limit. The question is untrusted text.
+**Input guard.** An authenticated account is required: anonymous visitors cannot call the assistant (ADR-0007). Then per-account rate limit and quota, budget check against PostgreSQL cost records, length limit. The question is untrusted text.
 
 **Analysis produces a structured object:**
 
@@ -219,7 +219,7 @@ Only verified output is displayed. Nothing produced by the model reaches the use
 The response contains:
 
 - The surviving statements, each with its label, its server-rendered attribution, and its references
-- For each reference: document title, institution, date, language, source tier, locator, and a link to the stored version. The quoted text is shown only if the version's rights permit display of excerpts.
+- For each reference: document title, institution, date, language, source tier, locator, and a link to the stored version. The quoted text is shown only if the version's rights permit workspace display; the assistant is available only in the authenticated research workspace.
 - **Uncertainty flags** for each statement (below)
 - Evidence gaps stated by the model and those detected by the pipeline
 - A standing notice: this is an AI-generated synthesis of the cited sources; it may be incomplete; it does not establish causation

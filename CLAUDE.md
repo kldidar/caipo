@@ -8,7 +8,7 @@ CAIPO (Central Asia AI Policy Observatory) is the research platform for the stud
 
 ## Current phase
 
-Architecture and research foundation. The foundation documents and the development environment (`docs/DEVELOPMENT.md`) are committed; there is no application code. **Do not write application code until the architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY for the phase you are working on.** All ADRs are currently Proposed; none is ratified. Only the project owner accepts an ADR. If a task requires a decision that is listed as unresolved, ask; do not decide it yourself.
+Architecture and research foundation. The foundation documents and the development environment (`docs/DEVELOPMENT.md`) are committed; there is no application code. **Do not write application code until the architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY for the phase you are working on.** The gate is READY for Phase 1 only. ADR-0001, 0002, 0005, 0007, 0009, and 0010 are Accepted; ADR-0003, 0004, 0006, 0008, and 0011 are Proposed and must not be built on. Only the project owner accepts an ADR. If a task requires a decision that is listed as unresolved, ask; do not decide it yourself.
 
 ## Read before working
 
@@ -25,7 +25,7 @@ Architecture and research foundation. The foundation documents and the developme
 Use the names in `docs/DATA_MODEL.md` exactly. In particular:
 
 - **Segment**: immutable extracted text. **RetrievalChunk**: derived unit for search. **Passage**: exact span in one Segment, used as evidence. **AnswerCitation**: a statement in an AI answer citing a Passage or Observation. There is no `Citation` model.
-- Roles are Reader, Researcher, Reviewer, Administrator. There are no others.
+- Roles are Reader, Researcher, Reviewer, Administrator. There are no others, and all are authenticated. An **anonymous visitor** is not a role: it is an unauthenticated request, allowed only on the public research site.
 - Workers are the default worker, the fetch worker, and the parse worker.
 - State names are only those in `docs/DATA_MODEL.md` §4.
 - "Source tier" is the only name for a source's category. It is a neutral category, not a quality rating.
@@ -41,7 +41,11 @@ Use the names in `docs/DATA_MODEL.md` exactly. In particular:
 7. **Provenance records are append-only.** Artifacts, acquisition records, document reviews, rights determinations, extractions, extraction selections, segments, passages, dataset releases, observations, claim reviews, analysis runs, search runs, AI interaction records, audit events, and redaction records are never updated in place or deleted by application code. Corrections and status changes create new records. The **only** exception is the redaction procedure in `docs/DATA_MODEL.md` §7, which is Administrator-only, recorded, and limited to named record classes. Do not invent other exceptions.
 8. **Segments are never changed for retrieval.** Chunking, search-side text transformation, and embeddings live on RetrievalChunks.
 9. **Policy events are formal lifecycle events only**: adopted, amended, entered into force, expired, repealed. Implementation information goes through claims. Policy status is derived, never stored.
-10. **Every new dependency needs a written justification** in the PR: what it replaces, why the standard library or Django cannot do it, maintenance status, and license.
+10. **Interface.** Server-rendered Django templates, HTMX, and small targeted JavaScript (ADR-0010). No separate frontend application, no JavaScript build step, no Django REST Framework, and no API until a further owner decision. Only the `web` app handles HTTP: services and selectors never take or return request or response objects.
+11. **Interface language.** English only at launch. Internationalisation is enabled and every user-facing string is marked for translation. Do not add translations.
+12. **CI is GitHub Actions and is not deployment.** CI runs code checks only. Do not add deployment steps, production credentials, or image publishing to it; deployment is ADR-0008, which is Proposed.
+13. **Do not install Celery or any other job system.** That choice is made by a spike at the Phase 2 gate (ADR-0004).
+14. **Every new dependency needs a written justification** in the PR: what it replaces, why the standard library or Django cannot do it, maintenance status, and license.
 
 ## Coding standards
 
@@ -74,11 +78,13 @@ Use the names in `docs/DATA_MODEL.md` exactly. In particular:
 - Output from the fetch and parse workers is validated by trusted code before it is written.
 - Tasks that handle external input have bounded attempts recorded in PostgreSQL.
 - Stored files are never executed and never served inline with their original content type.
-- Document rights are checked before text is displayed, exported, or sent to an external provider.
+- Document rights are checked before text is displayed, exported, or sent to an external provider. Rights and authentication are separate checks: no role, including Administrator, gains a use the rights do not allow.
+- Three surfaces (ADR-0007): public research site, authenticated research workspace, restricted administration. Anonymous visitors only read approved, public material. They never submit sources, trigger ingestion, create claims, call the assistant, or see drafts or restricted text.
+- No public self-registration. Reviewer and Administrator accounts require TOTP.
 - No raw SQL built by string formatting. No `mark_safe` or `|safe` on content derived from documents or model output.
 - The Django admin must not offer add, change, or delete on provenance or integrity-governed models.
 - Secrets come from environment variables only. Never commit, log, or echo them. Never read `.env` files into your context.
-- Every endpoint declares its permission requirement explicitly. Default is deny.
+- Every view declares the access it requires: public, a named role, or administration. A view without a declaration is refused. Default is deny.
 
 ## AI safety requirements
 

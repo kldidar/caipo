@@ -3,6 +3,9 @@ name = "caipo"
 version = "0.0.0"
 description = "Central Asia AI Policy Observatory: research platform for AI policy and economic transformation in Central Asia"
 readme = "README.md"
+# Covers CAIPO's original software only. See docs/RIGHTS_AND_LICENSING.md.
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.14,<3.15"
 dependencies = [
     # Long-term-support series (ADR-0001, docs/ARCHITECTURE.md §6).

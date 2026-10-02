@@ -2,9 +2,33 @@
 
 ## Reporting a vulnerability
 
-Do not open a public issue for a security problem. **A private reporting channel has not yet been set up, although the repository is already public** (checked 2026-10-02: GitHub private vulnerability reporting is disabled). This is tracked as blocker B18 in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate) and is overdue. The intended channel is GitHub private vulnerability reporting plus a monitored contact address.
+**Report security problems privately through GitHub's private vulnerability reporting.** On the repository page, open the **Security** tab and choose **Report a vulnerability**. This creates a draft security advisory visible only to you and the maintainers.
+
+Do not put vulnerability details in a public issue, pull request, or discussion.
+
+If the "Report a vulnerability" button is not available, open a public issue that says only that you wish to report a security problem privately, with no details, and the maintainers will open a private channel. The project publishes no security email address.
 
 The repository currently contains documentation and a development environment only. No application is deployed.
+
+### What to include
+
+- What is affected: file, component, or configuration
+- How to reproduce it, or a proof of concept
+- What an attacker could achieve
+- Any suggested fix
+
+### Coordinated disclosure
+
+1. **Report** privately, as above.
+2. **Acknowledgement.** The maintainers confirm receipt in the advisory thread. This is a small research project without a staffed security team, so responses are best-effort and no response time is guaranteed.
+3. **Assessment.** The maintainers confirm or decline the report and tell you which, with reasons.
+4. **Fix.** A fix is prepared privately in the advisory's own fork, and the reporter is invited to review it.
+5. **Publication.** The fix is released and the advisory is published, with credit to the reporter unless they prefer otherwise.
+6. **Timing.** The project's target is to release a fix and publish the advisory within 90 days of a report. This is a target, not a guaranteed response time or a service-level commitment. Please do not disclose publicly until a fix is released or 90 days have passed since your report, whichever comes first. If the maintainers need longer, they will ask and explain why.
+
+### Scope
+
+In scope: the code and configuration in this repository, and any deployment operated by the project. Out of scope: third-party websites that CAIPO fetches documents from, and vulnerabilities in dependencies that are not exploitable through CAIPO, which should be reported to their own maintainers.
 
 ## Security posture in one paragraph
 
@@ -106,24 +130,41 @@ Detection of injection text is unreliable, so it is not the primary defence.
 
 ### Rights restrictions
 
-Each document version has recorded rights, set by a Reviewer. With no rights determination, everything except storage for review is denied.
+Each document version has recorded rights, set by a Reviewer. With no rights determination, the version is available only to the submitting Researcher and to Reviewers for the purpose of review, and every other use is denied.
+
+**Rights are enforced independently of authentication.** A signed-in user of any role, including an Administrator, gets no use that the rights do not allow, and a right gives nothing to a user who lacks the permission. Both checks run every time.
 
 | Use | Requires |
 |---|---|
-| Text sent to an external AI provider (synthesis, support check, hosted embedding or reranking) | Right to transmit to an external provider |
-| Quoted text shown to users | Right to display excerpts; otherwise the reference shows the locator without the text |
-| Full text or original file shown or downloaded | Right to display in full |
-| Text included in exports and data snapshots | Right to redistribute |
+| Text sent to an external AI provider (synthesis, support check, hosted embedding or reranking) | Provider transmission |
+| Quoted text shown on the public site | Public excerpt display; otherwise the reference shows the locator without the text |
+| Full text or original file shown or downloaded on the public site | Public full display |
+| Full text, or a quoted passage in an assistant answer, shown in the research workspace | Workspace display, and a role that permits it |
+| Text included in exports and data snapshots | Redistribute |
 
-The rights policy itself is undecided (blocker B7).
+The mechanism is described in [docs/RIGHTS_AND_LICENSING.md](docs/RIGHTS_AND_LICENSING.md). The rights policy itself, which decides what each kind of document is granted, is undecided (blocker B7, remaining part). The MIT License on the software grants nothing in third-party documents or data.
+
+### Access surfaces
+
+Decided in [ADR-0007](docs/adr/0007-authentication.md).
+
+| Surface | Who | Limits |
+|---|---|---|
+| Public research site | Anonymous visitors | Read-only; approved and public material only; throttled per client address |
+| Research workspace | Authenticated accounts by role | Per-account throttling and assistant quotas |
+| Administration | Administrators | TOTP required; non-default path; provenance models read-only |
+
+An anonymous visitor can never submit a source or URL, trigger ingestion or a fetch, create or review a claim, call the AI assistant, or see drafts, restricted documents, or text without a public display right. Every view declares the access it requires, and a view with no declaration is refused.
 
 ### Web application threats
 
 - Django's defaults for CSRF, session security, clickjacking protection, and SQL parameterisation are kept on. A strict Content Security Policy is applied.
 - Document-derived text and model output are always auto-escaped.
 - Permissions are checked in the service layer, deny by default.
-- Rate limits apply to login, AI questions, URL submission, and uploads.
-- **Multi-factor authentication is required for Administrator and Reviewer accounts.** The mechanism is to be chosen (ADR-0007).
+- Rate limits apply to public pages per client address, and to login, AI questions, URL submission, and uploads per account.
+- There is no public self-registration. Accounts are created by an Administrator.
+- The interface is server-rendered. HTMX is served from the application's own static files at a pinned version, with its script-evaluation features turned off. There is no API at launch (ADR-0010).
+- **Multi-factor authentication with TOTP is required for Administrator and Reviewer accounts.** Such an account cannot use its privileges until TOTP is enrolled (ADR-0007).
 - **Django admin.** Restricted to Administrators, on a non-default path. Models for provenance and integrity-governed records (artifacts, acquisition records, versions, reviews, rights, extractions, segments, passages, releases, observations, claims, evidence, claim reviews, analysis and search runs, AI interaction records, audit events, redaction records) are registered read-only: no add, change, or delete. All writes to them go through services. The database-level protection on append-only tables applies to the web process's role as well, so the admin cannot bypass it even through a defect. Admin write access is limited to operational data such as users and roles.
 
 ### Export safety

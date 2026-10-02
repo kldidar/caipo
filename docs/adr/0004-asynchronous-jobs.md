@@ -16,6 +16,8 @@ Fetching and parsing also need to run with different privileges from the web pro
 
 ## Decision (proposed)
 
+**The choice of job system is not made.** On 2026-10-02 the project owner moved it to the Phase 2 gate, to be settled by the spike described under Open points. Python stays at 3.14 and Celery is not installed. What follows is the working proposal that the spike will test, not a decision.
+
 Use Celery with Redis as the broker, with a narrow scope.
 
 - Separate queues and workers for fetch, parse, and default work, so each can run in its own security zone.
@@ -53,10 +55,15 @@ Redis is not used as a cache until a measurement shows a need for one. **AI budg
 
 ## Open points
 
-1. Acceptance of the fetch and parse queues as described depends on ADR-0011.
+1. Acceptance of the fetch and parse queues as described depends on ADR-0011. The two questions are settled by one spike before Phase 2 (blockers B4 and B21).
 2. **Python 3.14 support is not declared by Celery 5.6.3 or kombu 5.6.2**, which list support up to Python 3.13 (package metadata checked 2026-10-01). A one-off smoke test on the same day passed a message through Redis 8.10.2 on Python 3.14.4, which is not the same as upstream support. Celery is not yet in the lockfile. The owner must decide whether this is acceptable before Phase 2 (blocker B4). The Redis client is already capped below 6.5 in `pyproject.toml` because kombu requires it.
-
-The rest needs owner ratification only.
+3. **The spike must evaluate**, on the pinned Python version:
+   - a stable Celery release, and whether one that declares Python 3.14 support exists by then
+   - `django-tasks`
+   - Dramatiq
+   - another alternative if one is justified, such as a PostgreSQL-backed queue
+   - against each: the worker isolation requirements of ADR-0009 and ADR-0011; retry and redelivery behaviour, including a worker killed mid-task; broker permissions, including whether an isolated worker can be prevented from publishing; JSON-only task serialisation; declared and actual Python 3.14 support; and the security properties that follow from these
+4. If the spike selects a job system that does not use Redis, the Redis service in the development environment is reconsidered.
 
 ## Revisit when
 
