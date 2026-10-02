@@ -167,7 +167,7 @@ It must not require new tables or columns, new apps, or conditional code. This i
 
 Each phase has its own gate check: its blockers in §10 must be closed before it starts.
 
-**Current position (2026-10-02):** Phase 0 documents are committed. One part of Phase 1, the reproducible development environment (locked Python dependencies, lint, type, and test tooling, and local PostgreSQL and Redis services), was built on the project owner's instruction before the Phase 1 gate opened. It contains no application code. On 2026-10-02 the project owner made the Phase 1 decisions (§8, §10), and the Phase 1 gate is open. The rest of Phase 1 has not started.
+**Current position (2026-10-02):** Phase 0 documents are committed. One part of Phase 1, the reproducible development environment (locked Python dependencies, lint, type, and test tooling, and local PostgreSQL and Redis services), was built on the project owner's instruction before the Phase 1 gate opened. It contains no application code. On 2026-10-02 the project owner made the Phase 1 decisions (§8, §10), and the Phase 1 gate is open. The Django application skeleton followed: settings, the User foundation, health endpoints, structured logging, and the access-declaration rule. The rest of Phase 1 (CI, roles and the authentication workflows, TOTP, countries and institutions) has not started.
 
 ## 8. Decisions made and open
 
@@ -214,16 +214,17 @@ Defined by `pyproject.toml`, `uv.lock`, `.python-version`, `docker-compose.yml`,
 
 | Item | Command | Result on 2026-10-02 |
 |---|---|---|
-| Lockfile | `uv lock --check` | Up to date; 21 packages |
+| Lockfile | `uv lock --check` | Up to date; 35 packages |
 | Install | `uv sync --locked` | Succeeds on Python 3.14.4 |
-| Locked runtime versions | `uv pip list` | Django 5.2.17, psycopg 3.3.6 (binary), redis client 6.4.0 |
-| Locked tool versions | `uv pip list` | pytest 9.1.1, ruff 0.16.10, mypy 2.3.1 |
+| Locked runtime versions | `uv pip list` | Django 5.2.17, psycopg 3.3.6 (binary), redis client 6.4.0, argon2-cffi 25.1.0 |
+| Locked tool versions | `uv pip list` | pytest 9.1.1, pytest-django 4.14.0, ruff 0.16.10, mypy 2.3.1, django-stubs 5.2.9, import-linter 2.15 |
 | Lint | `uv run ruff check .` | Passes |
 | Formatting | `uv run ruff format --check .` | Passes |
-| Types | `uv run mypy` | Passes. It covers the only Python source that exists, `tests/test_dev_services.py`. |
+| Types | `uv run mypy .` | Passes on the application skeleton and its tests |
+| Import layers | `uv run lint-imports` | One layering contract, kept |
 | Dependency audit | `pip-audit` on the exported lockfile, run through `uvx` | No known vulnerabilities |
 | Services | `docker compose up -d --wait`, `docker compose ps` | PostgreSQL 18.6 and Redis 8.10.2 start and report healthy |
-| Service tests | `uv run --env-file <env> pytest` | 4 passed: each service accepts the configured credentials and rejects a client without them |
+| Tests | `uv run --env-file <env> pytest` | 102 passed: the four service tests (each service accepts the configured credentials and rejects a client without them) and the tests of the application skeleton, against PostgreSQL |
 
 The service checks were run with a temporary environment file holding generated passwords, which was deleted afterwards, together with the containers and the database volume. No `.env` file exists in the repository.
 
@@ -242,8 +243,9 @@ The service checks were run with a temporary environment file holding generated 
 
 - **Celery on Python 3.14.** Celery 5.6.3 and kombu 5.6.2 declare support up to Python 3.13 only. A one-off smoke test outside the project passed a message through Redis 8.10.2 on Python 3.14.4. That is not upstream support. Celery is not in the lockfile and will not be installed before the job-system spike at the Phase 2 gate (ADR-0004).
 - **redis client 6.4.0 on Python 3.14.** It does not declare 3.14 support. It is held below 6.5 because kombu requires that. The service tests pass with it.
-- **Dependencies not yet locked:** `pytest-django`, `django-stubs`, `import-linter`, the pgvector client, and every document-parsing library.
-- **Tools not yet set up:** `pre-commit`, `gitleaks`, `trivy`, and CI. No secret-scanning tool has been run; only a targeted search for the temporary verification passwords was done.
+- **django-stubs on Python 3.14.** django-stubs 5.2.9 does not declare Python 3.14 support. Type checking passes with it.
+- **Dependencies not yet locked:** the pgvector client and every document-parsing library.
+- **Tools not yet set up:** `pre-commit`, `gitleaks`, `trivy`, and CI. Secret scanning is not automated. gitleaks 8.30.1 was run once by hand on 2026-10-02, from its container image, over the files then awaiting commit and the four commits of history, and reported no leaks; nothing repeats that scan yet.
 - **GPU access from inside containers** has not been tested.
 - **Local model feasibility** has not been assessed. A GPU with 12227 MiB is present and the WSL memory allocation is adjustable, so no hardware limitation is asserted. The production server is not yet specified. This is part of blocker B14.
 - **Mermaid diagrams** have not been rendered locally (no Node toolchain). Their syntax was checked by script only.

@@ -8,6 +8,9 @@ license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.14,<3.15"
 dependencies = [
+    # Password hashing with Argon2, required by ADR-0007. Django supplies the
+    # hasher but not the algorithm.
+    "argon2-cffi>=25.1,<26",
     # Long-term-support series (ADR-0001, docs/ARCHITECTURE.md §6).
     "django>=5.2,<5.3",
     # Binary wheels keep local setup free of a C toolchain. Revisit for production images.
@@ -19,13 +22,18 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    # Kept on the same series as Django, so the types describe the installed version.
+    "django-stubs>=5.2,<5.3",
+    # Enforces the app layering of docs/ARCHITECTURE.md §2 (ADR-0001).
+    "import-linter>=2.15,<3",
     "mypy>=2.3,<3",
     "pytest>=9.1,<10",
+    "pytest-django>=4.14,<5",
     "ruff>=0.16,<0.17",
 ]
 
 [tool.uv]
-# No importable package exists yet; this project only manages an environment.
+# The application runs from the source tree and is never built or installed.
 package = false
 
 [tool.ruff]
@@ -36,17 +44,47 @@ line-length = 100
 select = ["E", "F", "W", "I", "B", "UP", "S"]
 
 [tool.ruff.lint.per-file-ignores]
-# pytest assertions are the point of a test.
-"tests/**" = ["S101"]
+# pytest assertions are the point of a test, and the credentials tests use are
+# synthetic values that protect nothing.
+"**/tests/**" = ["S101", "S105", "S106"]
+# Environment settings modules extend the base module with a star import,
+# which is how Django settings are layered.
+"caipo/config/settings/*.py" = ["F403"]
 
 [tool.mypy]
 python_version = "3.14"
 strict = true
-files = ["tests"]
+files = ["caipo", "tests", "manage.py"]
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+# The base module reads nothing from the environment, so type checking needs
+# no .env file.
+django_settings_module = "caipo.config.settings.base"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "-ra --strict-markers --strict-config"
+testpaths = ["tests", "caipo"]
+# --ds rather than the DJANGO_SETTINGS_MODULE option: the option gives way to
+# the environment variable, and .env sets that variable to the development
+# settings.
+addopts = "-ra --strict-markers --strict-config --ds=caipo.config.settings.testing"
 markers = [
     "services: needs the Docker Compose development services to be running",
+]
+
+[tool.importlinter]
+root_package = "caipo"
+
+[[tool.importlinter.contracts]]
+name = "App layering (docs/ARCHITECTURE.md §2): imports point only to lower layers"
+type = "layers"
+containers = ["caipo"]
+# Exhaustive: a new package under caipo fails this check until it is given a
+# layer, so no app can be added outside the layering.
+exhaustive = true
+layers = [
+    "config",
+    "web",
+    "accounts",
+    "core",
 ]

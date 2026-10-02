@@ -25,7 +25,7 @@ The toolchain is deliberately small. Versions are pinned in `pyproject.toml` and
 | Git hooks | `pre-commit` | Runs ruff and gitleaks locally |
 | CI | GitHub Actions | Approved by the project owner on 2026-10-02 as Phase 1 engineering tooling. Not configured yet. |
 
-**Installed and locked:** `uv`, `ruff`, `mypy`, `pytest`. **Not yet set up:** `django-stubs`, `pytest-django`, and `import-linter` (they need a Django project to act on and are added with it), `pip-audit` (run on demand through `uvx`, not yet in CI), `gitleaks`, `trivy`, `pre-commit`, and CI. Each is checked against the pinned Python version when added (blocker B4).
+**Installed and locked:** `uv`, `ruff`, `mypy`, `django-stubs`, `pytest`, `pytest-django`, and `import-linter`. **Not yet set up:** `pip-audit` (run on demand through `uvx`, not yet in CI), `gitleaks`, `trivy`, `pre-commit`, and CI. Each is checked against the pinned Python version when added (blocker B4).
 
 ### CI is not deployment
 

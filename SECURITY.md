@@ -8,7 +8,7 @@ Do not put vulnerability details in a public issue, pull request, or discussion.
 
 If the "Report a vulnerability" button is not available, open a public issue that says only that you wish to report a security problem privately, with no details, and the maintainers will open a private channel. The project publishes no security email address.
 
-The repository currently contains documentation and a development environment only. No application is deployed.
+The repository currently contains documentation, a development environment, and a Django application skeleton with no research functionality. No application is deployed.
 
 ### What to include
 
@@ -155,6 +155,8 @@ Decided in [ADR-0007](docs/adr/0007-authentication.md).
 | Administration | Administrators | TOTP required; non-default path; provenance models read-only |
 
 An anonymous visitor can never submit a source or URL, trigger ingestion or a fetch, create or review a claim, call the AI assistant, or see drafts, restricted documents, or text without a public display right. Every view declares the access it requires, and a view with no declaration is refused.
+
+Two operational endpoints, `/health/live/` and `/health/ready/`, are reachable without authentication so that a process supervisor can probe them. They return a fixed status value and no data. They are not part of the public research site. They are not throttled yet, and each readiness request opens a database connection; whether they are reachable from outside the deployment at all is settled with the deployment decision (ADR-0008, Proposed).
 
 ### Web application threats
 

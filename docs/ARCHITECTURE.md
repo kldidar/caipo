@@ -2,7 +2,7 @@
 
 Status: Draft for owner review · Last updated: 2026-10-02
 
-This document describes the target architecture. No part of it is implemented yet. Decisions are recorded in [adr/](adr/README.md). ADR-0001, 0002, 0005, 0007, 0009, and 0010 are Accepted; the others are Proposed and must not be built on. Where this document and an Accepted ADR differ, the ADR governs.
+This document describes the target architecture. Only the Phase 1 skeleton is implemented: the Django project, the User foundation in `accounts`, the access-declaration rule and health endpoints in `web`, and correlation IDs and JSON log formatting in `core`. The readiness endpoint checks the database only. Decisions are recorded in [adr/](adr/README.md). ADR-0001, 0002, 0005, 0007, 0009, and 0010 are Accepted; the others are Proposed and must not be built on. Where this document and an Accepted ADR differ, the ADR governs.
 
 ## 1. System context
 
