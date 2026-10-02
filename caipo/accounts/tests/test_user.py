@@ -134,7 +134,8 @@ def test_authentication_rejects_an_inactive_user() -> None:
 
 
 def test_there_are_no_staff_or_superuser_privileges() -> None:
-    field_names = {field.name for field in User._meta.get_fields()}
+    # Columns only: the relation from RoleEvent back to its user is not a field of the user.
+    field_names = {field.name for field in User._meta.concrete_fields}
 
     assert field_names == {
         "id",

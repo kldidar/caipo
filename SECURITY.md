@@ -158,6 +158,40 @@ An anonymous visitor can never submit a source or URL, trigger ingestion or a fe
 
 Two operational endpoints, `/health/live/` and `/health/ready/`, are reachable without authentication so that a process supervisor can probe them. They return a fixed status value and no data. They are not part of the public research site. They are not throttled yet, and each readiness request opens a database connection; whether they are reachable from outside the deployment at all is settled with the deployment decision (ADR-0008, Proposed).
 
+### Authorization as implemented
+
+What exists now, and what does not. Nothing here means authentication is complete. The decisions behind it are recorded in [ADR-0007](docs/adr/0007-authentication.md) and [ADR-0012](docs/adr/0012-authorization-and-role-event-integrity.md).
+
+**Implemented**
+
+- **Roles are records, not flags.** A role is held only because an append-only RoleEvent grants it and no later event revokes it. Each event names the acting user, the time, and a reason. There is no role field, no staff flag, and no superuser flag on the user, so there is nothing to overwrite silently.
+- **One place decides.** `caipo.accounts.authorization` holds the whole policy: four roles, five permissions, and which role holds which. `caipo.accounts.selectors.can` and `require_permission` apply it to an account. Views and services both call these; neither contains role logic.
+- **Views declare a permission, never a role.** `@requires(Permission.RESEARCH_REVIEW)` states the capability a view needs; only the policy knows which roles have it.
+- **Deny by default, at every step.** No role means no permission. An unknown role or permission means no. A view with no access declaration, or a malformed one, is refused. An anonymous visitor holds no permission and reaches only views declared public.
+- **Nothing from the browser is trusted.** The account comes from the server-side session and its roles from the database on every request. A role named in a parameter, header, cookie, or session value has no effect.
+- **Services check for themselves.** A service calls `require_permission` whatever the view has already checked, and it works without an HTTP request.
+- **Second factor.** Reviewer and Administrator roles confer nothing until the account has enrolled TOTP (ADR-0007 rule 4). No enrolment mechanism exists, so today these two roles are inert: nobody can review, and nobody can grant or revoke a role through the application. The lookup that answers "is this account enrolled" returns no, unconditionally. It reads no setting, environment variable, request, session, or database value, so there is nothing to configure and no bypass switch; tests prove each of these inputs has no effect.
+- **The test stand-in is test-only.** To exercise what Reviewer and Administrator accounts will be able to do, the test suite has one fixture, `mfa_enrolled`, in `caipo/accounts/tests/fixtures.py`. It replaces the enrolment lookup in the memory of the test process for the length of one test. It is not part of the application, and a test checks that no application module refers to it or can replace the lookup.
+- **Administrator is not a superuser.** It holds the two administrative permissions, to manage roles and to deactivate accounts, and no research permission. There is no role hierarchy: a person who needs administrative and research capabilities is granted both roles explicitly.
+- **Nobody changes their own roles.** Granting or revoking a role requires an authorised Administrator and a target who is a different user. The service refuses otherwise, and a database constraint refuses a role event whose actor is its own subject.
+- **There is always an Administrator.** The services refuse to revoke the Administrator role from, or to deactivate, the only active account that holds it. An Administrator may deactivate their own account only while another active Administrator remains; the only Administrator attempting it is refused by the same rule, with nothing changed.
+- **Role history cannot be rewritten.** A PostgreSQL trigger on the role event table refuses every UPDATE and DELETE, for any database role and however the statement was sent (migration `accounts/0002_role_events`). The application also refuses, earlier and with a clearer error. Two things the trigger does not cover are left to database privileges, which are set with deployment (ADR-0008, Proposed): TRUNCATE, and dropping or disabling the trigger, which requires owning the table. The production application role must be able to do neither. In development the application connects as the database owner, so there the trigger guards against mistakes, not against the owner.
+- **Account changes happen one at a time.** Each role change or deactivation is one transaction holding a lock that admits one such change at a time, and the actor's permission is decided inside that lock. Two simultaneous changes cannot both be decided on the same earlier state, so they cannot leave the system without an Administrator or record a role twice.
+- **Deactivation is immediate.** A deactivated account keeps its role record and loses every permission on its next request.
+- **Refusals and role changes are logged** by account identifier, never by email address.
+
+**Not implemented**
+
+- Sign-in, sign-out, and any page a person can use. No one can authenticate through the application yet.
+- TOTP enrolment and verification, and therefore any working Reviewer or Administrator.
+- Creation of the first Administrator. Every role change requires an existing Administrator who is a different user, so the application cannot create the first one, and this is intended for now. The bootstrap procedure will be designed with the authentication and administration increment (ADR-0012). No environment variable, database flag, setting, or request parameter creates an Administrator, and none may be added as a shortcut.
+- Account creation by an Administrator, password reset, email verification, account recovery.
+- Throttling of sign-in, sign-in history, and assistant quotas.
+- The general audit record (AuditEvent) for authentication and administrative actions. Only role changes are recorded; a deactivation is logged, not yet recorded.
+- Reactivation of a deactivated account.
+- A least-privilege database role for the application (see "Role history cannot be rewritten" above).
+- The Django admin, which stays uninstalled until TOTP exists.
+
 ### Web application threats
 
 - Django's defaults for CSRF, session security, clickjacking protection, and SQL parameterisation are kept on. A strict Content Security Policy is applied.

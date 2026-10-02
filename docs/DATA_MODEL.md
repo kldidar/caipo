@@ -80,7 +80,9 @@ erDiagram
 
 ### 3.1 `accounts`
 
-**User**, roles, and permissions. Roles are Reader, Researcher, Reviewer, Administrator; all are authenticated. An anonymous visitor to the public research site is not a role and has no User record (ADR-0007).
+**User**, roles, and permissions. Roles are Reader, Researcher, Reviewer, Administrator; all are authenticated. An anonymous visitor to the public research site is not a role and has no User record (ADR-0007). A user may hold several roles. Permissions are not stored: which role holds which permission is a fixed table in code.
+
+**RoleEvent** (A-O). One change to a user's roles: user, role, event type (§4.7), acting user, reason, time. It is both the store of roles and their history: there is no current-role record to overwrite. The acting user is always recorded and is never the user whose role changes. Users referenced by a RoleEvent cannot be deleted. UPDATE and DELETE are refused by a database trigger as well as by the application. It records role changes only; the general AuditEvent below is not built yet.
 
 **AuditEvent** (A-O). Actor, action, object reference by type and public identifier (not a foreign key, because targets live in higher layers), time, details.
 
@@ -359,6 +361,10 @@ AnswerStatement uncertainty flags are not states. Their names and conditions are
 
 DatasetRelease (`imported`, `withdrawn`), AnalysisRun and SearchRun (`valid`, `invalidated`). The status is derived from the latest event.
 
+### 4.7 RoleEvent
+
+Event types: `granted`, `revoked`. A user holds a role when the latest RoleEvent for that user and that role is `granted`. Holding a role and being able to use it are different things: a deactivated account, and a Reviewer or Administrator account that has not enrolled TOTP, hold their roles on record and get nothing from them.
+
 ## 5. Conventions
 
 - Internal primary keys are database-generated integers. Records that may be cited from outside the system (documents, versions, passages, claims, releases, search runs) also carry a stable public identifier that never changes.
@@ -446,7 +452,7 @@ The retention period and the rights policy that trigger these are undecided (blo
 
 ## 9. Open questions
 
-1. How append-only is enforced at the database level: role privileges, triggers, or both. To be decided with the first provenance migration.
+1. How append-only is enforced at the database level: role privileges, triggers, or both. Decided for RoleEvent by the project owner on 2026-10-02 ([ADR-0012](adr/0012-authorization-and-role-event-integrity.md)): a trigger that refuses UPDATE and DELETE, created in the migration that creates the table (`accounts/0002_role_events`). Still open: whether every later append-only table follows the same pattern, and the least-privilege database roles that must deny TRUNCATE and changes to the trigger, which wait for the deployment decision (ADR-0008).
 2. Whether segments need a finer structural model for legal texts (article, part, clause) than a generic path. Depends on real documents (blocker B10).
 3. How tables inside documents are represented.
 4. Whether multi-country documents need more than a many-to-many link.

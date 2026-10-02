@@ -129,6 +129,37 @@ Both accept `GET` only and are reachable without signing in. Readiness does not 
 
 Logs are written to standard output as one JSON object per line, with `timestamp`, `level`, `logger`, `message`, and `correlation_id`. The start-up banner of `runserver` is printed by Django outside the logging system and is plain text.
 
+## Authorization
+
+Sign-in does not exist yet, so none of this is reachable through a browser. It is the layer that views and services are written against.
+
+**A view declares the access it requires**, outermost, with `public` or with `requires` and a permission. A view with no declaration answers 403.
+
+```python
+from caipo.accounts.selectors import Permission
+from caipo.web.access import public, requires
+
+
+@requires(Permission.WORKSPACE_READ)
+def some_workspace_page(request): ...
+```
+
+**A service checks for itself**, whatever the view has checked:
+
+```python
+from caipo.accounts import selectors
+
+selectors.require_permission(actor, selectors.Permission.ROLES_MANAGE)  # raises PermissionDenied
+if selectors.can(user, selectors.Permission.WORKSPACE_READ):
+    ...  # yes or no, never raises
+```
+
+Code asks for a permission, never for a role. Roles, permissions, and the table connecting them are in `caipo/accounts/authorization.py`; add a permission there only when a feature needs to tell two accounts apart. Roles change only through `caipo.accounts.services.grant_role` and `revoke_role`, each of which appends a RoleEvent, and accounts are deactivated through `deactivate_user`. These refuse an actor changing their own roles and any change that would leave no Administrator.
+
+Reviewer and Administrator roles confer nothing until TOTP exists ([SECURITY.md](../SECURITY.md), "Authorization as implemented"). In tests, the `user_with_roles` fixture (in `caipo/accounts/tests/fixtures.py`) creates synthetic users with roles, and the `mfa_enrolled` fixture stands in for enrolment. That fixture is test-only: it replaces a function inside the test process, and the application has no setting, variable, or input that does the same. Do not add one.
+
+Role events cannot be updated or deleted, by the application or by SQL: a database trigger refuses both. A test that needs a different role history adds events; it does not edit them.
+
 ## Tests and checks
 
 The services must be running for the tests.

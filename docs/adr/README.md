@@ -4,7 +4,7 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-Six ADRs were accepted by the project owner on 2026-10-02. Five remain Proposed; the last column says what stands between each of those and acceptance.
+Seven ADRs were accepted by the project owner on 2026-10-02. Five remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
@@ -19,6 +19,7 @@ Six ADRs were accepted by the project owner on 2026-10-02. Five remain Proposed;
 | [0009](0009-untrusted-content-handling.md) | Untrusted content handling: principles | Accepted | — |
 | [0010](0010-web-interface-and-api.md) | Web interface and API style | Accepted | — |
 | [0011](0011-worker-isolation-mechanism.md) | Worker isolation mechanism | Proposed | Spike (B21) |
+| [0012](0012-authorization-and-role-event-integrity.md) | Authorization and role event integrity | Accepted | — |
 
 ## Statuses
 

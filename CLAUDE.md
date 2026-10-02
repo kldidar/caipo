@@ -8,7 +8,7 @@ CAIPO (Central Asia AI Policy Observatory) is the research platform for the stud
 
 ## Current phase
 
-Phase 1, project skeleton. The foundation documents, the development environment (`docs/DEVELOPMENT.md`), and the Django application skeleton (settings, the User foundation, health endpoints, structured logging, the access-declaration rule) are committed; there is no domain code. **Do not write application code until the architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY for the phase you are working on.** The gate is READY for Phase 1 only. ADR-0001, 0002, 0005, 0007, 0009, and 0010 are Accepted; ADR-0003, 0004, 0006, 0008, and 0011 are Proposed and must not be built on. Only the project owner accepts an ADR. If a task requires a decision that is listed as unresolved, ask; do not decide it yourself.
+Phase 1, project skeleton. The foundation documents, the development environment (`docs/DEVELOPMENT.md`), and the Django application skeleton (settings, the User foundation, roles and the authorization layer, health endpoints, structured logging, the access-declaration rule) are committed; there is no sign-in, no TOTP, and no domain code. **Do not write application code until the architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY for the phase you are working on.** The gate is READY for Phase 1 only. ADR-0001, 0002, 0005, 0007, 0009, 0010, and 0012 are Accepted; ADR-0003, 0004, 0006, 0008, and 0011 are Proposed and must not be built on. Only the project owner accepts an ADR. If a task requires a decision that is listed as unresolved, ask; do not decide it yourself.
 
 ## Read before working
 

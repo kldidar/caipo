@@ -61,6 +61,8 @@ The access model was decided by the project owner on 2026-10-02 and is recorded 
 | Reviewer | Researcher, plus approve documents, set rights, change a source's allowed hosts, approve or return claims. Requires TOTP. |
 | Administrator | Manage users, configuration, and operational tasks; perform redaction. Requires TOTP. |
 
+An account may hold several roles. The roles are not a hierarchy in the software: each role's permissions are listed in full, with "Researcher: Reader, plus" expressed by the Researcher role holding the Reader's permissions as well. Administrator holds no research permission; an Administrator who also does research is granted a research role too. Nobody can grant or revoke their own roles: a role change needs an authorised Administrator and a different target user. The only active Administrator cannot have that role revoked or their account deactivated. These rules are recorded in [ADR-0012](adr/0012-authorization-and-role-event-integrity.md). Creating the first Administrator is not implemented yet. A Reviewer or Administrator role gives nothing until the account has enrolled TOTP, and TOTP is not implemented, so those two roles are inert for now ([SECURITY.md](../SECURITY.md), "Authorization as implemented").
+
 Permissions are deny-by-default. Document rights are enforced independently of authentication: no role, including Administrator, gains a use of a document that its recorded rights do not allow ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md)).
 
 ## 4. Functional requirements
@@ -167,11 +169,11 @@ It must not require new tables or columns, new apps, or conditional code. This i
 
 Each phase has its own gate check: its blockers in §10 must be closed before it starts.
 
-**Current position (2026-10-02):** Phase 0 documents are committed. One part of Phase 1, the reproducible development environment (locked Python dependencies, lint, type, and test tooling, and local PostgreSQL and Redis services), was built on the project owner's instruction before the Phase 1 gate opened. It contains no application code. On 2026-10-02 the project owner made the Phase 1 decisions (§8, §10), and the Phase 1 gate is open. The Django application skeleton followed: settings, the User foundation, health endpoints, structured logging, and the access-declaration rule. The CI workflow followed (`.github/workflows/ci.yml`). The rest of Phase 1 (roles and the authentication workflows, TOTP, countries and institutions) has not started.
+**Current position (2026-10-02):** Phase 0 documents are committed. One part of Phase 1, the reproducible development environment (locked Python dependencies, lint, type, and test tooling, and local PostgreSQL and Redis services), was built on the project owner's instruction before the Phase 1 gate opened. It contains no application code. On 2026-10-02 the project owner made the Phase 1 decisions (§8, §10), and the Phase 1 gate is open. The Django application skeleton followed: settings, the User foundation, health endpoints, structured logging, and the access-declaration rule. The CI workflow followed (`.github/workflows/ci.yml`), and then roles and the authorization layer. The rest of Phase 1 (sign-in and the other authentication workflows, TOTP, creation of the first Administrator, audit events, countries and institutions) has not started.
 
 ## 8. Decisions made and open
 
-Decisions are recorded as ADRs in [adr/](adr/README.md). Six were accepted by the project owner on 2026-10-02. Five remain Proposed and must not be built on; the last column says what each still needs.
+Decisions are recorded as ADRs in [adr/](adr/README.md). Seven were accepted by the project owner on 2026-10-02. Five remain Proposed and must not be built on; the last column says what each still needs.
 
 | ADR | Topic | Status | Needs |
 |---|---|---|---|
@@ -186,6 +188,7 @@ Decisions are recorded as ADRs in [adr/](adr/README.md). Six were accepted by th
 | 0009 | Untrusted content handling: principles | Accepted | — |
 | 0010 | Web interface and API style | Accepted | — |
 | 0011 | Worker isolation mechanism | Proposed | Spike (B21) |
+| 0012 | Authorization and role event integrity | Accepted | — |
 
 ## 9. Environment baseline
 
