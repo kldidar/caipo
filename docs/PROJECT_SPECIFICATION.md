@@ -192,6 +192,7 @@ Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by t
 | 0013 | Authentication core and first-Administrator bootstrap | Accepted | — |
 | 0014 | TOTP multi-factor authentication and authentication assurance | Accepted | — (amended on 2026-10-03 for approval of privileged enrolment; key management in production waits for ADR-0008) |
 | 0015 | Account lifecycle, provisioning by an Administrator, and email verification | Accepted | — (the email delivery service in production waits for ADR-0008) |
+| 0016 | Password reset by email | Accepted | — (accepted on 2026-10-03 before its implementation, which has not started; the email delivery service in production waits for ADR-0008) |
 
 ## 9. Environment baseline
 
