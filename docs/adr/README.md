@@ -23,7 +23,7 @@ Nine ADRs were accepted by the project owner on 2026-10-02, and ADR-0015 and ADR
 | [0013](0013-authentication-core-and-first-administrator-bootstrap.md) | Authentication core and first-Administrator bootstrap | Accepted | — |
 | [0014](0014-totp-mfa-and-authentication-assurance.md) | TOTP multi-factor authentication and authentication assurance | Accepted | — (amended on 2026-10-03: enrolment for Reviewer and Administrator accounts needs an Administrator's approval, and the first Administrator's second factor is set up by the bootstrap; key management in production waits for ADR-0008) |
 | [0015](0015-account-lifecycle-and-email-verification.md) | Account lifecycle, provisioning by an Administrator, and email verification | Accepted | — (the email delivery service in production waits for ADR-0008) |
-| [0016](0016-password-reset.md) | Password reset by email | Accepted | — (accepted before its implementation, which has not started; the email delivery service in production waits for ADR-0008) |
+| [0016](0016-password-reset.md) | Password reset by email | Accepted | — (accepted before its implementation, which followed; the email delivery service in production waits for ADR-0008) |
 
 ## Statuses
 

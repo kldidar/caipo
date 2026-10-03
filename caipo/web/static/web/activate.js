@@ -1,7 +1,8 @@
-// Moves the activation code from the part of the address after "#" into the
-// form, and removes it from the address bar and the history entry. A browser
-// never sends that part to a server, so the code reaches the server only in
-// the body of the form, by POST.
+// Moves the code of a message, an activation code or a password reset code,
+// from the part of the address after "#" into the form of the page that
+// loads this script, and removes it from the address bar and the history
+// entry. A browser never sends that part to a server, so the code reaches
+// the server only in the body of the form, by POST.
 (function () {
   "use strict";
   var field = document.getElementById("id_token");

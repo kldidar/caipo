@@ -182,8 +182,8 @@ What exists now, and what does not. Nothing here means authentication is complet
 
 **Not implemented**
 
-- Password reset and account recovery. Changing an account's email address.
-- **Sending email in production.** No delivery service is configured, so there an account can be created and its verification message cannot be sent (see "Account lifecycle as implemented").
+- Account recovery. Changing an account's email address. Password reset by email is implemented ([ADR-0016](docs/adr/0016-password-reset.md)); it changes a password and recovers nothing else.
+- **Sending email in production.** No delivery service is configured, so there an account can be created and its verification message cannot be sent (see "Account lifecycle as implemented"), and a password reset can be asked for and its message cannot be sent.
 - Recovery from a lost second factor: no recovery codes and no administrator-assisted reset (see below).
 - Pages for role administration and for disabling and enabling accounts. Those services work for an Administrator with a verified second factor; no page calls them yet.
 - Assistant quotas.
@@ -258,7 +258,7 @@ This is the one second factor that is trusted without an Administrator's approva
 
 ### Account lifecycle as implemented
 
-How an account other than the first Administrator's comes to exist, how its owner verifies the email address and chooses a password, and how it is disabled and enabled. The decisions are in [ADR-0015](docs/adr/0015-account-lifecycle-and-email-verification.md). Password reset and account recovery are not implemented.
+How an account other than the first Administrator's comes to exist, how its owner verifies the email address and chooses a password, and how it is disabled and enabled. The decisions are in [ADR-0015](docs/adr/0015-account-lifecycle-and-email-verification.md). Password reset by email is implemented as decided in [ADR-0016](docs/adr/0016-password-reset.md), which states its controls and its residual risks; disabling an account also removes its password-reset token. Account recovery is not implemented.
 
 **States**
 

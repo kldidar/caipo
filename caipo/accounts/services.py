@@ -1,6 +1,6 @@
 """Write interface of the accounts app: signing in and out, the second factor
 and its approval, changing roles, creating, activating, disabling, and enabling
-accounts, and creating the first Administrator.
+accounts, resetting a forgotten password, and creating the first Administrator.
 
 Every account change here runs as one transaction and holds a lock that lets
 only one of them proceed at a time, so each decides on what the previous one
@@ -30,6 +30,7 @@ from django.db import connection, transaction
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
 from django.views.decorators.debug import sensitive_variables
 
 from caipo.accounts import selectors, totp
@@ -48,6 +49,7 @@ from caipo.accounts.models import (
     AuthenticationEvent,
     AuthenticationEventType,
     MfaChallenge,
+    PasswordReset,
     RoleEvent,
     RoleEventType,
     TotpDevice,
@@ -67,6 +69,10 @@ _IDENTIFIER_LOCK = 2
 _SECOND_FACTOR_LOCK = 3
 # One activation attempt at a time for a source.
 _ACTIVATION_LOCK = 4
+# One submission of a reset token at a time for a source. Taken before the
+# email address lock and the second-factor lock of the token's account, and
+# never after them.
+_PASSWORD_RESET_LOCK = 5
 
 # What stands for the network address in the one event that no request causes.
 BOOTSTRAP_SOURCE = "create_first_administrator command"
@@ -107,6 +113,26 @@ class ActivationOutcome(StrEnum):
 @dataclass(frozen=True)
 class ActivationResult:
     outcome: ActivationOutcome
+    # Set only when the outcome is PASSWORD_REFUSED: what the password
+    # validators said. They describe rules and never repeat the password.
+    password_errors: tuple[str, ...] = ()
+
+
+class PasswordResetOutcome(StrEnum):
+    RESET = "reset"
+    # An unknown, malformed, used, replaced, or lapsed token, and a token of
+    # an account that is not active, are one outcome on purpose: a caller
+    # cannot tell them apart, so neither can whoever is asking.
+    REFUSED = "refused"
+    THROTTLED = "throttled"
+    # The token is good and the password chosen is not acceptable. Nothing
+    # was changed, and the token can be used again with another password.
+    PASSWORD_REFUSED = "password_refused"  # noqa: S105 - names an outcome; it is not a credential
+
+
+@dataclass(frozen=True)
+class PasswordResetResult:
+    outcome: PasswordResetOutcome
     # Set only when the outcome is PASSWORD_REFUSED: what the password
     # validators said. They describe rules and never repeat the password.
     password_errors: tuple[str, ...] = ()
@@ -873,17 +899,179 @@ def activate_account(*, token: str, password: str, source: str) -> ActivationRes
     return ActivationResult(ActivationOutcome.ACTIVATED)
 
 
+@sensitive_variables("email", "token")
+def request_password_reset(*, email: str, source: str, reset_url: Callable[[str], str]) -> None:
+    """Take a request to reset the password of whichever account has this email address.
+
+    Needs no actor: whoever asks is not signed in. `source` is the network
+    address the request came from, as the caller established it. `reset_url`
+    turns a token into the address the message carries; the caller supplies
+    it, because only the caller knows the site's pages.
+
+    Returns nothing, whatever happened, so that a caller cannot tell an
+    address that has an account from one that has none, and so cannot whoever
+    is asking. Every request goes through the same steps: the locks, the two
+    counts, and one `password_reset_requested` event, which names the account
+    if the address belongs to one and holds the address and the source only
+    as keyed hashes.
+
+    Only for an account that is ACTIVE, verified email address or not, two
+    more things happen. In the same transaction, holding the account's row
+    lock, a new token replaces any earlier one, which stops working at once,
+    and is stored as a keyed hash with the time it lapses,
+    PASSWORD_RESET_LIFETIME from now. Then, outside that transaction, the
+    message is handed to the email boundary. An address with no account, an
+    account that awaits verification, and a disabled account get no token and
+    no message.
+
+    A request is throttled once PASSWORD_RESET_REQUEST_EMAIL_LIMIT requests
+    were made for the email address within PASSWORD_RESET_REQUEST_EMAIL_WINDOW
+    or PASSWORD_RESET_REQUEST_SOURCE_LIMIT from the source within
+    PASSWORD_RESET_REQUEST_SOURCE_WINDOW, whether or not the address has an
+    account. A throttled request is logged, stores nothing, and sends nothing.
+
+    Never raises for any email address. A message that could not be sent is
+    logged as an error, without the address, the token, or the link; the
+    token stays stored and nobody holds it, until the next request replaces
+    it or it lapses.
+    """
+    identifier = User.objects.normalize_email(email)
+    identifier_key = _key("identifier", identifier)
+    source_key = _key("source", source)
+    eligible: User | None = None
+    token = None
+
+    with transaction.atomic():
+        # One request at a time per source and per email address, as for
+        # sign-in and in the same order, so that requests sent together
+        # cannot all be counted as the first.
+        _lock_attempts(_SOURCE_LOCK, source_key)
+        _lock_attempts(_IDENTIFIER_LOCK, identifier_key)
+
+        throttled_by = _reset_request_throttled_by(identifier_key, source_key)
+        if throttled_by is not None:
+            logger.warning(
+                "Password reset request throttled",
+                extra={"event": "password_reset.request_throttled", "scope": throttled_by},
+            )
+            return
+
+        # Locked, as disabling locks it: the status decides, and a disabling
+        # of the same account must not run alongside.
+        known = User.objects.select_for_update().filter(email=identifier).first()
+        _record(AuthenticationEventType.PASSWORD_RESET_REQUESTED, known, identifier_key, source_key)
+        if known is not None and known.status == AccountStatus.ACTIVE:
+            eligible = known
+            token = _issue_password_reset(known)
+
+    # The same line for every request: what is logged does not tell an
+    # address with an account from one without.
+    logger.info("Password reset requested", extra={"event": "password_reset.requested"})
+    if eligible is not None and token is not None:
+        _send_password_reset(eligible, reset_url(token))
+
+
+@sensitive_variables("token", "password")
+def reset_password(*, token: str, password: str, source: str) -> PasswordResetResult:
+    """Replace the password of the account a reset token was sent to.
+
+    `token` is what was sent to the account's email address. It decides which
+    account's password is set; nothing else does. `source` is the network
+    address the submission came from, as the caller established it.
+
+    Preconditions for RESET: submissions from the source are not throttled,
+    the token is the account's current one and has not lapsed, the account is
+    ACTIVE, and the password passes the password validators. Side effects
+    when RESET, in one transaction that holds the lock on the account's email
+    address that a sign-in holds, the account's second-factor lock, and the
+    account's row lock: the password is set, the token is removed, so it
+    cannot be used again, every pending second-factor challenge of the
+    account is removed, and `password_reset_succeeded` is recorded. A sign-in
+    for the account therefore runs wholly before the reset, and loses its
+    challenge, or wholly after it, and needs the new password.
+
+    Nothing else is touched: not the account's status, email verification,
+    roles, second factor or its approval, nor the counts that throttle
+    sign-in and second-factor codes. Nobody is signed in and no session is
+    created; sessions established under the old password stop being
+    recognised because the password they were bound to has changed.
+
+    Never raises for a bad token or password. Returns REFUSED for a token
+    that is unknown, malformed, used, replaced, or lapsed, or whose account
+    is not active, and records `password_reset_failed`, naming the account
+    only if the token is that account's current one. Returns THROTTLED,
+    without looking the token up and without recording, once
+    PASSWORD_RESET_THROTTLE_FAILURES submissions from the source were refused
+    within PASSWORD_RESET_THROTTLE_WINDOW. Returns PASSWORD_REFUSED, with the
+    validators' messages, if the token is good and the password is not: then
+    nothing is changed or recorded, and the token can be used again.
+    """
+    source_key = _key("source", source)
+    token_key = _key("password_reset", token)
+    with transaction.atomic():
+        _lock_attempts(_PASSWORD_RESET_LOCK, source_key)
+        refused = AuthenticationEvent.objects.filter(
+            event_type=AuthenticationEventType.PASSWORD_RESET_FAILED,
+            source_key=source_key,
+            created_at__gte=timezone.now() - settings.PASSWORD_RESET_THROTTLE_WINDOW,
+        ).count()
+        if refused >= settings.PASSWORD_RESET_THROTTLE_FAILURES:
+            logger.warning("Password reset throttled", extra={"event": "password_reset.throttled"})
+            return PasswordResetResult(PasswordResetOutcome.THROTTLED)
+
+        user, reset = _pending_password_reset(token_key)
+        if (
+            user is None
+            or reset is None
+            or user.status != AccountStatus.ACTIVE
+            or timezone.now() >= reset.expires_at
+        ):
+            _record(
+                AuthenticationEventType.PASSWORD_RESET_FAILED,
+                user,
+                _key("identifier", user.email) if user is not None else "",
+                source_key,
+            )
+            logger.warning(
+                "Password reset refused",
+                extra={"event": "password_reset.refused", "user_id": user.pk if user else None},
+            )
+            return PasswordResetResult(PasswordResetOutcome.REFUSED)
+
+        try:
+            validate_password(password, user=user)
+        except ValidationError as error:
+            return PasswordResetResult(PasswordResetOutcome.PASSWORD_REFUSED, tuple(error.messages))
+
+        user.set_password(password)
+        user.save(update_fields=["password", "updated_at"])
+        reset.delete()
+        # A sign-in that passed the old password and awaits its code must not
+        # outlive that password. The device it would be answered with is not
+        # touched.
+        MfaChallenge.objects.filter(user=user).delete()
+        _record(
+            AuthenticationEventType.PASSWORD_RESET_SUCCEEDED,
+            user,
+            _key("identifier", user.email),
+            source_key,
+        )
+
+    logger.info("Password reset", extra={"event": "password_reset.succeeded", "user_id": user.pk})
+    return PasswordResetResult(PasswordResetOutcome.RESET)
+
+
 def disable_user(*, actor: AuthenticationContext, user: User) -> None:
     """Disable an account, which then holds no permission and cannot be signed in to.
 
     Preconditions: the actor holds the permission to disable accounts. An
     actor may disable their own account: that gives up power and gains none.
     Side effects, in one transaction: the account becomes DISABLED, in the
-    database and on the object passed in, any activation token it had is
-    removed, and `account_disabled` is recorded naming the actor. Its role
-    record and its history are kept. It takes effect on the account's next
-    request: its sessions stop being recognised and its password signs
-    nobody in. The change is logged.
+    database and on the object passed in, any activation token and any
+    password-reset token it had are removed, and `account_disabled` is
+    recorded naming the actor. Its role record and its history are kept. It
+    takes effect on the account's next request: its sessions stop being
+    recognised and its password signs nobody in. The change is logged.
 
     Raises PermissionDenied if the actor may not disable accounts,
     AccountChangeError if the account is already disabled, and
@@ -893,7 +1081,8 @@ def disable_user(*, actor: AuthenticationContext, user: User) -> None:
         _serialize_account_changes()
         selectors.require_permission(actor, Permission.ACCOUNTS_DEACTIVATE)
         # Read again, and locked: the object passed in may be out of date,
-        # and an activation of the same account must not run alongside.
+        # and an activation or a password reset of the same account must not
+        # run alongside.
         target = User.objects.select_for_update().get(pk=user.pk)
         if target.status == AccountStatus.DISABLED:
             raise AccountChangeError("The account is already disabled.")
@@ -902,6 +1091,7 @@ def disable_user(*, actor: AuthenticationContext, user: User) -> None:
         target.status = AccountStatus.DISABLED
         target.save(update_fields=["status", "updated_at"])
         AccountActivation.objects.filter(user=target).delete()
+        PasswordReset.objects.filter(user=target).delete()
         _record_account(AccountEventType.ACCOUNT_DISABLED, target, actor=actor.user)
 
     user.status = AccountStatus.DISABLED
@@ -1300,6 +1490,152 @@ def verification_body(*, url: str, lifetime_hours: int) -> str:
         "If you were not expecting this message, ignore it. Nothing happens unless the"
         " link is used.\n"
     ) % {"url": url, "hours": lifetime_hours}
+
+
+@sensitive_variables("token")
+def _issue_password_reset(user: User) -> str:
+    """Give the account a new reset token, replacing any earlier one, and return it.
+
+    The token is 256 random bits. Only its keyed hash is stored, with the
+    time it lapses. Must be called inside a transaction, holding the
+    account's row lock.
+    """
+    token = secrets.token_urlsafe(32)
+    now = timezone.now()
+    PasswordReset.objects.update_or_create(
+        user=user,
+        defaults={
+            "token_key": _key("password_reset", token),
+            "created_at": now,
+            "expires_at": now + settings.PASSWORD_RESET_LIFETIME,
+        },
+    )
+    return token
+
+
+def _pending_password_reset(token_key: str) -> tuple[User | None, PasswordReset | None]:
+    """Return the account and reset with this token key, both locked, or neither.
+
+    Four locks, in the order every other operation takes them. First the
+    lock on the account's email address that a sign-in holds from before it
+    checks the password until it has stored its challenge: a sign-in for this
+    account cannot then run alongside. Then the account's second-factor lock,
+    which whoever examines a code for a pending challenge holds: without it,
+    that operation would hold the challenge and wait for the account row
+    while this one held the account row and waited for the challenge. Then
+    the account row, as disabling locks it, and then the reset row, which is
+    read again under the locks: another request may have used or replaced it
+    meanwhile. Must be called inside a transaction.
+    """
+    found = (
+        PasswordReset.objects.filter(token_key=token_key)
+        .values_list("user_id", "user__email")
+        .first()
+    )
+    if found is None:
+        return None, None
+    user_id, email = found
+    _lock_attempts(_IDENTIFIER_LOCK, _key("identifier", email))
+    _lock_second_factor(user_id)
+    user = User.objects.select_for_update().get(pk=user_id)
+    reset = (
+        PasswordReset.objects.select_for_update()
+        .filter(token_key=token_key, user_id=user_id)
+        .first()
+    )
+    if reset is None:
+        return None, None
+    return user, reset
+
+
+def _reset_request_throttled_by(identifier_key: str, source_key: str) -> str | None:
+    """Return which limit refuses a new reset request now, "email" or "source", or None.
+
+    Every request that was recorded counts, whether or not its email address
+    had an account, and nothing clears either count early.
+    """
+    now = timezone.now()
+    requests = AuthenticationEvent.objects.filter(
+        event_type=AuthenticationEventType.PASSWORD_RESET_REQUESTED
+    )
+    for_email = requests.filter(
+        identifier_key=identifier_key,
+        created_at__gte=now - settings.PASSWORD_RESET_REQUEST_EMAIL_WINDOW,
+    ).count()
+    if for_email >= settings.PASSWORD_RESET_REQUEST_EMAIL_LIMIT:
+        return "email"
+    from_source = requests.filter(
+        source_key=source_key,
+        created_at__gte=now - settings.PASSWORD_RESET_REQUEST_SOURCE_WINDOW,
+    ).count()
+    if from_source >= settings.PASSWORD_RESET_REQUEST_SOURCE_LIMIT:
+        return "source"
+    return None
+
+
+@sensitive_variables("url")
+def _send_password_reset(user: User, url: str) -> None:
+    """Send the account its reset message.
+
+    A message that could not be sent is logged as an error, without its
+    content, and changes nothing else: the caller's answer is the same.
+    """
+    lifetime_hours = int(settings.PASSWORD_RESET_LIFETIME.total_seconds() // 3600)
+    try:
+        mail.deliver(
+            to=user.email,
+            subject=password_reset_subject(),
+            body=password_reset_body(url=url, lifetime_hours=lifetime_hours),
+        )
+    except mail.DeliveryError as error:
+        # No traceback: what a mail service says when it refuses a message
+        # can repeat the recipient's address.
+        logger.error(  # noqa: TRY400 - deliberately without the traceback, see above
+            "The password reset message could not be sent",
+            extra={
+                "event": "password_reset.message_not_sent",
+                "user_id": user.pk,
+                "cause": type(error.__cause__).__name__,
+            },
+        )
+        return
+    logger.info(
+        "Password reset message sent",
+        extra={"event": "password_reset.message_sent", "user_id": user.pk},
+    )
+
+
+def password_reset_subject() -> str:
+    """Return the subject of the password reset message."""
+    return _("Reset your CAIPO password")
+
+
+def password_reset_body(*, url: str, lifetime_hours: int) -> str:
+    """Return the text of the password reset message.
+
+    The same for every recipient apart from the link: it names no person, no
+    email address, and no role, and holds no password, secret, or anything
+    about what the account can reach.
+    """
+    lapses = ngettext(
+        "The link works once and stops working %(hours)d hour after this message was sent.",
+        "The link works once and stops working %(hours)d hours after this message was sent.",
+        lifetime_hours,
+    ) % {"hours": lifetime_hours}
+    return _(
+        "A password reset was requested for the account with this email address on"
+        " CAIPO, the Central Asia AI Policy Observatory.\n"
+        "\n"
+        "To choose a new password, open this link:\n"
+        "\n"
+        "%(url)s\n"
+        "\n"
+        "%(lapses)s Do not pass it on: whoever opens it first sets the password of the"
+        " account.\n"
+        "\n"
+        "If you were not expecting this message, ignore it. Nothing happens unless the"
+        " link is used.\n"
+    ) % {"url": url, "lapses": lapses}
 
 
 def _key(purpose: str, value: str) -> str:

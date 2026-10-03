@@ -26,6 +26,8 @@
       <p role="alert">{{ error }}</p>
     {% elif activated %}
       <p role="status">{% translate "Your account is active. Sign in with your email address and the password you chose." %}</p>
+    {% elif password_reset %}
+      <p role="status">{% translate "Your password has been changed. Sign in with your email address and the new password." %}</p>
     {% endif %}
     <form method="post" action="{% url 'login' %}" novalidate>
       {% csrf_token %}
@@ -39,5 +41,6 @@
       {% endfor %}
       <button type="submit">{% translate "Sign in" %}</button>
     </form>
+    <p><a href="{% url 'password-reset' %}">{% translate "Forgotten your password?" %}</a></p>
   {% endif %}
 {% endblock %}

@@ -5,6 +5,7 @@ from django.db import IntegrityError, connection, models, transaction
 
 from caipo.accounts.models import (
     DECISION_EVENT_TYPES,
+    USERLESS_EVENT_TYPES,
     AppendOnlyError,
     AuthenticationEvent,
     AuthenticationEventType,
@@ -15,6 +16,9 @@ pytestmark = [pytest.mark.services, pytest.mark.django_db]
 
 APPEND_ONLY = "accounts_authenticationevent is append-only"
 KEY = "0" * 64
+# What was submitted may belong to no account: an email address at sign-in or
+# in a reset request, and a reset token (ADR-0013, ADR-0016).
+MAY_NAME_NOBODY = ["login_failure", "password_reset_requested", "password_reset_failed"]
 
 
 @pytest.fixture
@@ -62,6 +66,9 @@ def test_the_event_types_are_exactly_these() -> None:
         "mfa_enrollment_approved",
         "mfa_enrollment_rejected",
         "mfa_device_replaced",
+        "password_reset_requested",
+        "password_reset_succeeded",
+        "password_reset_failed",
     ]
 
 
@@ -140,11 +147,15 @@ def test_the_application_refuses_changes_before_the_database_is_asked(
     assert AuthenticationEvent.objects.get(pk=event.pk).event_type == "login_success"
 
 
+def test_the_events_that_may_name_nobody_are_exactly_these() -> None:
+    assert list(USERLESS_EVENT_TYPES) == MAY_NAME_NOBODY
+
+
 @pytest.mark.parametrize(
     "event_type",
-    [value for value in AuthenticationEventType.values if value != "login_failure"],
+    [value for value in AuthenticationEventType.values if value not in MAY_NAME_NOBODY],
 )
-def test_the_database_rejects_anything_but_a_sign_in_failure_without_a_user(
+def test_the_database_rejects_any_other_event_without_a_user(
     event_type: str,
 ) -> None:
     # A decision names its actor, so that only the missing user is at fault.
@@ -164,15 +175,28 @@ def test_the_database_rejects_anything_but_a_sign_in_failure_without_a_user(
         )
 
 
-def test_the_database_accepts_a_failure_without_a_user() -> None:
+@pytest.mark.parametrize("event_type", MAY_NAME_NOBODY)
+def test_the_database_accepts_a_failure_or_a_reset_request_without_a_user(event_type: str) -> None:
     AuthenticationEvent.objects.create(
-        event_type=AuthenticationEventType.LOGIN_FAILURE,
-        user=None,
-        identifier_key=KEY,
-        source_key=KEY,
+        event_type=event_type, user=None, identifier_key=KEY, source_key=KEY
     )
 
     assert AuthenticationEvent.objects.get().user is None
+
+
+@pytest.mark.parametrize(
+    "event_type",
+    ["password_reset_requested", "password_reset_succeeded", "password_reset_failed"],
+)
+def test_a_password_reset_event_can_name_its_account_and_never_an_actor(
+    user: User, event_type: str
+) -> None:
+    stored = AuthenticationEvent.objects.create(
+        event_type=event_type, user=user, identifier_key=KEY, source_key=KEY
+    )
+
+    assert (stored.user, stored.actor) == (user, None)
+    assert event_type not in DECISION_EVENT_TYPES
 
 
 def test_the_database_rejects_an_unknown_event_type(user: User) -> None:

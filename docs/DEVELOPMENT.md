@@ -210,6 +210,27 @@ The limits and the lifetime are `ACCOUNT_ACTIVATION_*` in `caipo/config/settings
 
 A new Reviewer or Administrator account, once activated, still has to turn on two-step verification with an Administrator's approval before the role gives it anything (see above).
 
+## Resetting a forgotten password
+
+Decided in [ADR-0016](adr/0016-password-reset.md).
+
+Somebody who is not signed in opens `/password-reset/` (linked from the sign-in page) and gives an email address. The page answers the same way whether or not the address has an account. For an active account a message is written to `data/outbox/`, as for a new account:
+
+```sh
+ls -t data/outbox/ | head -1
+```
+
+The link is `http://127.0.0.1:8000/password-reset/confirm/#<token>`. Opening it shows a form with the token filled in; the person chooses a new password and is sent to `/login/`. Nobody is signed in by it. The link works once and for 1 hour, and asking again makes the earlier link stop working. An account that awaits verification or is disabled gets no message.
+
+| Page | Method | What it does |
+|---|---|---|
+| `/password-reset/` | GET, POST | Public. Takes an email address and, for an active account, sends the message. Always the same answer, with status 200, also when throttled. |
+| `/password-reset/confirm/` | GET, POST | Public. Sets the new password, given the token from the message. Status 429 once too many tokens from one source were refused. |
+
+A reset changes the password only. The second factor, its approval, and the roles are as they were; sessions and a pending sign-in established under the old password stop working; the limits on sign-in attempts and on second-factor codes are not cleared. A lost device is not recovered by it (see "A lost device" above).
+
+The limits and the lifetime are `PASSWORD_RESET_*` in `caipo/config/settings/base.py`: 5 requests an hour for one email address, 20 requests in 15 minutes from one source, and 10 refused tokens in 15 minutes from one source. In production no email service is configured yet (ADR-0008), so there a reset can be asked for and its message cannot be sent.
+
 ## Authorization
 
 No page uses this yet apart from the sign-in pages, which are public, and the second-factor pages. It is the layer that views and services are written against.

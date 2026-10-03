@@ -121,6 +121,25 @@ ACCOUNT_ACTIVATION_LIFETIME = timedelta(hours=48)
 ACCOUNT_ACTIVATION_THROTTLE_WINDOW = timedelta(minutes=15)
 ACCOUNT_ACTIVATION_THROTTLE_FAILURES = 10
 
+# Password reset (ADR-0016). Repository-versioned like the limits above. The
+# names avoid Django's own PASSWORD_RESET_TIMEOUT, which belongs to a token
+# generator this project does not use.
+
+# The message that lets the owner of an active account choose a new password
+# stops working after this time.
+PASSWORD_RESET_LIFETIME = timedelta(hours=1)
+# Reset requests for one email address, whether or not it has an account,
+# before further requests for it issue no token and send no message.
+PASSWORD_RESET_REQUEST_EMAIL_WINDOW = timedelta(hours=1)
+PASSWORD_RESET_REQUEST_EMAIL_LIMIT = 5
+# The same, for requests from one source.
+PASSWORD_RESET_REQUEST_SOURCE_WINDOW = timedelta(minutes=15)
+PASSWORD_RESET_REQUEST_SOURCE_LIMIT = 20
+# Refused reset tokens from one source before further submissions are refused
+# unexamined until earlier ones age out.
+PASSWORD_RESET_THROTTLE_WINDOW = timedelta(minutes=15)
+PASSWORD_RESET_THROTTLE_FAILURES = 10
+
 # The address of this site as its users reach it, scheme and host with no
 # path, for links in messages. It has no value here: each environment module
 # must supply it. It is never taken from a request, whose Host header a
