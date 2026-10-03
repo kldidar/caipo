@@ -7,6 +7,7 @@ from .base import *
 DEBUG = True
 
 SECRET_KEY = env.required("DJANGO_SECRET_KEY")
+TOTP_ENCRYPTION_KEY = env.encryption_key("TOTP_ENCRYPTION_KEY")
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
 

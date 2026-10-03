@@ -90,6 +90,6 @@ def test_only_the_health_and_sign_in_endpoints_are_public() -> None:
         if declared_access(entry.callback) == PUBLIC
     }
 
-    # Signing in must be reachable by someone who is not signed in, and signing
-    # out when not signed in must be harmless.
-    assert public_routes == {"health-live", "health-ready", "login", "logout"}
+    # Signing in, with or without a second factor, must be reachable by someone
+    # who is not signed in, and signing out when not signed in must be harmless.
+    assert public_routes == {"health-live", "health-ready", "login", "login-verify", "logout"}

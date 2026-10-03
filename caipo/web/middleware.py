@@ -8,6 +8,7 @@ from django.http import HttpRequest, HttpResponse
 from caipo.accounts import selectors
 from caipo.core.correlation import CORRELATION_ATTRIBUTE, correlation_scope
 from caipo.web.access import PUBLIC, declared_access
+from caipo.web.sessions import authentication_context
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,9 @@ class AccessDeclarationMiddleware:
 
     Deny by default: forgetting a declaration closes the view, it does not
     open it. Listed after AuthenticationMiddleware, which establishes who is
-    asking. The account comes from the server-side session, and its roles from
-    the database; nothing in the request can name a role.
+    asking. The account and its assurance come from the server-side session,
+    and its roles from the database; nothing in the request can name a role or
+    claim a second factor.
 
     This guards the HTTP boundary only. A service checks again for itself.
     """
@@ -62,7 +64,7 @@ class AccessDeclarationMiddleware:
             raise PermissionDenied
         if access == PUBLIC:
             return
-        if not selectors.can(request.user, access):
+        if not selectors.can(authentication_context(request), access):
             logger.warning(
                 "Refused a view to an account without the declared permission",
                 extra={

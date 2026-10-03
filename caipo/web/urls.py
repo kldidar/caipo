@@ -1,10 +1,31 @@
 from django.urls import path
 
-from caipo.web import authentication, health
+from caipo.web import authentication, health, second_factor, second_factor_requests
 
 urlpatterns = [
     path("health/live/", health.live, name="health-live"),
     path("health/ready/", health.ready, name="health-ready"),
     path("login/", authentication.sign_in, name="login"),
+    path("login/verify/", authentication.verify_second_factor, name="login-verify"),
     path("logout/", authentication.sign_out, name="logout"),
+    path("account/second-factor/", second_factor.overview, name="second-factor"),
+    path("account/second-factor/enrol/", second_factor.enrol, name="second-factor-enrol"),
+    path("account/second-factor/confirm/", second_factor.confirm, name="second-factor-confirm"),
+    path("account/second-factor/disable/", second_factor.disable, name="second-factor-disable"),
+    path("account/second-factor/replace/", second_factor.replace, name="second-factor-replace"),
+    path(
+        "administration/second-factor-requests/",
+        second_factor_requests.overview,
+        name="second-factor-requests",
+    ),
+    path(
+        "administration/second-factor-requests/<int:number>/approve/",
+        second_factor_requests.approve,
+        name="second-factor-request-approve",
+    ),
+    path(
+        "administration/second-factor-requests/<int:number>/reject/",
+        second_factor_requests.reject,
+        name="second-factor-request-reject",
+    ),
 ]

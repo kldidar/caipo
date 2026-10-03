@@ -160,19 +160,19 @@ Two operational endpoints, `/health/live/` and `/health/ready/`, are reachable w
 
 ### Authorization as implemented
 
-What exists now, and what does not. Nothing here means authentication is complete. The decisions behind it are recorded in [ADR-0007](docs/adr/0007-authentication.md) and [ADR-0012](docs/adr/0012-authorization-and-role-event-integrity.md).
+What exists now, and what does not. Nothing here means authentication is complete. The decisions behind it are recorded in [ADR-0007](docs/adr/0007-authentication.md), [ADR-0012](docs/adr/0012-authorization-and-role-event-integrity.md), and [ADR-0014](docs/adr/0014-totp-mfa-and-authentication-assurance.md).
 
 **Implemented**
 
 - **Roles are records, not flags.** A role is held only because an append-only RoleEvent grants it and no later event revokes it. Each event names the acting user, the time, and a reason. There is no role field, no staff flag, and no superuser flag on the user, so there is nothing to overwrite silently.
-- **One place decides.** `caipo.accounts.authorization` holds the whole policy: four roles, five permissions, and which role holds which. `caipo.accounts.selectors.can` and `require_permission` apply it to an account. Views and services both call these; neither contains role logic.
+- **One place decides.** `caipo.accounts.authorization` holds the whole policy: four roles, seven permissions, two assurance levels, and which role holds which permission at which assurance. `caipo.accounts.selectors.can` and `require_permission` apply it to an authentication context: an account and the assurance it is acting at. Views and services both call these; neither contains role logic or asks whether an account has a second factor.
 - **Views declare a permission, never a role.** `@requires(Permission.RESEARCH_REVIEW)` states the capability a view needs; only the policy knows which roles have it.
 - **Deny by default, at every step.** No role means no permission. An unknown role or permission means no. A view with no access declaration, or a malformed one, is refused. An anonymous visitor holds no permission and reaches only views declared public.
-- **Nothing from the browser is trusted.** The account comes from the server-side session and its roles from the database on every request. A role named in a parameter, header, cookie, or session value has no effect.
-- **Services check for themselves.** A service calls `require_permission` whatever the view has already checked, and it works without an HTTP request.
-- **Second factor.** Reviewer and Administrator roles confer nothing until the account has enrolled TOTP (ADR-0007 rule 4). No enrolment mechanism exists, so today these two roles are inert: nobody can review, and nobody can grant or revoke a role through the application. The lookup that answers "is this account enrolled" returns no, unconditionally. It reads no setting, environment variable, request, session, or database value, so there is nothing to configure and no bypass switch; tests prove each of these inputs has no effect.
-- **The test stand-in is test-only.** To exercise what Reviewer and Administrator accounts will be able to do, the test suite has one fixture, `mfa_enrolled`, in `caipo/accounts/tests/fixtures.py`. It replaces the enrolment lookup in the memory of the test process for the length of one test. It is not part of the application, and a test checks that no application module refers to it or can replace the lookup.
-- **Administrator is not a superuser.** It holds the two administrative permissions, to manage roles and to deactivate accounts, and no research permission. There is no role hierarchy: a person who needs administrative and research capabilities is granted both roles explicitly.
+- **Nothing from the browser is trusted.** The account and its assurance come from the server-side session, and its roles from the database, on every request. A role or a verified second factor named in a parameter, header, or cookie has no effect.
+- **Services check for themselves.** A service calls `require_permission` whatever the view has already checked, and it works without an HTTP request. It is given the acting context, never a bare account: an account passed without a context holds no permission, so a caller that bypasses HTTP cannot obtain a privileged operation without the assurance it requires.
+- **Second factor.** Reviewer and Administrator roles confer their permissions only to a sign-in that verified a TOTP code from the account's active, trusted second factor (ADR-0007 rule 4, ADR-0014). A second factor is trusted when an Administrator approved its enrolment, or when the first-Administrator bootstrap established it. On a password alone these roles allow one thing, managing the account's own second factor, so that the account can ask for an enrolment. The password cannot complete one. See "Multi-factor authentication as implemented" below.
+- **Nothing stands in for the second factor in tests.** The earlier test-only fixture that replaced the enrolment lookup is gone, with the lookup. Tests give an account a real device, encrypted with the real cipher, and either compute real codes or use the context that the verification service returns for that device. The authorization decision is never replaced.
+- **Administrator is not a superuser.** It holds the three administrative permissions, to manage roles, to deactivate accounts, and to approve the second-factor enrolment of another account, the permission every role has to manage its own second factor, and no research permission. There is no role hierarchy: a person who needs administrative and research capabilities is granted both roles explicitly.
 - **Nobody changes their own roles.** Granting or revoking a role requires an authorised Administrator and a target who is a different user. The service refuses otherwise, and a database constraint refuses a role event whose actor is its own subject.
 - **There is always an Administrator.** The services refuse to revoke the Administrator role from, or to deactivate, the only active account that holds it. An Administrator may deactivate their own account only while another active Administrator remains; the only Administrator attempting it is refused by the same rule, with nothing changed.
 - **Role history cannot be rewritten.** A PostgreSQL trigger on the role event table refuses every UPDATE and DELETE, for any database role and however the statement was sent (migration `accounts/0002_role_events`). The application also refuses, earlier and with a clearer error. Two things the trigger does not cover are left to database privileges, which are set with deployment (ADR-0008, Proposed): TRUNCATE, and dropping or disabling the trigger, which requires owning the table. The production application role must be able to do neither. In development the application connects as the database owner, so there the trigger guards against mistakes, not against the owner.
@@ -182,23 +182,24 @@ What exists now, and what does not. Nothing here means authentication is complet
 
 **Not implemented**
 
-- TOTP enrolment and verification, and therefore any working Reviewer or Administrator. The first Administrator can be created and can sign in, and still cannot manage roles or accounts.
 - Account creation by an Administrator, so the first Administrator is the only account the application can create. Password reset, email verification, account recovery.
+- Recovery from a lost second factor: no recovery codes and no administrator-assisted reset (see below).
+- Pages for role administration. The role services work for an Administrator with a verified second factor; no page calls them yet.
 - Assistant quotas.
 - The general audit record (AuditEvent) for administrative actions. Role changes and sign-ins are recorded; a deactivation is logged, not yet recorded.
 - Reactivation of a deactivated account.
 - A least-privilege database role for the application (see "Role history cannot be rewritten" above).
-- The Django admin, which stays uninstalled until TOTP exists.
+- The Django admin. It is a later increment of its own (ADR-0007 rule 8).
 
 ### Authentication as implemented
 
-Sign-in with an email address and a password, on Django's own authentication and session machinery. The decisions are in [ADR-0013](docs/adr/0013-authentication-core-and-first-administrator-bootstrap.md). Multi-factor authentication, account creation, email verification, password reset, and account recovery are not implemented; they are later increments. Nothing here is a statement about production deployment.
+Sign-in with an email address and a password, on Django's own authentication and session machinery, followed by a TOTP code for accounts that have a second factor. The decisions are in [ADR-0013](docs/adr/0013-authentication-core-and-first-administrator-bootstrap.md) and [ADR-0014](docs/adr/0014-totp-mfa-and-authentication-assurance.md). Account creation, email verification, password reset, and account recovery are not implemented; they are later increments. Nothing here is a statement about production deployment.
 
 **Signing in and out**
 
 - **One answer for every refusal.** A wrong password, an unknown email address, and a deactivated account get the same page, the same status, and the same log line. Nothing tells the three apart, including throttling, which behaves the same whether or not an account exists.
 - **Credentials only by POST, with a CSRF token.** Signing out is POST-only with a CSRF token too, so a link or an image cannot sign anyone out. It takes no destination.
-- **The session key is replaced on sign-in**, so a key known beforehand is worth nothing afterwards, and the session is deleted on the server on sign-out. A deactivated account, or one whose password changes, loses its sessions on the next request.
+- **The session key is replaced on sign-in**, so a key known beforehand is worth nothing afterwards, and the session is deleted on the server on sign-out. For an account with a second factor it is replaced twice: when the password is accepted and again when the code is. A deactivated account, or one whose password changes, loses its sessions on the next request.
 - **After sign-in, only a path on this site is followed.** Any other destination is ignored.
 - **Passwords are never logged, stored in an event, or sent back in a page.** Log lines name an account by identifier only, and a refusal names nobody.
 
@@ -212,7 +213,7 @@ Sign-in with an email address and a password, on Django's own authentication and
 | `SameSite` | `Lax` for both cookies | Same |
 | Lifetime | Until the browser closes, and at most 12 hours on the server | Same |
 
-**Sign-in records.** Each sign-in, refused sign-in, and sign-out is an AuthenticationEvent: type, time, the account if the email address belongs to one, and the request's correlation ID. The table is append-only and protected by a database trigger in the same way as role events. It holds no password, password hash, session identifier, header, or address. What was typed as the email address, and where the request came from, are stored only as keyed hashes, because people type passwords into the email field. A refused sign-in for an address that has no account names nobody.
+**Sign-in records.** Each sign-in, refused sign-in, sign-out, and change to a second factor is an AuthenticationEvent: type, time, the account if the email address belongs to one, and the request's correlation ID. The table is append-only and protected by a database trigger in the same way as role events. It holds no password, password hash, second-factor code or secret, challenge token, session identifier, header, or address. What was typed as the email address, and where the request came from, are stored only as keyed hashes, because people type passwords into the email field. A refused sign-in for an address that has no account names nobody.
 
 **Brute-force protection the application provides**
 
@@ -247,12 +248,98 @@ python manage.py create_first_administrator
 
 - It works once. If any Administrator role event exists it refuses. The database allows a role event without an acting user only if it grants the Administrator role, and allows only one such event, ever.
 - It must be run by a person at a terminal. It asks for the email address, the password twice without showing it, and a phrase to be typed out as confirmation.
+- **It sets up the account's second factor before the account exists.** It writes a new TOTP key to the terminal, once, and asks for a code from the authenticator application that was given it. Only when a right code is typed are the account, its role event, and its second factor created, together, with the second factor active and trusted. After three codes that are not accepted the command ends having created nothing, and can be run again. It refuses to run unless its output is a terminal as well as its input, so the key is not written to a pipe or a file.
 - It has no option for an email address or password and no non-interactive mode, and it reads no credential from the environment.
-- The password must pass the password validators. The account and its role event are created together or not at all.
+- The password must pass the password validators. The account, its role event, and its second factor are created together or not at all.
 - The role event records that it was made by this command and the operating-system account that ran it, taken from the process and not from an environment variable.
 - No web request, header, cookie, setting, environment variable, or database value creates an Administrator, nothing else in the application calls the bootstrap, and the role services refuse a change that names no actor. There is no second way to run this once it has been used.
 
-The Administrator role still grants nothing until TOTP exists and the account has enrolled. The first Administrator can sign in, holds the role on record, and can do nothing administrative. There is no production bypass of this.
+This is the one second factor that is trusted without an Administrator's approval, because no Administrator exists who could give it (ADR-0014, as amended). The first Administrator never exists without a verified second factor: its password alone signs nobody in, and the Administrator role grants nothing until a sign-in has been verified with a code from the authenticator set up at the terminal. No temporary permission is granted, and there is no bypass, on the web or anywhere else.
+
+### Multi-factor authentication as implemented
+
+TOTP as a second factor, and an explicit record of how strongly each sign-in was proved. The decisions are in [ADR-0014](docs/adr/0014-totp-mfa-and-authentication-assurance.md). **This is not a statement that multi-factor authentication is complete for a production deployment**: how the encryption key is stored, supplied, backed up, and rotated belongs to ADR-0008, which is Proposed.
+
+**Assurance**
+
+- **Two levels.** `PASSWORD_AUTHENTICATED` and `MFA_VERIFIED`. Every authorization decision is made about an authentication context: the account and the level it is acting at.
+- **A verified second factor is never inferred.** Not from a role, not from a database flag, and not from anything in the request. It counts only if the server-side session notes the device a code was verified against **and** that device is, in the database at that moment, the same account's active second factor **and** that second factor is trusted. No one of these alone grants anything.
+- **Trust comes from an Administrator, not from the password.** A second factor that an account enrolled on its password alone is asked for at sign-in and proves nothing more than the password. For Reader and Researcher that is all it needs to do. For Reviewer and Administrator it is not enough: their second factor counts only if an Administrator approved its enrolment, or the bootstrap established it.
+- **Reviewer and Administrator permissions require `MFA_VERIFIED`.** Reader and Researcher permissions hold at either level.
+- **The same rule for a direct caller.** Services take the context and decide with it, so calling a service without HTTP, or with a bare account, or with a context that claims a device it cannot show, is refused.
+- **No switch.** No setting, environment variable, account attribute, header, cookie, parameter, or session value turns the requirement off. The settings that exist are an issuer name, a drift window, three lifetimes, a throttle, and the encryption key. None says whether a second factor, or its approval, is required. Tests check each of these inputs.
+
+**Enrolment**
+
+- An account must be signed in and must give its password again in the request that starts an enrolment. A wrong password there counts towards the sign-in limits, for the account and for the source.
+- The secret is generated on the server. Nothing the browser sends can supply a secret, a state, or an account.
+- Starting an enrolment enables nothing. The device is pending, grants nothing, and is not asked for at sign-in. Only a right code from the new secret makes it active.
+- **A Reader or Researcher account enrols by itself.** Its enrolment awaits its first code at once and is void after 10 minutes.
+- **A Reviewer or Administrator account cannot.** Its enrolment is a request that awaits approval, and until an Administrator approves it no code is accepted for it, whoever sends the code. See "Approval" below.
+- The secret is shown once, in the response that started the enrolment, as a key to type and as an `otpauth` address that carries the issuer, the account's email address, and the secret, and nothing else. It is not stored in clear, not kept in the session, and cannot be shown again. There is no QR code.
+- The session that proved the code gets a new session key and notes the device. It is `MFA_VERIFIED` only if that device is trusted. The account's other sessions are not raised.
+
+**Approval**
+
+The password of a Reviewer or Administrator account must not be enough to give that account a second factor that the system trusts. Otherwise whoever learned the password of an account that had not yet enrolled could enrol their own device and hold every privilege of the account.
+
+- **A request has a number.** It is shown, with the key, to whoever made the request, and it identifies that one key. The Administrator sees the number, the account's email address, and when the request was made, and never the key.
+- **The Administrator asks the person for the number by a means other than this system**, and approves only that number. A request made by someone else who knows the password has another number. The page says so. The system records who approved; it cannot check that they asked.
+- **Who can approve.** Only an account that holds the approval permission, which is the Administrator role's and exists only for a sign-in verified against a trusted second factor. A Reviewer, an Administrator signed in with a password alone, and an Administrator whose own second factor is not trusted are all refused, by the page and again by the service.
+- **Nobody approves their own request.** The service refuses it and a database constraint refuses a device that names its own account as approver.
+- **How.** By POST, with a CSRF token and a ticked confirmation; without the tick nothing is approved. The request is named by its number in the path, and nothing else from the browser is used: the approver is the account of the session. The change and its record are one transaction.
+- **What it does.** It lets the first code be accepted. It raises no session and confers nothing: the account has no privilege until a code has activated the device and a sign-in has been verified against it.
+- **Asking again starts again.** A new request replaces the earlier one and has no approval, also when the earlier one had been approved. Whoever knows the password cannot take over an approval given to the account's owner.
+- **Rejection** deletes the pending device and its key.
+- **Lifetimes.** A request waits 72 hours for a decision, and an approved one 72 hours from the approval for its first code.
+- **A device enrolled before the role was granted is not trusted.** An account that enrolled as a Reader and was then made a Reviewer or Administrator gets nothing from the new role until it has replaced that device and the new one has been approved.
+- **Recorded.** `mfa_enrollment_started` when the request is made, `mfa_enrollment_approved` or `mfa_enrollment_rejected` naming the Administrator, and `mfa_enrollment_succeeded` when the code is accepted. No event holds the key, a code, or the address that carries the key.
+
+**Secret storage**
+
+- TOTP secrets are encrypted with AES-256-GCM, from the `cryptography` package. They are not hashed, because verification needs the secret.
+- The key comes from the environment variable `TOTP_ENCRYPTION_KEY` and from nowhere else. It is separate from `DJANGO_SECRET_KEY`. Development and production refuse to start without a usable key; there is no fallback.
+- Each ciphertext is bound to its account, so it does not decrypt if copied into another account's row, and it records which key encrypted it by a fingerprint that reveals nothing of the key.
+- A secret that cannot be decrypted refuses the code and is logged as an error. Nothing is accepted that could not be checked.
+- The secret, the provisioning address, and codes never appear in logs, authentication events, URLs of this site, the session, or error messages.
+
+**Signing in with a second factor**
+
+- For an account with an active second factor, the right password signs nobody in. The session, under a new key, holds only a pending challenge, and the visitor is still anonymous to every other view.
+- The challenge is a row on the server that names the one account it can complete a sign-in for. The request cannot name an account, so a challenge cannot be moved to another one. It is removed when it is used, so it cannot be replayed; replaced by a new password step; removed on sign-out; and void after 5 minutes.
+- The code is accepted by POST only, with a CSRF token.
+- A code is accepted for the current 30-second step and one step either side, and only once: a code that was used, or that is older than the last one used, is refused.
+- Every refused code gets the same page: a wrong code, a used one, a lapsed challenge, a removed device. Whether an account has a second factor is visible only after its password was accepted.
+
+**Throttling of codes**
+
+- 5 refused codes for one account within 15 minutes. After that, codes are refused unexamined with status 429 until earlier refusals leave the window.
+- The count covers sign-in, enrolment, replacing, and disabling together, and nothing resets it early: not a new challenge, a new browser, another source address, or an accepted code.
+- Counted in PostgreSQL from the authentication events, one code at a time for an account. A throttled attempt stores nothing. Redis is not used.
+- An attacker who holds the password and guesses without pause has about one chance in 700 per day. Whoever holds the password can also keep the account's second factor throttled.
+
+**Replacing, disabling, and recovery**
+
+- An account can remove only its own second factor, and only with its password and a current, unused code in the same request. There is no parameter, setting, or flag that disables a second factor.
+- **An active second factor is replaced only on both proofs, and the new one is approved again.** Replacing asks for the password and a current, unused code from the device being given up; starting an enrolment is refused while a second factor is active, so a password alone replaces nothing. The new device inherits no trust: for a Reviewer or Administrator it is a request that awaits approval like any other. Both protections apply, not either: the code shows that the person held the old device, and the approval is what makes the new one trusted. The old device stops working when the new key is issued, the session loses what the old device proved, and the account has no privilege until the new device is approved and verified. This is recorded as `mfa_device_replaced`.
+- After disabling, enrolling again needs approval where enrolling did.
+- **There are no recovery codes, and an Administrator cannot reset another account's second factor.** A person who loses their device cannot sign in. Until recovery is designed, the remedy is a deliberate operation on the database by its owner: deleting that account's device row, after which the account signs in with its password and enrols again, with an Administrator's approval if it is a Reviewer or Administrator. Recovery is future work.
+- **The only Administrator cannot renew its own second factor.** If it replaces, disables, or loses its device, the new enrolment awaits an approval that nobody can give, and the bootstrap cannot be run again. Recovery is then a deliberate operation on the database by its owner, outside the application. A second Administrator should exist before either changes their second factor.
+
+**Key management assumptions**
+
+- The key is generated randomly, never committed, and held only in the deployment's protected configuration.
+- A database backup does not contain the key. The key must be backed up separately, or every second factor is lost with it.
+- **Rotation is not built.** Changing the key makes every stored secret undecryptable: every enrolled account is refused at the code step until its device row is removed and it enrols again. A rotation that re-encrypts under a new key is designed with the deployment decision (ADR-0008).
+- A leaked database alone does not expose TOTP secrets. A leaked database together with the key does.
+
+**Residual risks**
+
+- An account that requires a second factor and has not yet enrolled holds no privilege, and its password cannot establish one. What remains rests on the approving Administrator: an approval given without asking the person for the request number trusts whoever made the request.
+- Whoever knows the password of such an account can still make requests in its name. That replaces the owner's pending request and delays the enrolment; it gains nothing unless an Administrator approves it.
+- The first Administrator's second factor is as trustworthy as the bootstrap: whoever can run commands on the server at that moment sets it up.
+- A session that existed before its account enrolled stays signed in, at the weaker assurance, until it ends.
+- TOTP does not resist real-time phishing: a code typed into a hostile page can be relayed within its 30 seconds.
 
 ### Web application threats
 
@@ -262,7 +349,7 @@ The Administrator role still grants nothing until TOTP exists and the account ha
 - Rate limits apply to public pages per client address, and to login, AI questions, URL submission, and uploads per account.
 - There is no public self-registration. Accounts are created by an Administrator.
 - The interface is server-rendered. HTMX is served from the application's own static files at a pinned version, with its script-evaluation features turned off. There is no API at launch (ADR-0010).
-- **Multi-factor authentication with TOTP is required for Administrator and Reviewer accounts.** Such an account cannot use its privileges until TOTP is enrolled (ADR-0007).
+- **Multi-factor authentication with TOTP is required for Administrator and Reviewer accounts.** Such an account cannot use its privileges until TOTP is enrolled with an Administrator's approval and a code has been verified for the sign-in (ADR-0007, ADR-0014).
 - **Django admin.** Restricted to Administrators, on a non-default path. Models for provenance and integrity-governed records (artifacts, acquisition records, versions, reviews, rights, extractions, segments, passages, releases, observations, claims, evidence, claim reviews, analysis and search runs, AI interaction records, audit events, redaction records) are registered read-only: no add, change, or delete. All writes to them go through services. The database-level protection on append-only tables applies to the web process's role as well, so the admin cannot bypass it even through a defect. Admin write access is limited to operational data such as users and roles.
 
 ### Export safety

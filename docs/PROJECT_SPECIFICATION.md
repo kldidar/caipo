@@ -61,7 +61,7 @@ The access model was decided by the project owner on 2026-10-02 and is recorded 
 | Reviewer | Researcher, plus approve documents, set rights, change a source's allowed hosts, approve or return claims. Requires TOTP. |
 | Administrator | Manage users, configuration, and operational tasks; perform redaction. Requires TOTP. |
 
-An account may hold several roles. The roles are not a hierarchy in the software: each role's permissions are listed in full, with "Researcher: Reader, plus" expressed by the Researcher role holding the Reader's permissions as well. Administrator holds no research permission; an Administrator who also does research is granted a research role too. Nobody can grant or revoke their own roles: a role change needs an authorised Administrator and a different target user. The only active Administrator cannot have that role revoked or their account deactivated. These rules are recorded in [ADR-0012](adr/0012-authorization-and-role-event-integrity.md). The first Administrator is created once, by a command run at the server, and that grant is the only role event without an acting user ([ADR-0013](adr/0013-authentication-core-and-first-administrator-bootstrap.md)). The first Administrator can sign in, and like every Administrator has no administrative privileges until TOTP exists. A Reviewer or Administrator role gives nothing until the account has enrolled TOTP, and TOTP is not implemented, so those two roles are inert for now ([SECURITY.md](../SECURITY.md), "Authorization as implemented").
+An account may hold several roles. The roles are not a hierarchy in the software: each role's permissions are listed in full, with "Researcher: Reader, plus" expressed by the Researcher role holding the Reader's permissions as well. Administrator holds no research permission; an Administrator who also does research is granted a research role too. Nobody can grant or revoke their own roles: a role change needs an authorised Administrator and a different target user. The only active Administrator cannot have that role revoked or their account deactivated. These rules are recorded in [ADR-0012](adr/0012-authorization-and-role-event-integrity.md). The first Administrator is created once, by a command run at the server, and that grant is the only role event without an acting user ([ADR-0013](adr/0013-authentication-core-and-first-administrator-bootstrap.md)). A Reviewer or Administrator role gives its permissions only to a sign-in that verified a TOTP code from the account's enrolled, trusted second factor; signed in with a password alone, such an account can ask to enrol its second factor and do nothing else. Its password cannot complete the enrolment: an Administrator who is signed in with their own second factor approves the request first, so that a compromised password cannot establish a second factor. The first Administrator is the one exception, because nobody exists who could approve it: its second factor is set up and verified at the server by the command that creates it, and it never exists without one. The system records the assurance of each sign-in explicitly, as password-authenticated or MFA-verified, and every authorization decision takes it into account ([ADR-0014](adr/0014-totp-mfa-and-authentication-assurance.md); [SECURITY.md](../SECURITY.md), "Multi-factor authentication as implemented").
 
 Permissions are deny-by-default. Document rights are enforced independently of authentication: no role, including Administrator, gains a use of a document that its recorded rights do not allow ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md)).
 
@@ -169,11 +169,11 @@ It must not require new tables or columns, new apps, or conditional code. This i
 
 Each phase has its own gate check: its blockers in §10 must be closed before it starts.
 
-**Current position (2026-10-02):** Phase 0 documents are committed. One part of Phase 1, the reproducible development environment (locked Python dependencies, lint, type, and test tooling, and local PostgreSQL and Redis services), was built on the project owner's instruction before the Phase 1 gate opened. It contains no application code. On 2026-10-02 the project owner made the Phase 1 decisions (§8, §10), and the Phase 1 gate is open. The Django application skeleton followed: settings, the User foundation, health endpoints, structured logging, and the access-declaration rule. The CI workflow followed (`.github/workflows/ci.yml`), then roles and the authorization layer, and then sign-in, sign-out, sign-in throttling and records, and the command that creates the first Administrator. The rest of Phase 1 (TOTP, account creation by an Administrator, password reset and email verification, the general audit record, countries and institutions) has not started.
+**Current position (2026-10-03):** Phase 0 documents are committed. One part of Phase 1, the reproducible development environment (locked Python dependencies, lint, type, and test tooling, and local PostgreSQL and Redis services), was built on the project owner's instruction before the Phase 1 gate opened. It contains no application code. On 2026-10-02 the project owner made the Phase 1 decisions (§8, §10), and the Phase 1 gate is open. The Django application skeleton followed: settings, the User foundation, health endpoints, structured logging, and the access-declaration rule. The CI workflow followed (`.github/workflows/ci.yml`), then roles and the authorization layer, then sign-in, sign-out, sign-in throttling and records, and the command that creates the first Administrator, and then TOTP multi-factor authentication with explicit authentication assurance (enrolment, approval of enrolment for Reviewer and Administrator accounts by an Administrator, the first Administrator's second factor set up by the bootstrap command, encrypted secrets, the two-step sign-in, throttling of codes, and self-service replacing and disabling). The rest of Phase 1 (account creation by an Administrator, password reset and email verification, recovery from a lost second factor, the general audit record, countries and institutions) has not started. Multi-factor authentication is implemented in the application and is not complete as a production deployment: key management waits for ADR-0008.
 
 ## 8. Decisions made and open
 
-Decisions are recorded as ADRs in [adr/](adr/README.md). Eight were accepted by the project owner on 2026-10-02. Five remain Proposed and must not be built on; the last column says what each still needs.
+Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by the project owner on 2026-10-02. Five remain Proposed and must not be built on; the last column says what each still needs.
 
 | ADR | Topic | Status | Needs |
 |---|---|---|---|
@@ -190,6 +190,7 @@ Decisions are recorded as ADRs in [adr/](adr/README.md). Eight were accepted by 
 | 0011 | Worker isolation mechanism | Proposed | Spike (B21) |
 | 0012 | Authorization and role event integrity | Accepted | — (amended for the first-Administrator bootstrap) |
 | 0013 | Authentication core and first-Administrator bootstrap | Accepted | — |
+| 0014 | TOTP multi-factor authentication and authentication assurance | Accepted | — (amended on 2026-10-03 for approval of privileged enrolment; key management in production waits for ADR-0008) |
 
 ## 9. Environment baseline
 
@@ -218,9 +219,9 @@ Defined by `pyproject.toml`, `uv.lock`, `.python-version`, `docker-compose.yml`,
 
 | Item | Command | Result on 2026-10-02 |
 |---|---|---|
-| Lockfile | `uv lock --check` | Up to date; 35 packages |
+| Lockfile | `uv lock --check` | Up to date; 36 packages |
 | Install | `uv sync --locked` | Succeeds on Python 3.14.4 |
-| Locked runtime versions | `uv pip list` | Django 5.2.17, psycopg 3.3.6 (binary), redis client 6.4.0, argon2-cffi 25.1.0 |
+| Locked runtime versions | `uv pip list` | Django 5.2.17, psycopg 3.3.6 (binary), redis client 6.4.0, argon2-cffi 25.1.0, cryptography 50.0.2 |
 | Locked tool versions | `uv pip list` | pytest 9.1.1, pytest-django 4.14.0, ruff 0.16.10, mypy 2.3.1, django-stubs 5.2.9, import-linter 2.15 |
 | Lint | `uv run ruff check .` | Passes |
 | Formatting | `uv run ruff format --check .` | Passes |
@@ -228,7 +229,7 @@ Defined by `pyproject.toml`, `uv.lock`, `.python-version`, `docker-compose.yml`,
 | Import layers | `uv run lint-imports` | One layering contract, kept |
 | Dependency audit | `pip-audit` on the exported lockfile, run through `uvx` | No known vulnerabilities |
 | Services | `docker compose up -d --wait`, `docker compose ps` | PostgreSQL 18.6 and Redis 8.10.2 start and report healthy |
-| Tests | `uv run --env-file <env> pytest` | 102 passed: the four service tests (each service accepts the configured credentials and rejects a client without them) and the tests of the application skeleton, against PostgreSQL |
+| Tests | `uv run --env-file <env> pytest` | 827 passed: the four service tests (each service accepts the configured credentials and rejects a client without them) and the tests of the application skeleton, against PostgreSQL |
 
 The service checks were run with a temporary environment file holding generated passwords, which was deleted afterwards, together with the containers and the database volume. No `.env` file exists in the repository.
 
@@ -238,6 +239,7 @@ The service checks were run with a temporary environment file holding generated 
 |---|---|---|
 | Django LTS supports the chosen Python | Package metadata on PyPI; install and import | Django 5.2.17 declares Python 3.14 |
 | psycopg supports the chosen Python | Package metadata; connection test | psycopg 3.3.6 declares Python 3.14 and has a wheel for it |
+| cryptography supports the chosen Python | Package metadata on PyPI; install; the RFC 6238 test vectors and an encryption round trip in the test suite | cryptography 50.0.2 declares Python 3.14 and installs from a wheel. It does not depend on Django. |
 | Text search configurations in the pinned PostgreSQL | `SELECT cfgname FROM pg_ts_config` on 18.6 | `english`, `russian`, `simple`, and `turkish` are among those present. **None exists for Turkmen or Uzbek.** |
 | Trigram extension | `pg_available_extensions` | `pg_trgm` 1.6 is available |
 | Vector extension | `pg_available_extensions` | `vector` is **not** in the official PostgreSQL image now used. Adopting ADR-0003 means changing the image. |

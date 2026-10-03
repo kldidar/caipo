@@ -1,0 +1,27 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Two-step verification" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Two-step verification" %}</h1>
+  <p>{% translate "Enter the current code from your authenticator application." %}</p>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% endif %}
+  <form method="post" action="{% url 'login-verify' %}" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <p>
+        {{ field.label_tag }}
+        {{ field }}
+        {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+      </p>
+    {% endfor %}
+    <button type="submit">{% translate "Verify" %}</button>
+  </form>
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">{% translate "Cancel and start again" %}</button>
+  </form>
+{% endblock %}

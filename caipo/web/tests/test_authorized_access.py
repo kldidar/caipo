@@ -13,7 +13,11 @@ from caipo.accounts import selectors, services
 from caipo.accounts.models import User
 from caipo.accounts.selectors import Permission, Role
 from caipo.accounts.tests.fixtures import UserFactory
+from caipo.accounts.tests.fixtures import signed_in as acting
+from caipo.accounts.tests.fixtures import verified as acting_verified
+from caipo.web import sessions
 from caipo.web.access import PUBLIC, declared_access, public, requires
+from caipo.web.tests.helpers import signed_in, verified
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db, pytest.mark.urls(__name__)]
 
@@ -53,7 +57,7 @@ def manage_roles_view(request: HttpRequest) -> HttpResponse:
 @requires(Permission.WORKSPACE_READ)
 def read_view_calling_a_stricter_service(request: HttpRequest) -> HttpResponse:
     """A view whose declaration is weaker than what the service it calls demands."""
-    selectors.require_permission(request.user, Permission.ROLES_MANAGE)
+    selectors.require_permission(sessions.authentication_context(request), Permission.ROLES_MANAGE)
     return _view("stricter-service")
 
 
@@ -93,11 +97,6 @@ def _reset_calls() -> Iterator[None]:
     calls.clear()
 
 
-def _signed_in(client: Client, user: User) -> Client:
-    client.force_login(user)
-    return client
-
-
 def _served(client: Client) -> set[str]:
     """Return the test URLs this client is served."""
     return {url for url in VIEWS if client.get(url).status_code == 200}
@@ -120,7 +119,7 @@ def test_an_anonymous_visitor_is_refused_before_the_view_runs(client: Client, ur
 def test_signing_in_without_a_role_grants_nothing_beyond_public(
     client: Client, user_with_roles: UserFactory
 ) -> None:
-    assert _served(_signed_in(client, user_with_roles())) == {"/public/"}
+    assert _served(signed_in(client, user_with_roles())) == {"/public/"}
 
 
 @pytest.mark.parametrize(
@@ -128,19 +127,18 @@ def test_signing_in_without_a_role_grants_nothing_beyond_public(
     [
         ((Role.READER,), {"/public/", "/read/"}),
         ((Role.RESEARCHER,), {"/public/", "/read/", "/contribute/"}),
-        # No account can enrol a second factor yet, so these confer nothing.
+        # On a password alone these two roles open no page.
         ((Role.REVIEWER,), {"/public/"}),
         ((Role.ADMINISTRATOR,), {"/public/"}),
         ((Role.READER, Role.ADMINISTRATOR), {"/public/", "/read/"}),
     ],
 )
-def test_what_each_role_reaches_today(
+def test_what_each_role_reaches_on_a_password_alone(
     client: Client, user_with_roles: UserFactory, roles: tuple[Role, ...], expected: set[str]
 ) -> None:
-    assert _served(_signed_in(client, user_with_roles(*roles))) == expected
+    assert _served(signed_in(client, user_with_roles(*roles))) == expected
 
 
-@pytest.mark.usefixtures("mfa_enrolled")
 @pytest.mark.parametrize(
     ("roles", "expected"),
     [
@@ -154,22 +152,22 @@ def test_what_each_role_reaches_today(
         ),
     ],
 )
-def test_what_each_role_reaches_once_enrolled(
+def test_what_each_role_reaches_with_a_verified_second_factor(
     client: Client, user_with_roles: UserFactory, roles: tuple[Role, ...], expected: set[str]
 ) -> None:
-    assert _served(_signed_in(client, user_with_roles(*roles))) == expected
+    assert _served(verified(client, user_with_roles(*roles))) == expected
 
 
-@pytest.mark.usefixtures("mfa_enrolled")
 @pytest.mark.parametrize("role", list(Role))
 def test_the_http_boundary_and_the_service_layer_agree(
     client: Client, user_with_roles: UserFactory, role: Role
 ) -> None:
     user = user_with_roles(role)
-    _signed_in(client, user)
 
-    for url, permission in PERMISSION_OF.items():
-        assert (client.get(url).status_code == 200) == selectors.can(user, permission), url
+    for sign_in, actor in ((signed_in, acting(user)), (verified, acting_verified(user))):
+        sign_in(client, user)
+        for url, permission in PERMISSION_OF.items():
+            assert (client.get(url).status_code == 200) == selectors.can(actor, permission), url
 
 
 def test_a_refusal_is_logged_without_the_email(
@@ -178,7 +176,7 @@ def test_a_refusal_is_logged_without_the_email(
     user = user_with_roles(Role.READER)
 
     with caplog.at_level(logging.WARNING, logger="caipo.web.middleware"):
-        response = _signed_in(client, user).get("/contribute/")
+        response = signed_in(client, user).get("/contribute/")
 
     assert response.status_code == 403
     assert calls == []
@@ -194,17 +192,16 @@ def test_a_refusal_is_logged_without_the_email(
 def test_a_refusal_does_not_depend_on_the_http_method(
     client: Client, user_with_roles: UserFactory, method: str
 ) -> None:
-    response = getattr(_signed_in(client, user_with_roles(Role.READER)), method)("/contribute/")
+    response = getattr(signed_in(client, user_with_roles(Role.READER)), method)("/contribute/")
 
     assert response.status_code == 403
     assert calls == []
 
 
-@pytest.mark.usefixtures("mfa_enrolled")
 def test_a_role_supplied_by_the_browser_is_ignored(
     client: Client, user_with_roles: UserFactory
 ) -> None:
-    _signed_in(client, user_with_roles(Role.READER))
+    verified(client, user_with_roles(Role.READER))
     client.cookies["role"] = "administrator"
     client.cookies["roles"] = "administrator"
 
@@ -218,11 +215,10 @@ def test_a_role_supplied_by_the_browser_is_ignored(
     assert calls == []
 
 
-@pytest.mark.usefixtures("mfa_enrolled")
 def test_a_role_written_into_the_session_is_ignored(
     client: Client, user_with_roles: UserFactory
 ) -> None:
-    _signed_in(client, user_with_roles(Role.READER))
+    verified(client, user_with_roles(Role.READER))
     session = client.session
     session["role"] = "administrator"
     session["roles"] = ["administrator"]
@@ -236,13 +232,23 @@ def test_a_role_written_into_the_session_is_ignored(
 def test_no_request_input_stands_in_for_a_second_factor(
     client: Client, user_with_roles: UserFactory, roles: tuple[Role, ...]
 ) -> None:
-    # No mfa_enrolled fixture here: this is the application as it really runs.
-    _signed_in(client, user_with_roles(*roles))
-    names = ["mfa", "mfa_verified", "mfa_enrolled", "otp", "otp_verified", "totp", "bypass_mfa"]
+    signed_in(client, user_with_roles(*roles))
+    names = [
+        "mfa",
+        "mfa_verified",
+        "mfa_enrolled",
+        "otp",
+        "otp_verified",
+        "totp",
+        "bypass_mfa",
+        "assurance",
+        sessions.VERIFIED_DEVICE_KEY,
+    ]
     session = client.session
     for name in names:
         client.cookies[name] = "true"
         session[name] = True
+    session["assurance"] = "mfa_verified"
     session.save()
     query = "&".join(f"{name}=true" for name in names)
     headers = {f"X-{name.replace('_', '-')}": "true" for name in names}
@@ -253,17 +259,19 @@ def test_no_request_input_stands_in_for_a_second_factor(
     assert calls == []
 
 
-@pytest.mark.usefixtures("mfa_enrolled")
 def test_a_revoked_role_stops_working_on_the_next_request(
     client: Client, user_with_roles: UserFactory
 ) -> None:
     administrator = user_with_roles(Role.ADMINISTRATOR)
     user = user_with_roles(Role.RESEARCHER)
-    _signed_in(client, user)
+    verified(client, user)
     assert client.get("/contribute/").status_code == 200
 
     services.revoke_role(
-        actor=administrator, user=user, role=Role.RESEARCHER, reason="TEST revocation"
+        actor=acting_verified(administrator),
+        user=user,
+        role=Role.RESEARCHER,
+        reason="TEST revocation",
     )
 
     assert client.get("/contribute/").status_code == 403
@@ -273,7 +281,7 @@ def test_a_deactivated_account_is_refused_on_its_next_request(
     client: Client, user_with_roles: UserFactory
 ) -> None:
     user = user_with_roles(Role.READER)
-    _signed_in(client, user)
+    signed_in(client, user)
     assert client.get("/read/").status_code == 200
 
     User.objects.filter(pk=user.pk).update(is_active=False)
@@ -284,7 +292,7 @@ def test_a_deactivated_account_is_refused_on_its_next_request(
 def test_a_service_refuses_even_when_the_view_declaration_let_the_request_in(
     client: Client, user_with_roles: UserFactory
 ) -> None:
-    response = _signed_in(client, user_with_roles(Role.READER)).get("/stricter-service/")
+    response = signed_in(client, user_with_roles(Role.READER)).get("/stricter-service/")
 
     assert response.status_code == 403
     assert calls == []
@@ -294,7 +302,7 @@ def test_a_malformed_declaration_counts_as_none(
     client: Client, user_with_roles: UserFactory
 ) -> None:
     assert declared_access(view_with_a_malformed_declaration) is None
-    assert _signed_in(client, user_with_roles(Role.READER)).get("/malformed/").status_code == 403
+    assert signed_in(client, user_with_roles(Role.READER)).get("/malformed/").status_code == 403
     assert calls == []
 
 
@@ -314,7 +322,7 @@ def test_requires_accepts_only_a_permission(not_a_permission: object) -> None:
 def test_a_service_can_be_called_with_no_request_at_all(user_with_roles: UserFactory) -> None:
     with pytest.raises(PermissionDenied):
         services.grant_role(
-            actor=user_with_roles(Role.READER),
+            actor=acting(user_with_roles(Role.READER)),
             user=user_with_roles(),
             role=Role.READER,
             reason="TEST attempt",
@@ -327,7 +335,7 @@ def test_health_endpoints_stay_open_to_everyone(
     client: Client, user_with_roles: UserFactory, roles: tuple[Role, ...] | None
 ) -> None:
     if roles is not None:
-        _signed_in(client, user_with_roles(*roles))
+        signed_in(client, user_with_roles(*roles))
 
     assert client.get("/health/live/").status_code == 200
     assert client.get("/health/ready/").status_code == 200

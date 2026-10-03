@@ -2,7 +2,7 @@
 
 Status: Draft for owner review · Last updated: 2026-10-02
 
-This document describes the target architecture. Only the Phase 1 skeleton is implemented: the Django project; the User foundation, role events, the authorization policy, sign-in with its throttling and records, and the first-Administrator bootstrap in `accounts`; the access-declaration rule, the sign-in and sign-out pages, and health endpoints in `web`; and correlation IDs and JSON log formatting in `core`. The readiness endpoint checks the database only. Decisions are recorded in [adr/](adr/README.md). ADR-0001, 0002, 0005, 0007, 0009, 0010, 0012, and 0013 are Accepted; the others are Proposed and must not be built on. Where this document and an Accepted ADR differ, the ADR governs.
+This document describes the target architecture. Only the Phase 1 skeleton is implemented: the Django project; the User foundation, role events, the authorization policy with its assurance levels, sign-in with its throttling and records, TOTP second factors and the approval of their enrolment, and the first-Administrator bootstrap in `accounts`; the access-declaration rule, the sign-in, verification, sign-out, second-factor, and enrolment-approval pages, and health endpoints in `web`; and correlation IDs and JSON log formatting in `core`. The readiness endpoint checks the database only. Decisions are recorded in [adr/](adr/README.md). ADR-0001, 0002, 0005, 0007, 0009, 0010, 0012, 0013, and 0014 are Accepted; the others are Proposed and must not be built on. Where this document and an Accepted ADR differ, the ADR governs.
 
 ## 1. System context
 
@@ -54,7 +54,7 @@ An app may import only from apps in lower layers. Apps in the same layer do not 
 | Layer | App | Responsibility |
 |---|---|---|
 | 0 | `core` | Shared base classes, identifiers, correlation IDs. No domain knowledge and no reference to users. |
-| 1 | `accounts` | Users, roles, permissions, audit events, redaction records |
+| 1 | `accounts` | Users, roles, permissions, second factors, authentication events, audit events, redaction records |
 | 1 | `registry` | Countries, institutions, languages |
 | 2 | `sources` | Sources, documents, versions, artifacts, acquisition records, reviews, rights, extractions, segments, passages |
 | 3 | `ingestion` | Ingestion requests and their lifecycle; orchestration of guarded fetch, upload intake, and parsing; validation of output from the isolated workers. The untrusted-input boundary. Writes through `sources` services. |
@@ -226,7 +226,7 @@ Decided in [ADR-0007](adr/0007-authentication.md) and [ADR-0010](adr/0010-web-in
 |---|---|---|
 | Public research site | Anonymous visitors | Approved, public material; read-only; server-rendered, with stable citable URLs |
 | Research workspace | Reader, Researcher, Reviewer | Drafts, submission, coding, claims, review, the assistant |
-| Administration | Administrator | Operations; TOTP required |
+| Administration | Administrator | Operations; a sign-in verified with TOTP required (ADR-0014) |
 
 All three are served by the same Django application through server-rendered templates, with HTMX for interactive components. There is no separate frontend application and no API at launch. The interface launches in English with Django's internationalisation infrastructure enabled.
 

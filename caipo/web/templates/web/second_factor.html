@@ -1,0 +1,76 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Two-step verification" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Two-step verification" %}</h1>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% endif %}
+
+  {% if state == "active" %}
+    <p>{% translate "Two-step verification is on for your account. Signing in asks for a code from your authenticator application." %}</p>
+    <h2>{% translate "Replace it" %}</h2>
+    <p>{% translate "This needs your password and a current code. Your present authenticator stops working at once and you get a new key. For a Reviewer or Administrator account the new key must be approved by an Administrator before it works, and those roles give nothing until then." %}</p>
+    <form method="post" action="{% url 'second-factor-replace' %}" novalidate>
+      {% csrf_token %}
+      {% for field in replace_form %}
+        <p>{{ field.label_tag }} {{ field }}</p>
+      {% endfor %}
+      <button type="submit">{% translate "Replace two-step verification" %}</button>
+    </form>
+    <h2>{% translate "Turn it off" %}</h2>
+    <p>{% translate "This needs your password and a current code. Reviewer and Administrator roles give nothing while it is off, and turning it on again for such an account needs an Administrator's approval." %}</p>
+    <form method="post" action="{% url 'second-factor-disable' %}" novalidate>
+      {% csrf_token %}
+      {% for field in disable_form %}
+        <p>{{ field.label_tag }} {{ field }}</p>
+      {% endfor %}
+      <button type="submit">{% translate "Turn off two-step verification" %}</button>
+    </form>
+  {% else %}
+    {% if provisioning %}
+      <p>{% translate "Add this key to your authenticator application. It is shown only now and cannot be shown again." %}</p>
+      <p>{% translate "Key:" %} <code>{{ provisioning.secret }}</code></p>
+      <p>{% translate "Or use this address in the application:" %} <code>{{ provisioning.uri }}</code></p>
+    {% endif %}
+    {% if state == "pending_approval" %}
+      <p>{% blocktranslate %}Your request number is <strong>{{ request_number }}</strong>. Two-step verification for your account must be approved by an Administrator before it can be turned on. Give the Administrator this number yourself, and not through this site. Codes are not accepted until the request is approved.{% endblocktranslate %}</p>
+      {% if not provisioning %}
+        <p>{% translate "If you no longer have the key, start again below. That makes a new request with a new number." %}</p>
+      {% endif %}
+      <h2>{% translate "Start again" %}</h2>
+    {% elif state == "pending_verification" %}
+      {% if not provisioning %}
+        <p>{% translate "Two-step verification has been started and is not on yet. If you no longer have the key, start again below." %}</p>
+      {% endif %}
+      <h2>{% translate "Turn it on" %}</h2>
+      <p>{% translate "Enter the current code from your authenticator application." %}</p>
+      <form method="post" action="{% url 'second-factor-confirm' %}" novalidate>
+        {% csrf_token %}
+        {% for field in code_form %}
+          <p>{{ field.label_tag }} {{ field }}</p>
+        {% endfor %}
+        <button type="submit">{% translate "Turn on two-step verification" %}</button>
+      </form>
+      <h2>{% translate "Start again" %}</h2>
+    {% else %}
+      <p>{% translate "Two-step verification is off for your account. Reviewer and Administrator roles give nothing until it is on, and for such an account an Administrator must approve it." %}</p>
+      <h2>{% translate "Set it up" %}</h2>
+    {% endif %}
+    <p>{% translate "Enter your password to get a new key for your authenticator application." %}</p>
+    <form method="post" action="{% url 'second-factor-enrol' %}" novalidate>
+      {% csrf_token %}
+      {% for field in password_form %}
+        <p>{{ field.label_tag }} {{ field }}</p>
+      {% endfor %}
+      <button type="submit">{% translate "Get a new key" %}</button>
+    </form>
+  {% endif %}
+
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">{% translate "Sign out" %}</button>
+  </form>
+{% endblock %}

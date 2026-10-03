@@ -84,11 +84,15 @@ erDiagram
 
 **RoleEvent** (A-O). One change to a user's roles: user, role, event type (§4.7), acting user, reason, time. It is both the store of roles and their history: there is no current-role record to overwrite. The acting user is recorded and is never the user whose role changes. The one exception, defined in [ADR-0012](adr/0012-authorization-and-role-event-integrity.md) as amended, is the grant that creates the first Administrator, which is made by an operator at the server before any account exists: it has no acting user, names the bootstrap command and the operator's operating-system account in its reason, can only be a grant of the Administrator role, and the database allows it only once. Users referenced by a RoleEvent cannot be deleted. UPDATE and DELETE are refused by a database trigger as well as by the application. It records role changes only; the general AuditEvent below is not built yet.
 
-**AuthenticationEvent** (A-O). One sign-in, refused sign-in, or sign-out: event type (§4.8), time, the user if the submitted email address belongs to an account, the request's correlation ID, and keyed hashes of the submitted email address and of the source address. No password, password hash, session identifier, header, or raw address. It is also what sign-in throttling counts. Retention is a future data-governance decision: no period is set, and until one is, nothing deletes these events ([ADR-0013](adr/0013-authentication-core-and-first-administrator-bootstrap.md)). The keyed hashes depend on the application's secret key, so rotating it makes earlier events unmatchable to later ones by address or source. It is not the general AuditEvent.
+**AuthenticationEvent** (A-O). One sign-in, refused sign-in, sign-out, or change to a second factor: event type (§4.8), time, the user if the submitted email address belongs to an account, the acting user for a decision on another user's enrolment request and for nothing else, the request's correlation ID, and keyed hashes of the submitted email address and of the source address. No password, password hash, second-factor code or secret, challenge token, session identifier, header, or raw address. It is also what sign-in throttling and second-factor throttling count. Retention is a future data-governance decision: no period is set, and until one is, nothing deletes these events ([ADR-0013](adr/0013-authentication-core-and-first-administrator-bootstrap.md)). The keyed hashes depend on the application's secret key, so rotating it makes earlier events unmatchable to later ones by address or source. It is not the general AuditEvent.
 
 **AuditEvent** (A-O). Actor, action, object reference by type and public identifier (not a foreign key, because targets live in higher layers), time, details.
 
 **RedactionRecord** (A-O, never itself redacted). Records each use of the redaction exception: actor, time, legal or privacy basis, record class, target identifier, what was removed. See §7.
+
+**TotpDevice.** The TOTP second factor of one user ([ADR-0014](adr/0014-totp-mfa-and-authentication-assurance.md)): user, state (§4.9), the secret under authenticated encryption, the identifier of the key that encrypted it, the time step of the last code accepted, when it was created, when it was confirmed, and when and by whom its enrolment was approved. A user has at most one, in any state; a user with none is not enrolled. A device is trusted when it records an approval: by an Administrator, who is named and is never the device's own user, or by the first-Administrator bootstrap, which names nobody. Only a trusted device counts towards the `MFA_VERIFIED` assurance. The secret is stored only as AES-256-GCM ciphertext (`bytea`) under a key that is not in the database, bound to the user, so it does not decrypt in another user's row; the key identifier is a keyed fingerprint that reveals nothing of the key. Operational state, not a provenance record: it is updated when it is approved and when a code is accepted, and deleted when the second factor is disabled, replaced, or its request rejected. What happened to it is recorded in AuthenticationEvent.
+
+**MfaChallenge.** A sign-in whose password was accepted and whose second-factor code is awaited: user, a keyed hash of the token that the pending session holds, and when it was issued. A user has at most one. It is created only by the sign-in service, removed when it is used, cancelled, or replaced, and void after five minutes. Operational state, not a provenance record.
 
 ### 3.2 `registry`
 
@@ -365,11 +369,33 @@ DatasetRelease (`imported`, `withdrawn`), AnalysisRun and SearchRun (`valid`, `i
 
 ### 4.7 RoleEvent
 
-Event types: `granted`, `revoked`. A user holds a role when the latest RoleEvent for that user and that role is `granted`. Holding a role and being able to use it are different things: a deactivated account, and a Reviewer or Administrator account that has not enrolled TOTP, hold their roles on record and get nothing from them.
+Event types: `granted`, `revoked`. A user holds a role when the latest RoleEvent for that user and that role is `granted`. Holding a role and being able to use it are different things. A deactivated account holds its roles on record and gets nothing from them. A Reviewer or Administrator role confers its permissions only to a sign-in that verified a code from the account's active, trusted second factor; on a password alone it allows managing that second factor and nothing else ([ADR-0014](adr/0014-totp-mfa-and-authentication-assurance.md)).
 
 ### 4.8 AuthenticationEvent
 
-Event types: `login_success`, `login_failure`, `logout`. Only a `login_failure` can be without a user.
+Event types: `login_success`, `login_failure`, `logout`, `password_confirmation_failed`, `mfa_challenge_issued`, `mfa_enrollment_started`, `mfa_enrollment_succeeded`, `mfa_verification_failed`, `mfa_verification_succeeded`, `mfa_disabled`, `mfa_enrollment_approved`, `mfa_enrollment_rejected`, `mfa_device_replaced`. Only a `login_failure` can be without a user. `mfa_enrollment_started` records that an enrolment was requested and `mfa_enrollment_succeeded` that one was completed. `mfa_enrollment_approved` and `mfa_enrollment_rejected` name the acting user, who is never the user the event is about; no other event names one. For an account with an active second factor, the accepted password is recorded as `mfa_challenge_issued`, and `login_success` is recorded only when the code is accepted.
+
+### 4.9 TotpDevice
+
+| State | Meaning |
+|---|---|
+| (no device) | Not enrolled |
+| `pending_approval` | A secret has been issued to a user who holds a role that requires a second factor, and no Administrator has approved the request. No code is accepted for it. Grants nothing, is not asked for at sign-in, and is void 72 hours after it was issued. |
+| `pending_verification` | A secret has been issued, any approval it needed has been given, and no code from it has been accepted. Grants nothing and is not asked for at sign-in. Void 10 minutes after it was issued if it needed no approval, and 72 hours after the approval if it did. |
+| `active` | A code proved possession of the secret. This is the account's second factor. It counts towards `MFA_VERIFIED` only if it is trusted. |
+
+| From | To | Condition |
+|---|---|---|
+| (no device), or either pending state | `pending_approval` | The account gives its password again and holds a role that requires a second factor. A new secret replaces any pending one, and any approval is lost. |
+| (no device), or either pending state | `pending_verification` | The account gives its password again and holds no such role. A new secret replaces any pending one. |
+| `pending_approval` | `pending_verification` | An Administrator, acting at `MFA_VERIFIED` and not the device's own user, approves the request. The approval and the approver are recorded on the row. |
+| `pending_approval` | (no device) | An Administrator rejects the request. The row and its secret are deleted. |
+| `pending_verification` | `active` | A right code for the pending secret, within its lifetime |
+| `active` | (no device) | The account gives its password and a current, unused code. The row and its secret are deleted. |
+| `active` | `pending_approval` or `pending_verification` | Replacement: the account gives its password and a current, unused code. The row and its secret are deleted and a new secret is issued, by the two rules for a new enrolment above. No approval is carried over. |
+| (no device) | `active`, trusted | Only for the first Administrator, by the bootstrap command, in the transaction that creates the account, after a right code was typed at the terminal |
+
+A device is `active` if and only if it records when it was confirmed and the time step of an accepted code; a check constraint enforces this, and a unique constraint allows one device for a user.
 
 ## 5. Conventions
 

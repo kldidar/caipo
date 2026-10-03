@@ -1,6 +1,8 @@
 """The settings the suite runs under, and the rules each environment module must keep."""
 
+import base64
 import runpy
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -15,6 +17,8 @@ SETTINGS_PACKAGE = "caipo.config.settings"
 # Visibly synthetic: these stand in for deployment secrets and protect nothing.
 TEST_SECRET_KEY = "TEST-secret-key-used-only-by-the-settings-tests-0123456789"
 TEST_DATABASE_PASSWORD = "TEST-database-password"
+TEST_TOTP_KEY_BYTES = bytes(range(32))
+TEST_TOTP_KEY = base64.urlsafe_b64encode(TEST_TOTP_KEY_BYTES).decode()
 
 
 def _load(environment: str) -> dict[str, Any]:
@@ -26,6 +30,7 @@ def _load(environment: str) -> dict[str, Any]:
 def deployment_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     for name, value in {
         "DJANGO_SECRET_KEY": TEST_SECRET_KEY,
+        "TOTP_ENCRYPTION_KEY": TEST_TOTP_KEY,
         "DJANGO_ALLOWED_HOSTS": "caipo.test, www.caipo.test",
         "POSTGRES_DB": "TEST_db",
         "POSTGRES_USER": "TEST_user",
@@ -87,6 +92,7 @@ def test_logs_are_json_on_standard_output() -> None:
 
 def test_base_settings_hold_no_secret_and_no_database() -> None:
     assert not hasattr(base, "SECRET_KEY")
+    assert not hasattr(base, "TOTP_ENCRYPTION_KEY")
     assert not hasattr(base, "DATABASES")
     assert base.DEBUG is False
     assert base.ALLOWED_HOSTS == []
@@ -98,6 +104,7 @@ def test_production_reads_its_configuration_from_the_environment() -> None:
 
     assert production["DEBUG"] is False
     assert production["SECRET_KEY"] == TEST_SECRET_KEY
+    assert production["TOTP_ENCRYPTION_KEY"] == TEST_TOTP_KEY_BYTES
     assert production["ALLOWED_HOSTS"] == ["caipo.test", "www.caipo.test"]
     assert production["DATABASES"]["default"]["PASSWORD"] == TEST_DATABASE_PASSWORD
     assert production["SESSION_COOKIE_SECURE"] is True
@@ -107,7 +114,13 @@ def test_production_reads_its_configuration_from_the_environment() -> None:
 @pytest.mark.usefixtures("deployment_environment")
 @pytest.mark.parametrize(
     "variable",
-    ["DJANGO_SECRET_KEY", "DJANGO_ALLOWED_HOSTS", "POSTGRES_PASSWORD", "POSTGRES_HOST"],
+    [
+        "DJANGO_SECRET_KEY",
+        "TOTP_ENCRYPTION_KEY",
+        "DJANGO_ALLOWED_HOSTS",
+        "POSTGRES_PASSWORD",
+        "POSTGRES_HOST",
+    ],
 )
 @pytest.mark.parametrize("state", ["unset", "empty"])
 def test_production_refuses_to_start_without_a_required_variable(
@@ -138,6 +151,54 @@ def test_production_refuses_a_weak_secret_key(monkeypatch: pytest.MonkeyPatch, k
 
 
 @pytest.mark.usefixtures("deployment_environment")
+@pytest.mark.parametrize("environment", ["production", "development"])
+@pytest.mark.parametrize(
+    "key",
+    [
+        "TEST-not-base64!",
+        base64.urlsafe_b64encode(bytes(range(16))).decode(),
+        base64.urlsafe_b64encode(bytes(range(33))).decode(),
+        base64.urlsafe_b64encode(bytes(32)).decode(),
+        TEST_TOTP_KEY + "TEST",
+        "ключ-TEST",
+    ],
+    ids=["not-base64", "too-short", "too-long", "all-zero", "trailing-text", "not-ascii"],
+)
+def test_an_unusable_totp_encryption_key_stops_start_up(
+    monkeypatch: pytest.MonkeyPatch, environment: str, key: str
+) -> None:
+    monkeypatch.setenv("TOTP_ENCRYPTION_KEY", key)
+
+    with pytest.raises(ImproperlyConfigured, match="TOTP_ENCRYPTION_KEY") as error:
+        _load(environment)
+
+    assert key not in str(error.value)
+
+
+@pytest.mark.usefixtures("deployment_environment")
+def test_development_has_no_built_in_totp_encryption_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("TOTP_ENCRYPTION_KEY")
+
+    with pytest.raises(ImproperlyConfigured, match="TOTP_ENCRYPTION_KEY"):
+        _load("development")
+
+
+def test_the_suite_generates_its_own_totp_encryption_key() -> None:
+    assert isinstance(settings.TOTP_ENCRYPTION_KEY, bytes)
+    assert len(settings.TOTP_ENCRYPTION_KEY) == 32
+    assert settings.TOTP_ENCRYPTION_KEY != TEST_TOTP_KEY_BYTES
+
+
+def test_second_factor_limits_are_repository_settings() -> None:
+    assert settings.TOTP_ISSUER == "CAIPO"
+    assert settings.TOTP_DRIFT_STEPS == 1
+    assert settings.MFA_ENROLLMENT_LIFETIME == timedelta(minutes=10)
+    assert settings.MFA_CHALLENGE_LIFETIME == timedelta(minutes=5)
+    assert settings.MFA_THROTTLE_WINDOW == timedelta(minutes=15)
+    assert settings.MFA_THROTTLE_FAILURES == 5
+
+
+@pytest.mark.usefixtures("deployment_environment")
 @pytest.mark.parametrize("hosts", ["*", "caipo.test,*", " , "])
 def test_production_refuses_wildcard_or_empty_allowed_hosts(
     monkeypatch: pytest.MonkeyPatch, hosts: str
@@ -158,6 +219,7 @@ def test_a_missing_variable_error_does_not_reveal_other_values(
         _load("production")
 
     assert TEST_SECRET_KEY not in str(error.value)
+    assert TEST_TOTP_KEY not in str(error.value)
     assert TEST_DATABASE_PASSWORD not in str(error.value)
 
 
@@ -210,6 +272,7 @@ def _settings_that_differ_from_base(environment: str) -> set[str]:
 def test_development_relaxes_only_what_local_http_requires() -> None:
     assert _settings_that_differ_from_base("development") == {
         "SECRET_KEY",
+        "TOTP_ENCRYPTION_KEY",
         "DATABASES",
         "ALLOWED_HOSTS",
         "DEBUG",
@@ -223,6 +286,7 @@ def test_development_relaxes_only_what_local_http_requires() -> None:
 def test_production_changes_nothing_but_what_comes_from_the_environment() -> None:
     assert _settings_that_differ_from_base("production") == {
         "SECRET_KEY",
+        "TOTP_ENCRYPTION_KEY",
         "DATABASES",
         "ALLOWED_HOSTS",
     }

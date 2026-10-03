@@ -4,6 +4,7 @@ Only secrets and addresses come from the environment. Result-affecting settings
 live in repository-versioned files (CLAUDE.md, coding standards).
 """
 
+import base64
 import os
 from typing import Any
 
@@ -39,6 +40,27 @@ def secret_key(name: str) -> str:
             "use at least 50 random characters."
         )
     return value
+
+
+def encryption_key(name: str) -> bytes:
+    """Return a 256-bit encryption key from the environment.
+
+    The variable holds the key as URL-safe Base64. Raises ImproperlyConfigured,
+    without the value, if the variable is unset, is not Base64, does not
+    decode to exactly 32 bytes, or is too uniform to be a generated key. There
+    is no fallback key: without one the application does not start.
+    """
+    value = required(name)
+    try:
+        key = base64.b64decode(value, altchars=b"-_", validate=True)
+    except ValueError:
+        key = b""
+    if len(key) != 32 or len(set(key)) < 8:
+        raise ImproperlyConfigured(
+            f"The environment variable {name} is not a usable encryption key: "
+            "use 32 random bytes, encoded as URL-safe Base64."
+        )
+    return key
 
 
 def host_list(name: str) -> list[str]:

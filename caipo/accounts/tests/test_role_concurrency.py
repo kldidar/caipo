@@ -15,13 +15,9 @@ from django.db import connection, connections, transaction
 from caipo.accounts import selectors, services
 from caipo.accounts.models import RoleEvent, RoleEventType, User
 from caipo.accounts.selectors import Role
-from caipo.accounts.tests.fixtures import UserFactory
+from caipo.accounts.tests.fixtures import UserFactory, verified
 
-pytestmark = [
-    pytest.mark.services,
-    pytest.mark.django_db(transaction=True),
-    pytest.mark.usefixtures("mfa_enrolled"),
-]
+pytestmark = [pytest.mark.services, pytest.mark.django_db(transaction=True)]
 
 REASON = "TEST concurrent change"
 WAIT_SECONDS = 20
@@ -130,15 +126,16 @@ def test_a_change_waits_for_one_already_in_progress(
     user_with_roles: UserFactory, operation: str
 ) -> None:
     administrator = user_with_roles(Role.ADMINISTRATOR)
+    as_administrator = verified(administrator)
     user = user_with_roles(Role.READER)
     operations: dict[str, Callable[[], object]] = {
         "grant": lambda: services.grant_role(
-            actor=administrator, user=user, role=Role.RESEARCHER, reason=REASON
+            actor=as_administrator, user=user, role=Role.RESEARCHER, reason=REASON
         ),
         "revoke": lambda: services.revoke_role(
-            actor=administrator, user=user, role=Role.READER, reason=REASON
+            actor=as_administrator, user=user, role=Role.READER, reason=REASON
         ),
-        "deactivate": lambda: services.deactivate_user(actor=administrator, user=user),
+        "deactivate": lambda: services.deactivate_user(actor=as_administrator, user=user),
     }
     outcome: list[object] = []
 
@@ -157,6 +154,7 @@ def test_the_permission_is_decided_after_waiting_not_before(
     user_with_roles: UserFactory,
 ) -> None:
     administrator = user_with_roles(Role.ADMINISTRATOR)
+    as_administrator = verified(administrator)
     target = user_with_roles()
     seeder = User.objects.get(email="test.seed@caipo.test")
     outcome: list[object] = []
@@ -172,10 +170,10 @@ def test_the_permission_is_decided_after_waiting_not_before(
 
     with _ChangeInProgress(revoke_the_administrator) as other:
         # Still an Administrator as far as any other connection can see.
-        assert selectors.can(administrator, selectors.Permission.ROLES_MANAGE)
+        assert selectors.can(as_administrator, selectors.Permission.ROLES_MANAGE)
         thread = _in_thread(
             lambda: services.grant_role(
-                actor=administrator, user=target, role=Role.ADMINISTRATOR, reason=REASON
+                actor=as_administrator, user=target, role=Role.ADMINISTRATOR, reason=REASON
             ),
             outcome,
         )
@@ -189,14 +187,16 @@ def test_the_permission_is_decided_after_waiting_not_before(
 
 def test_two_administrators_revoking_each_other_leave_one(user_with_roles: UserFactory) -> None:
     first = user_with_roles(Role.ADMINISTRATOR)
+    as_first = verified(first)
     second = user_with_roles(Role.ADMINISTRATOR)
+    as_second = verified(second)
 
     outcomes = _at_the_same_time(
         lambda: services.revoke_role(
-            actor=first, user=second, role=Role.ADMINISTRATOR, reason=REASON
+            actor=as_first, user=second, role=Role.ADMINISTRATOR, reason=REASON
         ),
         lambda: services.revoke_role(
-            actor=second, user=first, role=Role.ADMINISTRATOR, reason=REASON
+            actor=as_second, user=first, role=Role.ADMINISTRATOR, reason=REASON
         ),
     )
 
@@ -208,11 +208,13 @@ def test_two_administrators_deactivating_themselves_leave_one(
     user_with_roles: UserFactory,
 ) -> None:
     first = user_with_roles(Role.ADMINISTRATOR)
+    as_first = verified(first)
     second = user_with_roles(Role.ADMINISTRATOR)
+    as_second = verified(second)
 
     outcomes = _at_the_same_time(
-        lambda: services.deactivate_user(actor=first, user=first),
-        lambda: services.deactivate_user(actor=second, user=second),
+        lambda: services.deactivate_user(actor=as_first, user=first),
+        lambda: services.deactivate_user(actor=as_second, user=second),
     )
 
     assert _kinds(outcomes) == {"NoneType", "LastAdministratorError"}
@@ -223,11 +225,13 @@ def test_two_administrators_deactivating_each_other_leave_one(
     user_with_roles: UserFactory,
 ) -> None:
     first = user_with_roles(Role.ADMINISTRATOR)
+    as_first = verified(first)
     second = user_with_roles(Role.ADMINISTRATOR)
+    as_second = verified(second)
 
     outcomes = _at_the_same_time(
-        lambda: services.deactivate_user(actor=first, user=second),
-        lambda: services.deactivate_user(actor=second, user=first),
+        lambda: services.deactivate_user(actor=as_first, user=second),
+        lambda: services.deactivate_user(actor=as_second, user=first),
     )
 
     assert _kinds(outcomes) == {"NoneType", "PermissionDenied"}
@@ -238,12 +242,14 @@ def test_the_same_grant_made_twice_at_once_is_recorded_once(
     user_with_roles: UserFactory,
 ) -> None:
     first = user_with_roles(Role.ADMINISTRATOR)
+    as_first = verified(first)
     second = user_with_roles(Role.ADMINISTRATOR)
+    as_second = verified(second)
     user = user_with_roles()
 
     outcomes = _at_the_same_time(
-        lambda: services.grant_role(actor=first, user=user, role=Role.REVIEWER, reason=REASON),
-        lambda: services.grant_role(actor=second, user=user, role=Role.REVIEWER, reason=REASON),
+        lambda: services.grant_role(actor=as_first, user=user, role=Role.REVIEWER, reason=REASON),
+        lambda: services.grant_role(actor=as_second, user=user, role=Role.REVIEWER, reason=REASON),
     )
 
     assert _kinds(outcomes) == {"RoleEvent", "RoleChangeError"}
@@ -255,12 +261,14 @@ def test_a_grant_and_a_revoke_of_the_same_role_at_once_leave_a_consistent_record
     user_with_roles: UserFactory,
 ) -> None:
     first = user_with_roles(Role.ADMINISTRATOR)
+    as_first = verified(first)
     second = user_with_roles(Role.ADMINISTRATOR)
+    as_second = verified(second)
     user = user_with_roles(Role.READER)
 
     outcomes = _at_the_same_time(
-        lambda: services.revoke_role(actor=first, user=user, role=Role.READER, reason=REASON),
-        lambda: services.grant_role(actor=second, user=user, role=Role.READER, reason=REASON),
+        lambda: services.revoke_role(actor=as_first, user=user, role=Role.READER, reason=REASON),
+        lambda: services.grant_role(actor=as_second, user=user, role=Role.READER, reason=REASON),
     )
 
     history = list(

@@ -3,12 +3,11 @@
 import logging
 import threading
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from django.conf import LazySettings
 from django.db import connections
-from django.utils import timezone
 
 from caipo.accounts import services
 from caipo.accounts.models import AuthenticationEvent, User
@@ -33,21 +32,6 @@ THROTTLED = SignInOutcome.THROTTLED
 @pytest.fixture
 def user() -> User:
     return User.objects.create_user(EMAIL, PASSWORD)
-
-
-@pytest.fixture
-def clock(monkeypatch: pytest.MonkeyPatch) -> Callable[[timedelta], None]:
-    """Return a function that moves the application's clock forward."""
-    current = [timezone.now()]
-
-    def now() -> datetime:
-        return current[0]
-
-    def advance(by: timedelta) -> None:
-        current[0] += by
-
-    monkeypatch.setattr(timezone, "now", now)
-    return advance
 
 
 def _attempt(email: str = EMAIL, password: str = WRONG, source: str = SOURCE) -> SignInOutcome:

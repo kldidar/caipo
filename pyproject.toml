@@ -11,6 +11,9 @@ dependencies = [
     # Password hashing with Argon2, required by ADR-0007. Django supplies the
     # hasher but not the algorithm.
     "argon2-cffi>=25.1,<26",
+    # TOTP codes (RFC 6238) and authenticated encryption of their secrets
+    # (ADR-0014). The standard library has HMAC but no authenticated cipher.
+    "cryptography>=50.0,<51",
     # Long-term-support series (ADR-0001, docs/ARCHITECTURE.md §6).
     "django>=5.2,<5.3",
     # Binary wheels keep local setup free of a C toolchain. Revisit for production images.

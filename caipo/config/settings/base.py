@@ -2,7 +2,8 @@
 
 This module reads nothing from the environment, so it imports anywhere,
 including under the type checker. Each environment module adds the values that
-come from the environment: SECRET_KEY, DATABASES, and ALLOWED_HOSTS.
+come from the environment: SECRET_KEY, TOTP_ENCRYPTION_KEY, DATABASES, and
+ALLOWED_HOSTS.
 
 Defaults here are the restrictive ones. An environment module loosens a value
 only where it must, and says why.
@@ -18,7 +19,7 @@ DEBUG = False
 ALLOWED_HOSTS: list[str] = []
 
 # django.contrib.admin is deliberately absent. ADR-0007 puts it on a
-# non-default path behind TOTP, and TOTP does not exist yet.
+# non-default path behind TOTP. It is a later increment of its own.
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -82,6 +83,33 @@ LOGIN_URL = "login"
 LOGIN_THROTTLE_WINDOW = timedelta(minutes=15)
 LOGIN_THROTTLE_ACCOUNT_FAILURES = 5
 LOGIN_THROTTLE_SOURCE_FAILURES = 20
+
+# Second factor (ADR-0014). Repository-versioned like the limits above, and
+# for the same reason. None of these can turn the requirement off: which roles
+# need a second factor is part of the authorization policy, not a setting.
+
+# The name an authenticator application shows beside the account.
+TOTP_ISSUER = "CAIPO"
+# A code is accepted for the current 30-second step and this many steps on
+# either side, to allow for a clock that is slightly off.
+TOTP_DRIFT_STEPS = 1
+# The key that encrypts TOTP secrets, as 32 bytes. It has no value here: each
+# environment module must supply it, and code that needs it fails without it.
+TOTP_ENCRYPTION_KEY: bytes
+
+# An enrolment that needs no approval and is not confirmed with a code within
+# this time is void.
+MFA_ENROLLMENT_LIFETIME = timedelta(minutes=10)
+# An enrolment that needs an Administrator's approval waits this long for the
+# decision and, once approved, as long again for its first code. It waits for
+# people, so it is counted in days.
+MFA_APPROVAL_LIFETIME = timedelta(hours=72)
+# After the password is accepted, the code must follow within this time.
+MFA_CHALLENGE_LIFETIME = timedelta(minutes=5)
+# Wrong codes for one account, in any of sign-in, enrolment, and disabling,
+# before further codes are refused unexamined until earlier ones age out.
+MFA_THROTTLE_WINDOW = timedelta(minutes=15)
+MFA_THROTTLE_FAILURES = 5
 
 # Sessions are held on the server; the cookie carries only an identifier. A
 # session ends when the browser closes and, whatever the browser does, twelve

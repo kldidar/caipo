@@ -1,6 +1,6 @@
 # Development environment
 
-How to set up and run CAIPO locally. The environment provides a pinned Python environment and two backing services, PostgreSQL and Redis. The application is a Django skeleton: settings, the User foundation, health endpoints, and structured logging.
+How to set up and run CAIPO locally. The environment provides a pinned Python environment and two backing services, PostgreSQL and Redis. The application is a Django skeleton: settings, the User foundation, sign-in with TOTP multi-factor authentication, health endpoints, and structured logging.
 
 Last verified end to end on 2026-10-02. What was verified, and what was not, is recorded in [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §9.
 
@@ -33,7 +33,13 @@ In `.env`, set `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, and `DJANGO_SECRET_KEY` to
 python3 -c "import secrets; print(secrets.token_urlsafe(50))"
 ```
 
-An `.env` created before the Django skeleton existed also needs the `DJANGO_SETTINGS_MODULE` line from `.env.example`.
+Set `TOTP_ENCRYPTION_KEY` to a fourth, which has its own form, 32 random bytes as URL-safe Base64:
+
+```sh
+python3 -c "import base64, secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"
+```
+
+An `.env` created before the Django skeleton existed also needs the `DJANGO_SETTINGS_MODULE` line from `.env.example`, and one created before multi-factor authentication existed needs the `TOTP_ENCRYPTION_KEY` line. Without it every `manage.py` command stops with an error naming the variable. The test suite does not need it: it generates its own key.
 
 `.env` is ignored by git. Every variable is documented in `.env.example`. Compose refuses to start while a required variable is empty.
 
@@ -105,10 +111,10 @@ uv run --env-file .env python manage.py runserver        # http://127.0.0.1:8000
 
 | Module | Used by | Notes |
 |---|---|---|
-| `caipo.config.settings.base` | Imported by the others; the type checker | Reads nothing from the environment. Holds no secret key and no database. |
-| `caipo.config.settings.development` | `manage.py`, through `DJANGO_SETTINGS_MODULE` in `.env` | `DEBUG` on, loopback hosts only, cookies allowed over plain HTTP |
-| `caipo.config.settings.testing` | `pytest`, always | Generates its own secret key for each run |
-| `caipo.config.settings.production` | The default when `DJANGO_SETTINGS_MODULE` is unset | A baseline, not a complete production configuration. Also requires `DJANGO_ALLOWED_HOSTS`, a comma-separated list without wildcards, and refuses a `DJANGO_SECRET_KEY` shorter than 50 characters. |
+| `caipo.config.settings.base` | Imported by the others; the type checker | Reads nothing from the environment. Holds no secret key, no encryption key, and no database. |
+| `caipo.config.settings.development` | `manage.py`, through `DJANGO_SETTINGS_MODULE` in `.env` | `DEBUG` on, loopback hosts only, cookies allowed over plain HTTP. Requires `TOTP_ENCRYPTION_KEY`. |
+| `caipo.config.settings.testing` | `pytest`, always | Generates its own secret key and TOTP encryption key for each run |
+| `caipo.config.settings.production` | The default when `DJANGO_SETTINGS_MODULE` is unset | A baseline, not a complete production configuration. Also requires `DJANGO_ALLOWED_HOSTS`, a comma-separated list without wildcards, refuses a `DJANGO_SECRET_KEY` shorter than 50 characters, and refuses a `TOTP_ENCRYPTION_KEY` that is not 32 bytes of URL-safe Base64. |
 
 A required variable that is missing stops start-up with an error naming the variable. If a command reports that `DJANGO_ALLOWED_HOSTS` is not set during local work, `DJANGO_SETTINGS_MODULE` is missing from `.env` and the production settings were selected.
 
@@ -137,19 +143,49 @@ uv run --env-file .env python manage.py create_first_administrator
 uv run --env-file .env python manage.py runserver        # then http://127.0.0.1:8000/login/
 ```
 
-`create_first_administrator` creates the only account the application can create so far. It is interactive and works once; what it asks for, and why it has no options, is in [SECURITY.md](../SECURITY.md), "The first Administrator". To start again locally, recreate the development database (`docker compose down -v`).
+`create_first_administrator` creates the only account the application can create so far. It is interactive and works once; what it asks for, and why it has no options, is in [SECURITY.md](../SECURITY.md), "The first Administrator". Have an authenticator application at hand (any that implements TOTP: six digits, 30 seconds): after the email address, the password, and the confirmation, the command writes a key to the terminal, once, and asks for the code the application shows for it. The account is created only when a code is accepted. After three codes that are not, nothing has been created and the command can be run again. To start again locally after it has succeeded, recreate the development database (`docker compose down -v`).
 
 During an initial deployment it is run once, by the person installing the system, in a terminal on the server and under the settings of that environment, after `migrate` and before anyone needs to sign in. In a container that means an interactive session, for example `docker compose exec` with a terminal attached. It cannot be put in a start-up script, because it refuses to run without a terminal.
 
 The pages are `/login/` and `/logout/`. A view never checks a password itself: `caipo.accounts.services.sign_in` decides, throttles, and records, and the view only establishes the session. After 5 refused attempts for one email address, or 20 from one source, within 15 minutes, the page answers 429; signing in successfully from another address does not lift that, waiting does. The limits are `LOGIN_THROTTLE_*` in `caipo/config/settings/base.py`. The decisions, and what is deferred to later increments, are in [ADR-0013](adr/0013-authentication-core-and-first-administrator-bootstrap.md).
 
-The first Administrator can sign in but has no administrative privileges, because those require TOTP, which is not implemented. That is intended, and there is no setting that changes it.
+The first Administrator signs in with its password and then a code from the authenticator that was set up by the command: the password alone signs nobody in, and there is no setting that changes it. See the next section.
+
+A development database whose Administrator was created before the bootstrap set up the second factor (migration `accounts/0005_second_factor_approval`) has an Administrator whose second factor nobody approved, and nobody who could approve it. Recreate that database.
 
 The sign-in tests use the real Argon2 hasher, which is why the suite takes about a minute.
 
+## Two-step verification
+
+Decided in [ADR-0014](adr/0014-totp-mfa-and-authentication-assurance.md); what it does and does not protect is in [SECURITY.md](../SECURITY.md), "Multi-factor authentication as implemented".
+
+To enrol, sign in and open `/account/second-factor/`. Give the password again to get a key, add the key to an authenticator application (any that implements TOTP: six digits, 30 seconds), and enter the current code. The key is shown once; if it is lost before the code is entered, start again. There is no QR code.
+
+A Reader or Researcher account does all of that by itself. A Reviewer or Administrator account cannot: its password must not be enough to give it a second factor. Such an account is shown its key together with a request number, and codes are not accepted until an Administrator has approved that request. The person gives the number to an Administrator themselves, not through the site. The Administrator, signed in with their own second factor, opens `/administration/second-factor-requests/`, ticks the confirmation for the request with that number, and approves it. The person then enters the current code. Asking for a key again makes a new request with a new number and no approval. The first Administrator is the exception: its second factor is set up by `create_first_administrator`.
+
+From then on `/login/` asks for the password and then, at `/login/verify/`, for a code. A code works once, so signing in again within the same 30 seconds means waiting for the next code.
+
+| Page | Method | What it does |
+|---|---|---|
+| `/login/verify/` | GET, POST | Asks for the code of a sign-in whose password was accepted. Nobody is signed in until the code is. |
+| `/account/second-factor/` | GET | Shows whether two-step verification is off, awaiting approval, awaiting its first code, or on |
+| `/account/second-factor/enrol/` | POST | Password again; issues a new key and shows it once, with a request number where approval is needed |
+| `/account/second-factor/confirm/` | POST | A code from the new key; turns two-step verification on. Refused while the request awaits approval. |
+| `/account/second-factor/replace/` | POST | Password and a current code; gives up the present key and issues a new one, which needs approval where enrolling did |
+| `/account/second-factor/disable/` | POST | Password and a current code; turns it off |
+| `/administration/second-factor-requests/` | GET | For an Administrator signed in with a second factor: the requests that await a decision |
+| `/administration/second-factor-requests/<number>/approve/` | POST | Approves one request; needs the ticked confirmation |
+| `/administration/second-factor-requests/<number>/reject/` | POST | Rejects one request and discards its key |
+
+After 5 refused codes for one account within 15 minutes the pages answer 429 until earlier refusals are 15 minutes old. Nothing lifts that sooner. The limits and lifetimes are `MFA_*` and `TOTP_*` in `caipo/config/settings/base.py`.
+
+**The encryption key.** TOTP secrets are stored encrypted under `TOTP_ENCRYPTION_KEY`. Changing that key, or losing it, makes every enrolled second factor unusable: each enrolled account is refused at the code step. Locally, recreate the development database (`docker compose down -v`) or delete the rows of `accounts_totpdevice`. Rotating the key without that loss is not built; it is designed with the deployment decision (ADR-0008).
+
+**A lost device.** There are no recovery codes and no reset by an Administrator. The account's row in `accounts_totpdevice` has to be deleted in the database by its owner; the account then signs in with its password and enrols again, with an Administrator's approval if it is a Reviewer or Administrator. For the only Administrator that approval cannot be given by anybody: locally, recreate the development database. Keep a second Administrator in any database that matters.
+
 ## Authorization
 
-No page uses this yet apart from the sign-in pages, which are public. It is the layer that views and services are written against.
+No page uses this yet apart from the sign-in pages, which are public, and the second-factor pages. It is the layer that views and services are written against.
 
 **A view declares the access it requires**, outermost, with `public` or with `requires` and a permission. A view with no declaration answers 403.
 
@@ -162,19 +198,24 @@ from caipo.web.access import public, requires
 def some_workspace_page(request): ...
 ```
 
-**A service checks for itself**, whatever the view has checked:
+**A service checks for itself**, whatever the view has checked. It is given the authentication context of whoever is acting, which is the account together with the assurance of its sign-in, and never a bare account:
 
 ```python
 from caipo.accounts import selectors
+from caipo.web import sessions
+
+actor = sessions.authentication_context(request)  # in a view; None for an anonymous visitor
 
 selectors.require_permission(actor, selectors.Permission.ROLES_MANAGE)  # raises PermissionDenied
-if selectors.can(user, selectors.Permission.WORKSPACE_READ):
+if selectors.can(actor, selectors.Permission.WORKSPACE_READ):
     ...  # yes or no, never raises
 ```
 
+A view passes `actor` on to the service it calls, as `services.grant_role(actor=actor, ...)` does. An account passed where a context is expected holds no permission. Code never asks whether an account has a second factor or which assurance it has: the policy decides which permissions need which.
+
 Code asks for a permission, never for a role. Roles, permissions, and the table connecting them are in `caipo/accounts/authorization.py`; add a permission there only when a feature needs to tell two accounts apart. Roles change only through `caipo.accounts.services.grant_role` and `revoke_role`, each of which appends a RoleEvent, and accounts are deactivated through `deactivate_user`. These refuse an actor changing their own roles and any change that would leave no Administrator.
 
-Reviewer and Administrator roles confer nothing until TOTP exists ([SECURITY.md](../SECURITY.md), "Authorization as implemented"). In tests, the `user_with_roles` fixture (in `caipo/accounts/tests/fixtures.py`) creates synthetic users with roles, and the `mfa_enrolled` fixture stands in for enrolment. That fixture is test-only: it replaces a function inside the test process, and the application has no setting, variable, or input that does the same. Do not add one.
+Reviewer and Administrator roles confer their permissions only at the `MFA_VERIFIED` assurance. In tests, the `user_with_roles` fixture (in `caipo/accounts/tests/fixtures.py`) creates synthetic users with roles. The helpers beside it give the context to act in: `signed_in(user)` for a sign-in with the password alone, and `verified(user)`, which gives the account a real, encrypted, trusted second factor and returns the context the verification service returns for it. `enrolled_device(user, trusted=False)` gives the device an account enrols on its password alone, and `approving_administrator()` the context of an Administrator who can approve a request. `code_at()` computes the code an authenticator would show. For HTTP tests, `caipo/web/tests/helpers.py` puts a test client in either state. Nothing replaces the authorization decision in a test, and the application has no setting, variable, or input that switches the requirement off. Do not add one.
 
 Role events cannot be updated or deleted, by the application or by SQL: a database trigger refuses both. A test that needs a different role history adds events; it does not edit them.
 

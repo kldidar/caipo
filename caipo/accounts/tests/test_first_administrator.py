@@ -1,12 +1,15 @@
 """Creating the first Administrator: the service, and the command an operator runs."""
 
+import base64
 import builtins
 import getpass
 import inspect
 import io
 import logging
+import re
 import sys
 from collections.abc import Callable, Iterator
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -16,12 +19,32 @@ from django.core.management.base import CommandError
 from django.db import IntegrityError
 
 import caipo
-from caipo.accounts import mfa, selectors, services
+from caipo.accounts import models, selectors, services, totp
 from caipo.accounts.management.commands import create_first_administrator as command_module
-from caipo.accounts.models import RoleEvent, RoleEventType, User
+from caipo.accounts.models import (
+    AuthenticationEvent,
+    AuthenticationEventType,
+    RoleEvent,
+    RoleEventType,
+    TotpDevice,
+    TotpDeviceState,
+    User,
+)
 from caipo.accounts.selectors import Permission, Role
-from caipo.accounts.services import FirstAdministratorExistsError, SignInOutcome
-from caipo.accounts.tests.fixtures import UserFactory
+from caipo.accounts.services import (
+    FirstAdministratorExistsError,
+    MfaOutcome,
+    SecondFactorCodeError,
+    SignInOutcome,
+)
+from caipo.accounts.tests.fixtures import (
+    Clock,
+    UserFactory,
+    code_at,
+    logged,
+    signed_in,
+    verified,
+)
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
 
@@ -33,8 +56,20 @@ COMMAND = "create_first_administrator"
 CONFIRMATION = command_module.CONFIRMATION
 
 
-def _create(email: str = EMAIL, password: str = PASSWORD) -> User:
-    return services.create_first_administrator(email=email, password=password, operator=OPERATOR)
+SOURCE = "203.0.113.10"
+WRONG_CODE = "000000"
+
+
+def _create(email: str = EMAIL, password: str = PASSWORD, code: str | None = None) -> User:
+    """Run both steps of the bootstrap, by default with the right code for the issued secret."""
+    enrollment = services.prepare_first_administrator(email=email, password=password)
+    return services.create_first_administrator(
+        email=email,
+        password=password,
+        operator=OPERATOR,
+        enrollment=enrollment,
+        code=code_at(secret=enrollment.secret) if code is None else code,
+    )
 
 
 # --- The service ---------------------------------------------------------------
@@ -61,18 +96,133 @@ def test_the_grant_is_a_role_event_without_an_actor_that_says_who_ran_it() -> No
     assert PASSWORD not in event.reason
 
 
-def test_the_password_is_hashed_and_signs_the_account_in() -> None:
+def test_the_password_is_hashed_and_alone_signs_nobody_in() -> None:
     user = _create()
 
     assert user.password.startswith("argon2$")
     assert PASSWORD not in user.password
-    result = services.sign_in(email=EMAIL, password=PASSWORD, source="203.0.113.10")
-    assert result.outcome == SignInOutcome.SIGNED_IN
+    result = services.sign_in(email=EMAIL, password=PASSWORD, source=SOURCE)
+    assert result.outcome == SignInOutcome.SECOND_FACTOR_REQUIRED
+    assert result.user is None
 
 
-def test_the_role_grants_nothing_until_a_second_factor_exists() -> None:
-    # Bootstrapping makes no exception to ADR-0007 rule 4.
-    assert selectors.permissions_of(_create()) == frozenset()
+def test_the_role_grants_only_enrolment_until_a_second_factor_is_verified() -> None:
+    # Bootstrapping makes no exception to ADR-0007 rule 4: a context that
+    # shows the password alone holds nothing administrative.
+    assert selectors.permissions_of(signed_in(_create())) == {Permission.MFA_MANAGE_OWN}
+
+
+def test_the_first_administrator_is_created_with_an_active_trusted_second_factor() -> None:
+    user = _create()
+
+    device = TotpDevice.objects.get()
+    assert device.user == user
+    assert device.state == TotpDeviceState.ACTIVE
+    assert device.confirmed_at is not None
+    # Trusted by the bootstrap itself: nobody exists who could have approved it.
+    assert device.approved_at is not None
+    assert device.approved_by is None
+    assert selectors.mfa_state_of(user) == selectors.MfaState.ACTIVE
+    event = AuthenticationEvent.objects.get()
+    assert event.event_type == AuthenticationEventType.MFA_ENROLLMENT_SUCCEEDED
+    assert (event.user, event.actor) == (user, None)
+    assert "second factor" in RoleEvent.objects.get().reason
+
+
+@pytest.mark.parametrize("code", [WRONG_CODE, "", "12345", "1234567", "abcdef"])
+def test_without_a_right_code_nothing_at_all_is_created(code: str) -> None:
+    with pytest.raises(SecondFactorCodeError):
+        _create(code=code)
+
+    assert not User.objects.exists()
+    assert not RoleEvent.objects.exists()
+    assert not TotpDevice.objects.exists()
+    assert not AuthenticationEvent.objects.exists()
+    # The bootstrap is still open: nothing happened.
+    assert selectors.an_administrator_was_ever_created() is False
+
+
+def test_a_code_for_another_secret_does_not_create_the_administrator() -> None:
+    enrollment = services.prepare_first_administrator(email=EMAIL, password=PASSWORD)
+    other = services.prepare_first_administrator(email=EMAIL, password=PASSWORD)
+    assert other.secret != enrollment.secret
+
+    with pytest.raises(SecondFactorCodeError):
+        services.create_first_administrator(
+            email=EMAIL,
+            password=PASSWORD,
+            operator=OPERATOR,
+            enrollment=enrollment,
+            code=code_at(secret=other.secret),
+        )
+
+    assert not User.objects.exists()
+
+
+def test_preparing_writes_nothing_and_logs_nothing(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.DEBUG):
+        enrollment = services.prepare_first_administrator(email=EMAIL, password=PASSWORD)
+
+    assert not User.objects.exists()
+    assert not TotpDevice.objects.exists()
+    assert not AuthenticationEvent.objects.exists()
+    assert [record for record in caplog.records if record.name.startswith("caipo")] == []
+    assert enrollment.provisioning.secret not in repr(enrollment)
+    assert str(enrollment.secret) not in repr(enrollment)
+
+
+def test_preparing_refuses_what_creating_would_refuse(user_with_roles: UserFactory) -> None:
+    with pytest.raises(ValidationError):
+        services.prepare_first_administrator(email=EMAIL, password="12345678901234")
+    with pytest.raises(ValidationError):
+        services.prepare_first_administrator(email="not-an-email", password=PASSWORD)
+
+    user_with_roles(Role.ADMINISTRATOR)
+    with pytest.raises(FirstAdministratorExistsError):
+        services.prepare_first_administrator(email=EMAIL, password=PASSWORD)
+
+
+def test_the_code_that_created_the_administrator_cannot_be_used_again() -> None:
+    _create()
+    challenge = services.sign_in(email=EMAIL, password=PASSWORD, source=SOURCE).challenge
+    assert challenge is not None
+    secret = _stored_secret()
+
+    result = services.verify_second_factor(
+        challenge=challenge, code=code_at(secret=secret), source=SOURCE
+    )
+
+    assert result.outcome == MfaOutcome.REFUSED
+
+
+def test_the_secret_and_code_reach_no_log_event_or_role_record(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    enrollment = services.prepare_first_administrator(email=EMAIL, password=PASSWORD)
+    code = code_at(secret=enrollment.secret)
+
+    with caplog.at_level(logging.DEBUG):
+        services.create_first_administrator(
+            email=EMAIL, password=PASSWORD, operator=OPERATOR, enrollment=enrollment, code=code
+        )
+
+    stored = " ".join(
+        [
+            RoleEvent.objects.get().reason,
+            *(str(value) for value in AuthenticationEvent.objects.values_list().get()),
+            logged(caplog.records),
+        ]
+    )
+    for forbidden in (enrollment.provisioning.secret, enrollment.provisioning.uri, PASSWORD):
+        assert forbidden not in stored
+    assert enrollment.secret not in bytes(TotpDevice.objects.get().secret_ciphertext)
+
+
+def _stored_secret() -> bytes:
+    device = TotpDevice.objects.get()
+    return totp.decrypt_secret(
+        bytes(device.secret_ciphertext), device.key_id, user_id=device.user_id
+    )
 
 
 def test_the_email_is_normalized() -> None:
@@ -100,14 +250,13 @@ def test_bootstrap_is_refused_when_an_administrator_was_granted_by_other_means(
     assert not User.objects.filter(email=EMAIL).exists()
 
 
-@pytest.mark.usefixtures("mfa_enrolled")
 def test_bootstrap_stays_closed_after_the_first_administrator_loses_the_role(
     user_with_roles: UserFactory,
 ) -> None:
     first = _create()
     second = user_with_roles(Role.ADMINISTRATOR)
     services.revoke_role(
-        actor=second, user=first, role=Role.ADMINISTRATOR, reason="TEST revocation"
+        actor=verified(second), user=first, role=Role.ADMINISTRATOR, reason="TEST revocation"
     )
 
     with pytest.raises(FirstAdministratorExistsError):
@@ -179,57 +328,60 @@ def test_normal_role_changes_still_need_an_acting_administrator(
     other = user_with_roles()
 
     with pytest.raises(PermissionDenied):
-        services.grant_role(actor=first, user=other, role=Role.READER, reason="TEST attempt")
+        services.grant_role(
+            actor=signed_in(first), user=other, role=Role.READER, reason="TEST attempt"
+        )
 
     assert RoleEvent.objects.filter(event_type=RoleEventType.GRANTED).count() == 1
 
 
-def test_the_first_administrator_can_sign_in_and_holds_no_administrative_privilege(
-    terminal: Terminal, user_with_roles: UserFactory
+def test_the_first_administrator_needs_the_bootstrap_device_for_every_privilege(
+    terminal: Terminal, user_with_roles: UserFactory, clock: Clock
 ) -> None:
-    """ADR-0007 rule 4 and ADR-0013 point 27, end to end, with nothing standing in for TOTP."""
-    # The application as it really runs: the enrolment lookup has not been replaced.
-    assert mfa.is_enrolled.__module__ == "caipo.accounts.mfa"
-    assert Path(inspect.getfile(mfa.is_enrolled)).name == "mfa.py"
+    """ADR-0007 rule 4 and ADR-0014, end to end, with nothing standing in for TOTP."""
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
 
-    # 1. The first Administrator can be created.
-    _run()
+    # 1. The first Administrator is created, with the device verified at the terminal.
+    _run(terminal)
     administrator = User.objects.get(email=EMAIL)
-
-    # 2. The account can authenticate.
-    result = services.sign_in(email=EMAIL, password=PASSWORD, source="203.0.113.10")
-    assert result.outcome == SignInOutcome.SIGNED_IN
-    assert result.user == administrator
-
-    # 3. The Administrator role is present.
     assert selectors.roles_of(administrator) == {Role.ADMINISTRATOR}
+    assert selectors.mfa_state_of(administrator) == selectors.MfaState.ACTIVE
 
-    # 4. Without an enrolled second factor, nothing the role confers is available.
-    assert mfa.is_enrolled(administrator) is False
-    assert selectors.permissions_of(administrator) == frozenset()
-    for permission in Permission:
-        assert selectors.can(administrator, permission) is False
-        with pytest.raises(PermissionDenied):
-            selectors.require_permission(administrator, permission)
-
+    # 2. The password alone signs nobody in, and a context that claims no
+    #    more than the password holds nothing administrative.
+    result = services.sign_in(email=EMAIL, password=PASSWORD, source=SOURCE)
+    assert result.outcome == SignInOutcome.SECOND_FACTOR_REQUIRED
+    assert result.user is None and result.challenge is not None
+    password_only = signed_in(administrator)
+    assert selectors.permissions_of(password_only) == {Permission.MFA_MANAGE_OWN}
     other = user_with_roles(Role.READER)
     with pytest.raises(PermissionDenied):
-        services.grant_role(actor=administrator, user=other, role=Role.RESEARCHER, reason="TEST")
+        services.grant_role(actor=password_only, user=other, role=Role.RESEARCHER, reason="TEST")
     with pytest.raises(PermissionDenied):
-        services.revoke_role(actor=administrator, user=other, role=Role.READER, reason="TEST")
-    with pytest.raises(PermissionDenied):
-        services.deactivate_user(actor=administrator, user=other)
+        services.deactivate_user(actor=password_only, user=other)
 
-    assert selectors.roles_of(other) == {Role.READER}
-    assert User.objects.get(pk=other.pk).is_active is True
-    assert RoleEvent.objects.filter(actor=administrator).count() == 0
+    # 3. Whoever knows the password cannot give the account another device.
+    started = services.start_mfa_enrollment(actor=password_only, password=PASSWORD, source=SOURCE)
+    assert started.outcome == MfaOutcome.UNAVAILABLE
+
+    # 4. With a code from the authenticator set up at the terminal, the
+    #    account is an operational Administrator.
+    clock(timedelta(seconds=60))
+    verified_result = services.verify_second_factor(
+        challenge=result.challenge, code=terminal.code(), source=SOURCE
+    )
+    assert verified_result.outcome == MfaOutcome.ACCEPTED
+    assert verified_result.context is not None
+    assert selectors.can(verified_result.context, Permission.ROLES_MANAGE) is True
+    services.grant_role(
+        actor=verified_result.context, user=other, role=Role.RESEARCHER, reason="TEST"
+    )
+    assert selectors.roles_of(other) == {Role.READER, Role.RESEARCHER}
 
 
 # --- The bootstrap is the only way to an event without an actor ----------------
 
 
-@pytest.mark.usefixtures("mfa_enrolled")
 @pytest.mark.parametrize("operation", [services.grant_role, services.revoke_role])
 @pytest.mark.parametrize("role", list(Role))
 def test_the_role_services_refuse_a_change_that_names_no_actor(
@@ -276,6 +428,27 @@ def test_only_the_bootstrap_operation_writes_an_event_without_an_actor() -> None
     assert "actor=None" in inspect.getsource(services.create_first_administrator)
 
 
+def test_only_the_bootstrap_operation_trusts_a_device_that_nobody_approved() -> None:
+    """A device is marked approved in two places: the approval, which names the
+    approving Administrator, and the bootstrap, which is the one that names nobody."""
+    package_root = Path(inspect.getfile(caipo)).parent
+    writers = sorted(
+        str(path.relative_to(package_root))
+        for path in package_root.rglob("*.py")
+        if "tests" not in path.parts
+        and "migrations" not in path.parts
+        and re.search(r"approved_at\s*=[^=]", path.read_text())
+    )
+
+    # The model defines the field and sets it nowhere.
+    assert writers == ["accounts/models.py", "accounts/services.py"]
+    assert len(re.findall(r"approved_at\s*=[^=]", inspect.getsource(models))) == 1
+    source = inspect.getsource(services)
+    assert len(re.findall(r"approved_at\s*=[^=]", source)) == 2
+    assert "approved_at=now" in inspect.getsource(services.create_first_administrator)
+    assert "approved_by = actor.user" in inspect.getsource(services._decide_enrollment)
+
+
 def test_a_second_actor_less_event_is_refused_by_the_database_even_for_the_bootstrap_itself(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -293,22 +466,63 @@ def test_a_second_actor_less_event_is_refused_by_the_database_even_for_the_boots
 # --- The command ---------------------------------------------------------------
 
 
-class Terminal:
-    """Stands in for the person at the keyboard, and records what was asked."""
+class _TerminalOutput(io.StringIO):
+    """What the command writes, on something that says it is a terminal or says it is not."""
 
-    def __init__(self, monkeypatch: pytest.MonkeyPatch, *, interactive: bool = True) -> None:
+    def __init__(self, *, interactive: bool) -> None:
+        super().__init__()
+        self._interactive = interactive
+
+    def isatty(self) -> bool:
+        return self._interactive
+
+
+class Terminal:
+    """Stands in for the person at the keyboard, and records what was asked.
+
+    By default the person reads the key off the screen, puts it into an
+    authenticator, and types the code it shows. `codes` replaces that with
+    what is typed at each request for a code, `RIGHT_CODE` meaning the same.
+    """
+
+    RIGHT_CODE = "TEST: the code the authenticator shows"
+
+    def __init__(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        interactive: bool = True,
+        output_is_a_terminal: bool = True,
+    ) -> None:
         self.lines: Iterator[str] = iter(())
         self.secrets: Iterator[str] = iter(())
+        self.codes: Iterator[str] = iter(())
         self.prompts: list[str] = []
+        self.out = _TerminalOutput(interactive=output_is_a_terminal)
         monkeypatch.setattr(builtins, "input", self._input)
         monkeypatch.setattr(getpass, "getpass", self._getpass)
         monkeypatch.setattr(sys.stdin, "isatty", lambda: interactive, raising=False)
 
-    def will_type(self, *, lines: list[str], secrets: list[str]) -> None:
+    def will_type(
+        self, *, lines: list[str], secrets: list[str], codes: list[str] | None = None
+    ) -> None:
         self.lines, self.secrets = iter(lines), iter(secrets)
+        self.codes = iter([self.RIGHT_CODE] if codes is None else codes)
+
+    def key(self) -> str:
+        """Return the key as it was shown on the screen."""
+        (shown,) = re.findall(r"^Key: (\S+)$", self.out.getvalue(), flags=re.MULTILINE)
+        return str(shown)
+
+    def code(self) -> str:
+        """Return what an authenticator that was given the key shows now."""
+        return code_at(secret=base64.b32decode(self.key()))
 
     def _input(self, prompt: str = "") -> str:
         self.prompts.append(prompt)
+        if "code" in prompt:
+            typed = next(self.codes)
+            return self.code() if typed == self.RIGHT_CODE else typed
         return next(self.lines)
 
     def _getpass(self, prompt: str = "") -> str:
@@ -321,16 +535,16 @@ def terminal(monkeypatch: pytest.MonkeyPatch) -> Terminal:
     return Terminal(monkeypatch)
 
 
-def _run() -> str:
-    out, err = io.StringIO(), io.StringIO()
-    call_command(COMMAND, stdout=out, stderr=err)
-    return out.getvalue() + err.getvalue()
+def _run(terminal: Terminal) -> str:
+    err = io.StringIO()
+    call_command(COMMAND, stdout=terminal.out, stderr=err)
+    return terminal.out.getvalue() + err.getvalue()
 
 
 def test_the_command_creates_the_first_administrator(terminal: Terminal) -> None:
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
 
-    output = _run()
+    output = _run(terminal)
 
     user = User.objects.get()
     assert user.email == EMAIL
@@ -340,6 +554,86 @@ def test_the_command_creates_the_first_administrator(terminal: Terminal) -> None
     assert RoleEvent.objects.get().actor is None
     assert EMAIL in output
     assert "second factor" in output
+    device = TotpDevice.objects.get()
+    assert (device.user, device.state) == (user, TotpDeviceState.ACTIVE)
+    assert device.approved_at is not None
+    assert _stored_secret() == base64.b32decode(terminal.key())
+
+
+def test_the_command_shows_the_key_once_before_anything_exists(
+    terminal: Terminal, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[tuple[str, bool, bool]] = []
+
+    def watch(prompt: str = "") -> str:
+        seen.append((prompt, "Key: " in terminal.out.getvalue(), User.objects.exists()))
+        return terminal._input(prompt)
+
+    terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
+    monkeypatch.setattr(builtins, "input", watch)
+
+    output = _run(terminal)
+
+    # When the code was asked for, the key was on the screen and no account existed.
+    assert ("Current six-digit code: ", True, False) in seen
+    assert output.count(terminal.key()) == 2  # the key, and the address that carries it
+    assert "otpauth://totp/" in output
+
+
+def test_a_mistyped_code_can_be_typed_again(terminal: Terminal) -> None:
+    terminal.will_type(
+        lines=[EMAIL, CONFIRMATION],
+        secrets=[PASSWORD, PASSWORD],
+        codes=[WRONG_CODE, Terminal.RIGHT_CODE],
+    )
+
+    output = _run(terminal)
+
+    assert "not accepted" in output
+    assert selectors.roles_of(User.objects.get()) == {Role.ADMINISTRATOR}
+    assert TotpDevice.objects.get().state == TotpDeviceState.ACTIVE
+
+
+def test_the_command_asks_for_a_code_three_times_at_most() -> None:
+    assert command_module.CODE_ATTEMPTS == 3
+
+
+def test_the_command_creates_nothing_when_no_code_is_accepted(
+    terminal: Terminal, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    terminal.will_type(
+        lines=[EMAIL, CONFIRMATION],
+        secrets=[PASSWORD, PASSWORD],
+        codes=[WRONG_CODE] * command_module.CODE_ATTEMPTS,
+    )
+
+    with pytest.raises(CommandError, match="No code was accepted"):
+        _run(terminal)
+
+    assert not User.objects.exists()
+    assert not RoleEvent.objects.exists()
+    assert not TotpDevice.objects.exists()
+    assert list(terminal.codes) == []
+
+    # Nothing was left behind, so the bootstrap can be run again.
+    again = Terminal(monkeypatch)
+    again.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
+    _run(again)
+    assert selectors.roles_of(User.objects.get()) == {Role.ADMINISTRATOR}
+
+
+def test_the_command_does_not_write_the_key_to_anything_but_a_terminal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    terminal = Terminal(monkeypatch, output_is_a_terminal=False)
+    terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
+
+    with pytest.raises(CommandError, match="at a terminal"):
+        _run(terminal)
+
+    assert terminal.prompts == []
+    assert "Key:" not in terminal.out.getvalue()
+    assert not User.objects.exists()
 
 
 def test_the_password_never_appears_in_output_prompts_or_logs(
@@ -348,18 +642,20 @@ def test_the_password_never_appears_in_output_prompts_or_logs(
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
 
     with caplog.at_level(logging.DEBUG):
-        output = _run()
+        output = _run(terminal)
 
-    logged = " ".join(f"{record.getMessage()} {record.__dict__}" for record in caplog.records)
+    recorded = " ".join(f"{record.getMessage()} {record.__dict__}" for record in caplog.records)
     assert PASSWORD not in output
     assert PASSWORD not in " ".join(terminal.prompts)
-    assert PASSWORD not in logged
+    assert PASSWORD not in recorded
+    # The key is shown on the terminal and reaches no log.
+    assert terminal.key() not in recorded
 
 
 def test_the_password_is_asked_for_with_hidden_input_twice(terminal: Terminal) -> None:
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
 
-    _run()
+    _run(terminal)
 
     # Both secrets were consumed through getpass, and nothing else was.
     assert list(terminal.secrets) == []
@@ -376,7 +672,7 @@ def test_the_command_refuses_a_second_bootstrap_before_asking_anything(
     _create()
 
     with pytest.raises(CommandError, match="already been created"):
-        _run()
+        _run(terminal)
 
     assert terminal.prompts == []
     assert User.objects.count() == 1
@@ -389,7 +685,7 @@ def test_the_command_requires_the_confirmation_to_be_typed_out(
     terminal.will_type(lines=[EMAIL, typed], secrets=[PASSWORD, PASSWORD])
 
     with pytest.raises(CommandError, match="Not confirmed"):
-        _run()
+        _run(terminal)
 
     assert not User.objects.exists()
     assert not RoleEvent.objects.exists()
@@ -399,7 +695,7 @@ def test_the_command_refuses_passwords_that_differ(terminal: Terminal) -> None:
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD + "x"])
 
     with pytest.raises(CommandError, match="not the same") as error:
-        _run()
+        _run(terminal)
 
     assert PASSWORD not in str(error.value)
     assert not User.objects.exists()
@@ -410,7 +706,7 @@ def test_the_command_refuses_a_weak_password_without_repeating_it(terminal: Term
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[weak, weak])
 
     with pytest.raises(CommandError, match="entirely numeric") as error:
-        _run()
+        _run(terminal)
 
     assert weak not in str(error.value)
     assert not User.objects.exists()
@@ -423,7 +719,7 @@ def test_the_command_refuses_to_run_without_a_person_at_a_terminal(
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
 
     with pytest.raises(CommandError, match="at a terminal"):
-        _run()
+        _run(terminal)
 
     assert terminal.prompts == []
     assert not User.objects.exists()
@@ -451,7 +747,7 @@ def test_no_environment_variable_supplies_credentials_or_skips_the_terminal(
     terminal = Terminal(monkeypatch, interactive=False)
 
     with pytest.raises(CommandError, match="at a terminal"):
-        _run()
+        _run(terminal)
 
     assert not User.objects.exists()
     assert terminal.prompts == []
@@ -464,7 +760,7 @@ def test_environment_variables_are_ignored_when_a_person_is_present(
         monkeypatch.setenv(name, "TEST-from-the-environment@caipo.test")
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
 
-    _run()
+    _run(terminal)
 
     user = User.objects.get()
     assert user.email == EMAIL
@@ -479,7 +775,7 @@ def test_the_operator_is_taken_from_the_process_not_from_the_environment(
         monkeypatch.setenv(name, "TEST-spoofed-operator")
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
 
-    _run()
+    _run(terminal)
 
     assert "TEST-spoofed-operator" not in RoleEvent.objects.get().reason
 
@@ -501,7 +797,7 @@ def test_the_command_accepts_no_credential_or_non_interactive_argument(
     terminal.will_type(lines=[EMAIL, CONFIRMATION], secrets=[PASSWORD, PASSWORD])
 
     with pytest.raises((CommandError, TypeError)):
-        call_command(COMMAND, *arguments, stdout=io.StringIO(), stderr=io.StringIO())
+        call_command(COMMAND, *arguments, stdout=terminal.out, stderr=io.StringIO())
 
     assert not User.objects.exists()
     assert terminal.prompts == []

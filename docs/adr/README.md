@@ -4,7 +4,7 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-Eight ADRs were accepted by the project owner on 2026-10-02. Five remain Proposed; the last column says what stands between each of those and acceptance.
+Nine ADRs were accepted by the project owner on 2026-10-02. Five remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
@@ -21,6 +21,7 @@ Eight ADRs were accepted by the project owner on 2026-10-02. Five remain Propose
 | [0011](0011-worker-isolation-mechanism.md) | Worker isolation mechanism | Proposed | Spike (B21) |
 | [0012](0012-authorization-and-role-event-integrity.md) | Authorization and role event integrity | Accepted | — (amended on 2026-10-02 for the first-Administrator bootstrap) |
 | [0013](0013-authentication-core-and-first-administrator-bootstrap.md) | Authentication core and first-Administrator bootstrap | Accepted | — |
+| [0014](0014-totp-mfa-and-authentication-assurance.md) | TOTP multi-factor authentication and authentication assurance | Accepted | — (amended on 2026-10-03: enrolment for Reviewer and Administrator accounts needs an Administrator's approval, and the first Administrator's second factor is set up by the bootstrap; key management in production waits for ADR-0008) |
 
 ## Statuses
 

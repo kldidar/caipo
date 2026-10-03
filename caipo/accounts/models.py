@@ -1,6 +1,7 @@
-"""Users, the record of their roles, and the record of sign-ins (ADR-0007).
+"""Users, the record of their roles, the record of sign-ins, and second factors
+(ADR-0007, ADR-0014).
 
-TOTP, the general audit record, and redaction records are not here yet.
+The general audit record and redaction records are not here yet.
 """
 
 import unicodedata
@@ -200,23 +201,47 @@ class AuthenticationEventType(models.TextChoices):
     LOGIN_SUCCESS = "login_success", _("Signed in")
     LOGIN_FAILURE = "login_failure", _("Sign-in failed")
     LOGOUT = "logout", _("Signed out")
+    # A signed-in account was asked for its password again and gave a wrong one.
+    PASSWORD_CONFIRMATION_FAILED = "password_confirmation_failed", _("Password not confirmed")
+    # The password was accepted and a second-factor code is now awaited.
+    MFA_CHALLENGE_ISSUED = "mfa_challenge_issued", _("Second factor requested")
+    MFA_ENROLLMENT_STARTED = "mfa_enrollment_started", _("Second-factor enrolment started")
+    MFA_ENROLLMENT_SUCCEEDED = "mfa_enrollment_succeeded", _("Second factor enrolled")
+    MFA_VERIFICATION_FAILED = "mfa_verification_failed", _("Second-factor code refused")
+    MFA_VERIFICATION_SUCCEEDED = "mfa_verification_succeeded", _("Second-factor code accepted")
+    MFA_DISABLED = "mfa_disabled", _("Second factor disabled")
+    # An Administrator approved, or rejected, another account's enrolment
+    # request. The event names the account and, as its actor, the Administrator.
+    MFA_ENROLLMENT_APPROVED = "mfa_enrollment_approved", _("Second-factor enrolment approved")
+    MFA_ENROLLMENT_REJECTED = "mfa_enrollment_rejected", _("Second-factor enrolment rejected")
+    # An active second factor was given up, on both proofs, for a new enrolment.
+    MFA_DEVICE_REPLACED = "mfa_device_replaced", _("Second factor replaced")
+
+
+# The events that one account causes for another. Only these name an actor.
+DECISION_EVENT_TYPES = (
+    AuthenticationEventType.MFA_ENROLLMENT_APPROVED,
+    AuthenticationEventType.MFA_ENROLLMENT_REJECTED,
+)
 
 
 class AuthenticationEvent(AppendOnlyModel):
-    """One sign-in, failed sign-in, or sign-out.
+    """One sign-in, failed sign-in, sign-out, or change to a second factor.
 
     Append-only, and deliberately small. It records that something happened,
     when, to which account if that is known, and under which request. It is
-    also what sign-in throttling counts. It is not the general audit record.
+    also what sign-in and second-factor throttling count. It is not the
+    general audit record.
 
-    It never holds a password, a password hash, a session identifier, or
-    anything else from the request. What was typed as the email address and
-    where the request came from are kept only as keyed hashes: enough to count
-    attempts that belong together, not enough to read back what was submitted.
-    People do type passwords into the email field.
+    It never holds a password, a password hash, a second-factor code or
+    secret, a session identifier, or anything else from the request. What was
+    typed as the email address and where the request came from are kept only
+    as keyed hashes: enough to count attempts that belong together, not enough
+    to read back what was submitted. People do type passwords into the email
+    field.
     """
 
-    event_type = models.CharField(_("event type"), max_length=20, choices=AuthenticationEventType)
+    event_type = models.CharField(_("event type"), max_length=32, choices=AuthenticationEventType)
     # Empty for a failed sign-in with an email address that belongs to no
     # account: there is nobody to name, and naming somebody would be wrong.
     user = models.ForeignKey(
@@ -224,6 +249,17 @@ class AuthenticationEvent(AppendOnlyModel):
         on_delete=models.PROTECT,
         related_name="+",
         verbose_name=_("user"),
+        null=True,
+        blank=True,
+    )
+    # Set only for a decision on another account's enrolment request: the
+    # Administrator who made it. Every other event is caused by the account it
+    # names, or by nobody known.
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name=_("actor"),
         null=True,
         blank=True,
     )
@@ -248,6 +284,17 @@ class AuthenticationEvent(AppendOnlyModel):
                 | models.Q(event_type=AuthenticationEventType.LOGIN_FAILURE),
                 name="accounts_authenticationevent_user_known_unless_failure",
             ),
+            # A decision names who made it, and nothing else names an actor.
+            models.CheckConstraint(
+                condition=models.Q(actor__isnull=False, event_type__in=DECISION_EVENT_TYPES)
+                | (models.Q(actor__isnull=True) & ~models.Q(event_type__in=DECISION_EVENT_TYPES)),
+                name="accounts_authenticationevent_actor_iff_decision",
+            ),
+            # Nobody decides on their own enrolment.
+            models.CheckConstraint(
+                condition=~models.Q(actor=models.F("user")),
+                name="accounts_authenticationevent_actor_is_not_user",
+            ),
         ]
         indexes = [
             # Every sign-in attempt counts recent events by each of these.
@@ -259,3 +306,126 @@ class AuthenticationEvent(AppendOnlyModel):
 
     def __str__(self) -> str:
         return self.event_type
+
+
+class TotpDeviceState(models.TextChoices):
+    # A secret has been issued to an account whose roles require a second
+    # factor, and no Administrator has approved the request yet. No code is
+    # accepted for it.
+    PENDING_APPROVAL = "pending_approval", _("Awaiting approval")
+    # A secret has been issued, any approval it needed has been given, and no
+    # code from it has been accepted yet.
+    PENDING_VERIFICATION = "pending_verification", _("Awaiting verification")
+    # The account proved possession of the secret. This is the second factor.
+    ACTIVE = "active", _("Active")
+
+
+class TotpDevice(models.Model):
+    """The TOTP second factor of one account, pending or active (ADR-0014).
+
+    An account with no row is not enrolled. There is at most one row for an
+    account, so an account cannot have two second factors, or one pending
+    beside one active. A pending row grants nothing. Disabling removes the
+    row, and with it the secret; what happened is kept in AuthenticationEvent.
+
+    A device is trusted when `approved_at` is set: an Administrator, named in
+    `approved_by`, approved the enrolment, or the first-Administrator
+    bootstrap established it, in which case nobody is named. Only a trusted
+    device counts towards MFA_VERIFIED. A device enrolled on a password alone
+    is asked for at sign-in and proves nothing more than the password.
+
+    The secret is never stored as it is used. `secret_ciphertext` is the
+    secret under authenticated encryption with a key that is not in the
+    database, bound to the account it was issued to, and `key_id` names the
+    key without revealing it. See `caipo.accounts.totp`.
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.PROTECT, related_name="+", verbose_name=_("user")
+    )
+    state = models.CharField(_("state"), max_length=20, choices=TotpDeviceState)
+    secret_ciphertext = models.BinaryField(_("encrypted secret"))
+    key_id = models.CharField(_("encryption key identifier"), max_length=16)
+    # The time step of the last code accepted. A code is accepted only for a
+    # later step, so a code that was seen in use cannot be used again.
+    last_used_step = models.BigIntegerField(_("last used time step"), null=True, blank=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    confirmed_at = models.DateTimeField(_("confirmed at"), null=True, blank=True)
+    approved_at = models.DateTimeField(_("approved at"), null=True, blank=True)
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name=_("approved by"),
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = _("TOTP device")
+        verbose_name_plural = _("TOTP devices")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(state__in=TotpDeviceState.values),
+                name="accounts_totpdevice_state_known",
+            ),
+            # Active means confirmed, and only active does: a row cannot claim
+            # to be the second factor without recording that a code proved it.
+            models.CheckConstraint(
+                condition=models.Q(
+                    state__in=[
+                        TotpDeviceState.PENDING_APPROVAL,
+                        TotpDeviceState.PENDING_VERIFICATION,
+                    ],
+                    confirmed_at__isnull=True,
+                    last_used_step__isnull=True,
+                )
+                | models.Q(
+                    state=TotpDeviceState.ACTIVE,
+                    confirmed_at__isnull=False,
+                    last_used_step__isnull=False,
+                ),
+                name="accounts_totpdevice_active_iff_confirmed",
+            ),
+            # A request that still awaits approval has not been approved.
+            models.CheckConstraint(
+                condition=~models.Q(state=TotpDeviceState.PENDING_APPROVAL)
+                | models.Q(approved_at__isnull=True),
+                name="accounts_totpdevice_awaiting_approval_is_unapproved",
+            ),
+            # Whoever is named as approving did approve, and nobody approves
+            # their own second factor.
+            models.CheckConstraint(
+                condition=models.Q(approved_by__isnull=True)
+                | (models.Q(approved_at__isnull=False) & ~models.Q(approved_by=models.F("user"))),
+                name="accounts_totpdevice_approver_is_not_user",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.state
+
+
+class MfaChallenge(models.Model):
+    """A sign-in whose password was accepted and whose second factor is awaited.
+
+    The pending authentication state, held on the server. It is created only
+    by the sign-in service, names the one account it can complete a sign-in
+    for, and is removed when it is used, cancelled, or replaced. There is at
+    most one for an account. It grants nothing by itself.
+
+    `token_key` is a keyed hash of the token that the pending session holds.
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.PROTECT, related_name="+", verbose_name=_("user")
+    )
+    token_key = models.CharField(_("token key"), max_length=64, unique=True)
+    created_at = models.DateTimeField(_("created at"))
+
+    class Meta:
+        verbose_name = _("second-factor challenge")
+        verbose_name_plural = _("second-factor challenges")
+
+    def __str__(self) -> str:
+        return f"challenge for user {self.user_id}"

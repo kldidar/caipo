@@ -1,0 +1,28 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Two-step verification requests" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Two-step verification requests" %}</h1>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% endif %}
+  <p>{% translate "A Reviewer or Administrator account cannot turn on two-step verification by itself. Before you approve a request, ask the person, by a means other than this site, for the request number they were shown. Approve only the request with that number: a request with another number was made by someone else who knows the password." %}</p>
+  {% for item in requests %}
+    <h2>{% blocktranslate with number=item.number %}Request {{ number }}{% endblocktranslate %}</h2>
+    <p>{% blocktranslate with email=item.email requested_at=item.requested_at|date:"c" %}Account {{ email }}, requested at {{ requested_at }}.{% endblocktranslate %}</p>
+    <form method="post" action="{% url 'second-factor-request-approve' item.number %}" novalidate>
+      {% csrf_token %}
+      <p><label>{{ approval_form.confirmed }} {{ approval_form.confirmed.label }}</label></p>
+      <button type="submit">{% translate "Approve" %}</button>
+    </form>
+    <form method="post" action="{% url 'second-factor-request-reject' item.number %}">
+      {% csrf_token %}
+      <button type="submit">{% translate "Reject" %}</button>
+    </form>
+  {% empty %}
+    <p>{% translate "No request awaits a decision." %}</p>
+  {% endfor %}
+  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+{% endblock %}

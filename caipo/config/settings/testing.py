@@ -9,6 +9,7 @@ from .base import *
 # Generated per process: tests must not depend on a particular key, and no key
 # is written down anywhere.
 SECRET_KEY = secrets.token_urlsafe(50)
+TOTP_ENCRYPTION_KEY = secrets.token_bytes(32)
 
 ALLOWED_HOSTS = ["testserver"]
 
