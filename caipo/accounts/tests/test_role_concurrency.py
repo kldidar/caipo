@@ -116,7 +116,7 @@ def _kinds(outcomes: list[object]) -> set[str]:
 def _administrators() -> set[int]:
     return {
         user.pk
-        for user in User.objects.filter(is_active=True)
+        for user in User.objects.filter(status="active")
         if Role.ADMINISTRATOR in selectors.roles_of(user)
     }
 
@@ -135,7 +135,7 @@ def test_a_change_waits_for_one_already_in_progress(
         "revoke": lambda: services.revoke_role(
             actor=as_administrator, user=user, role=Role.READER, reason=REASON
         ),
-        "deactivate": lambda: services.deactivate_user(actor=as_administrator, user=user),
+        "deactivate": lambda: services.disable_user(actor=as_administrator, user=user),
     }
     outcome: list[object] = []
 
@@ -213,8 +213,8 @@ def test_two_administrators_deactivating_themselves_leave_one(
     as_second = verified(second)
 
     outcomes = _at_the_same_time(
-        lambda: services.deactivate_user(actor=as_first, user=first),
-        lambda: services.deactivate_user(actor=as_second, user=second),
+        lambda: services.disable_user(actor=as_first, user=first),
+        lambda: services.disable_user(actor=as_second, user=second),
     )
 
     assert _kinds(outcomes) == {"NoneType", "LastAdministratorError"}
@@ -230,8 +230,8 @@ def test_two_administrators_deactivating_each_other_leave_one(
     as_second = verified(second)
 
     outcomes = _at_the_same_time(
-        lambda: services.deactivate_user(actor=as_first, user=second),
-        lambda: services.deactivate_user(actor=as_second, user=first),
+        lambda: services.disable_user(actor=as_first, user=second),
+        lambda: services.disable_user(actor=as_second, user=first),
     )
 
     assert _kinds(outcomes) == {"NoneType", "PermissionDenied"}

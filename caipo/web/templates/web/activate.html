@@ -1,0 +1,26 @@
+{% extends "web/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% translate "Activate your account" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Activate your account" %}</h1>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% endif %}
+  <p>{% translate "Choose the password for your account. If the activation code below is empty, copy it from the link in the message you received: it is everything after the # sign." %}</p>
+  <form method="post" action="{% url 'activate' %}" novalidate>
+    {% csrf_token %}
+    {% for form_error in form.non_field_errors %}<p role="alert">{{ form_error }}</p>{% endfor %}
+    {% for password_error in password_errors %}<p role="alert">{{ password_error }}</p>{% endfor %}
+    {% for field in form %}
+      <p>
+        {{ field.label_tag }}
+        {{ field }}
+        {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+      </p>
+    {% endfor %}
+    <button type="submit">{% translate "Activate" %}</button>
+  </form>
+  <script src="{% static 'web/activate.js' %}" defer></script>
+{% endblock %}

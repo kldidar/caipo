@@ -1,6 +1,6 @@
 """Write interface of the accounts app: signing in and out, the second factor
-and its approval, changing roles, deactivating accounts, and creating the first
-Administrator.
+and its approval, changing roles, creating, activating, disabling, and enabling
+accounts, and creating the first Administrator.
 
 Every account change here runs as one transaction and holds a lock that lets
 only one of them proceed at a time, so each decides on what the previous one
@@ -16,6 +16,7 @@ without a context there is no assurance to decide on, and the answer is no.
 
 import logging
 import secrets
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -28,6 +29,7 @@ from django.core.validators import validate_email
 from django.db import connection, transaction
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
+from django.utils.translation import gettext as _
 from django.views.decorators.debug import sensitive_variables
 
 from caipo.accounts import selectors, totp
@@ -39,6 +41,10 @@ from caipo.accounts.authorization import (
     enrollment_requires_approval,
 )
 from caipo.accounts.models import (
+    AccountActivation,
+    AccountEvent,
+    AccountEventType,
+    AccountStatus,
     AuthenticationEvent,
     AuthenticationEventType,
     MfaChallenge,
@@ -48,6 +54,7 @@ from caipo.accounts.models import (
     TotpDeviceState,
     User,
 )
+from caipo.core import mail
 from caipo.core.correlation import get_correlation_id
 
 logger = logging.getLogger(__name__)
@@ -58,6 +65,8 @@ logger = logging.getLogger(__name__)
 _SOURCE_LOCK = 1
 _IDENTIFIER_LOCK = 2
 _SECOND_FACTOR_LOCK = 3
+# One activation attempt at a time for a source.
+_ACTIVATION_LOCK = 4
 
 # What stands for the network address in the one event that no request causes.
 BOOTSTRAP_SOURCE = "create_first_administrator command"
@@ -81,6 +90,35 @@ class FirstAdministratorExistsError(AccountChangeError):
 
 class SecondFactorCodeError(AccountChangeError):
     """The code given for the first Administrator's second factor is not right for it."""
+
+
+class ActivationOutcome(StrEnum):
+    ACTIVATED = "activated"
+    # An unknown, used, replaced, or lapsed token, and a token of an account
+    # that is disabled or already active, are one outcome on purpose: a caller
+    # cannot tell them apart, so neither can whoever is asking.
+    REFUSED = "refused"
+    THROTTLED = "throttled"
+    # The token is good and the password chosen is not acceptable. Nothing
+    # was changed, and the token can be used again with another password.
+    PASSWORD_REFUSED = "password_refused"  # noqa: S105 - names an outcome; it is not a credential
+
+
+@dataclass(frozen=True)
+class ActivationResult:
+    outcome: ActivationOutcome
+    # Set only when the outcome is PASSWORD_REFUSED: what the password
+    # validators said. They describe rules and never repeat the password.
+    password_errors: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class CreatedAccount:
+    user: User
+    # Whether the verification message was handed on for delivery. If not,
+    # the account exists and awaits verification, and the message must be
+    # sent again with `send_account_verification`.
+    verification_sent: bool
 
 
 class SignInOutcome(StrEnum):
@@ -644,35 +682,286 @@ def revoke_role(*, actor: AuthenticationContext, user: User, role: Role, reason:
     return _change_role(actor, user, role, reason, RoleEventType.REVOKED)
 
 
-def deactivate_user(*, actor: AuthenticationContext, user: User) -> None:
-    """Deactivate an account, which then holds no permission and cannot be used.
+@sensitive_variables("token", "password")
+def create_user(
+    *,
+    actor: AuthenticationContext,
+    email: str,
+    role: Role,
+    source: str,
+    activation_url: Callable[[str], str],
+) -> CreatedAccount:
+    """Create an account that awaits verification, with one role, and invite its owner.
 
-    Preconditions: the actor holds the permission to deactivate accounts. An
-    actor may deactivate their own account: that gives up power and gains
-    none. Side effects: the account is marked inactive, in the database and on
-    the object passed in, and the change is logged. Its role record is kept.
+    The only way an account other than the first Administrator's comes to
+    exist. The acting Administrator names an email address and one role, and
+    never a password: the account is created with a password nobody knows,
+    and its owner chooses one with `activate_account`, using the token sent
+    to that address. `activation_url` turns that token into the address the
+    message carries; the caller supplies it, because only the caller knows
+    the site's pages.
 
-    Raises PermissionDenied if the actor may not deactivate accounts,
-    AccountChangeError if the account is already inactive, and
+    Preconditions: the actor holds the permission to create accounts and the
+    permission to manage roles, the role is one of the four roles, and the
+    email address is valid and belongs to no account. Side effects, in one
+    transaction: the account is created in PENDING_VERIFICATION, one RoleEvent
+    grants it the role, made by `grant_role` under its own rules, an
+    activation token is stored as a keyed hash, and `account_created` is
+    recorded naming the actor. Then, outside that transaction, the
+    verification message is sent, and `verification_sent` is recorded if it
+    was handed on. Whatever the role, the account can do nothing until it is
+    activated, and a Reviewer or Administrator role confers nothing until
+    the account has enrolled a second factor with an Administrator's approval
+    and signed in with it (ADR-0014).
+
+    The creation is logged without the email address. The token is not
+    logged, recorded, or returned.
+
+    Raises PermissionDenied if the actor may not create accounts or manage
+    roles, ValueError if the role is not one of the four roles, and
+    ValidationError if the email address is not valid or already belongs to
+    an account. Then nothing was created. A message that could not be sent is
+    not an error: the result says so, and the account awaits another message.
+    """
+    source_key = _key("source", source)
+    with transaction.atomic():
+        _serialize_account_changes()
+        # Permission first, so that a caller without it learns nothing about
+        # which email addresses have accounts or which inputs are valid.
+        selectors.require_permission(actor, Permission.ACCOUNTS_CREATE)
+        role = Role(role)
+        email = User.objects.normalize_email(email)
+        validate_email(email)
+        if User.objects.filter(email=email).exists():
+            raise ValidationError(_("An account with this email address already exists."))
+
+        user = User(email=email, status=AccountStatus.PENDING_VERIFICATION)
+        # A password nobody knows, and not an unusable one: a sign-in attempt
+        # for this account then costs what it costs for any other, so the
+        # time taken does not tell an account that awaits verification from
+        # one that does not exist. The value is discarded here.
+        user.set_password(secrets.token_urlsafe(32))
+        user.save()
+        _change_role(
+            actor,
+            user,
+            role,
+            "Initial role, given when the account was created.",
+            RoleEventType.GRANTED,
+        )
+        _record_account(AccountEventType.ACCOUNT_CREATED, user, source_key, actor=actor.user)
+        token = _issue_activation(user)
+
+    logger.info(
+        "Account created",
+        extra={
+            "event": "accounts.created",
+            "user_id": user.pk,
+            "actor_id": actor.user.pk,
+            "role": role.value,
+        },
+    )
+    sent = _send_verification(user, activation_url(token), source_key, actor.user)
+    return CreatedAccount(user=user, verification_sent=sent)
+
+
+@sensitive_variables("token")
+def send_account_verification(
+    *,
+    actor: AuthenticationContext,
+    user_id: int,
+    source: str,
+    activation_url: Callable[[str], str],
+) -> bool:
+    """Send the verification message of an account that awaits verification again.
+
+    Preconditions: the actor holds the permission to create accounts, and the
+    account exists and is in PENDING_VERIFICATION. Side effects: a new token
+    replaces the earlier one, which stops working at once, and the message is
+    sent; `verification_sent` is recorded, naming the actor, if it was handed
+    on. Returns whether it was.
+
+    Raises PermissionDenied if the actor may not create accounts, and
+    AccountChangeError if there is no such account awaiting verification.
+    """
+    source_key = _key("source", source)
+    with transaction.atomic():
+        selectors.require_permission(actor, Permission.ACCOUNTS_CREATE)
+        user = (
+            User.objects.select_for_update()
+            .filter(pk=user_id, status=AccountStatus.PENDING_VERIFICATION)
+            .first()
+        )
+        if user is None:
+            raise AccountChangeError("No such account awaits verification.")
+        token = _issue_activation(user)
+
+    return _send_verification(user, activation_url(token), source_key, actor.user)
+
+
+@sensitive_variables("token", "password")
+def activate_account(*, token: str, password: str, source: str) -> ActivationResult:
+    """Verify an email address and activate its account, with the password its owner chose.
+
+    `token` is what was sent to the account's email address. It decides which
+    account is activated; nothing else does. Presenting it shows that the
+    person can read that address, which is the verification.
+
+    Preconditions for ACTIVATED: attempts from the source are not throttled,
+    the token is the account's current one and younger than
+    ACCOUNT_ACTIVATION_LIFETIME, the account is in PENDING_VERIFICATION, and
+    the password passes the password validators. Side effects when ACTIVATED,
+    in one transaction: the password is set, the account becomes ACTIVE and
+    records when its email address was verified and when it was activated,
+    the token is removed, so it cannot be used again, and
+    `verification_succeeded` is recorded. Nobody is signed in.
+
+    Never raises for a bad token or password. Returns REFUSED for a token
+    that is unknown, used, replaced, or lapsed, or whose account is not
+    awaiting verification, and records `verification_failed`, naming the
+    account only if the token is that account's current one. Returns
+    THROTTLED, without examining the token and without recording, once
+    ACCOUNT_ACTIVATION_THROTTLE_FAILURES attempts from the source were
+    refused within ACCOUNT_ACTIVATION_THROTTLE_WINDOW. Returns
+    PASSWORD_REFUSED, with the validators' messages, if the token is good and
+    the password is not: then nothing is changed or recorded.
+    """
+    source_key = _key("source", source)
+    token_key = _key("activation", token)
+    with transaction.atomic():
+        _lock_attempts(_ACTIVATION_LOCK, source_key)
+        refused = AccountEvent.objects.filter(
+            event_type=AccountEventType.VERIFICATION_FAILED,
+            source_key=source_key,
+            created_at__gte=timezone.now() - settings.ACCOUNT_ACTIVATION_THROTTLE_WINDOW,
+        ).count()
+        if refused >= settings.ACCOUNT_ACTIVATION_THROTTLE_FAILURES:
+            logger.warning("Account activation throttled", extra={"event": "activation.throttled"})
+            return ActivationResult(ActivationOutcome.THROTTLED)
+
+        user, activation = _pending_activation(token_key)
+        if (
+            user is None
+            or activation is None
+            or user.status != AccountStatus.PENDING_VERIFICATION
+            or timezone.now() >= selectors.activation_expires_at(activation)
+        ):
+            _record_account(AccountEventType.VERIFICATION_FAILED, user, source_key)
+            logger.warning(
+                "Account activation refused",
+                extra={"event": "activation.refused", "user_id": user.pk if user else None},
+            )
+            return ActivationResult(ActivationOutcome.REFUSED)
+
+        try:
+            validate_password(password, user=user)
+        except ValidationError as error:
+            return ActivationResult(ActivationOutcome.PASSWORD_REFUSED, tuple(error.messages))
+
+        now = timezone.now()
+        user.set_password(password)
+        user.status = AccountStatus.ACTIVE
+        user.email_verified_at = now
+        user.activated_at = now
+        user.save(
+            update_fields=["password", "status", "email_verified_at", "activated_at", "updated_at"]
+        )
+        activation.delete()
+        _record_account(AccountEventType.VERIFICATION_SUCCEEDED, user, source_key)
+
+    logger.info("Account activated", extra={"event": "accounts.activated", "user_id": user.pk})
+    return ActivationResult(ActivationOutcome.ACTIVATED)
+
+
+def disable_user(*, actor: AuthenticationContext, user: User) -> None:
+    """Disable an account, which then holds no permission and cannot be signed in to.
+
+    Preconditions: the actor holds the permission to disable accounts. An
+    actor may disable their own account: that gives up power and gains none.
+    Side effects, in one transaction: the account becomes DISABLED, in the
+    database and on the object passed in, any activation token it had is
+    removed, and `account_disabled` is recorded naming the actor. Its role
+    record and its history are kept. It takes effect on the account's next
+    request: its sessions stop being recognised and its password signs
+    nobody in. The change is logged.
+
+    Raises PermissionDenied if the actor may not disable accounts,
+    AccountChangeError if the account is already disabled, and
     LastAdministratorError if it is the only active Administrator.
     """
     with transaction.atomic():
         _serialize_account_changes()
         selectors.require_permission(actor, Permission.ACCOUNTS_DEACTIVATE)
-        # Read again: the object passed in may be out of date.
-        target = User.objects.get(pk=user.pk)
-        if not target.is_active:
-            raise AccountChangeError("The account is already inactive.")
+        # Read again, and locked: the object passed in may be out of date,
+        # and an activation of the same account must not run alongside.
+        target = User.objects.select_for_update().get(pk=user.pk)
+        if target.status == AccountStatus.DISABLED:
+            raise AccountChangeError("The account is already disabled.")
         if Role.ADMINISTRATOR in selectors.roles_of(target):
             _require_another_administrator(besides=target)
-        target.is_active = False
-        target.save(update_fields=["is_active", "updated_at"])
+        target.status = AccountStatus.DISABLED
+        target.save(update_fields=["status", "updated_at"])
+        AccountActivation.objects.filter(user=target).delete()
+        _record_account(AccountEventType.ACCOUNT_DISABLED, target, actor=actor.user)
 
-    user.is_active = False
+    user.status = AccountStatus.DISABLED
     logger.info(
-        "Account deactivated",
-        extra={"event": "accounts.deactivated", "user_id": user.pk, "actor_id": actor.user.pk},
+        "Account disabled",
+        extra={"event": "accounts.disabled", "user_id": user.pk, "actor_id": actor.user.pk},
     )
+
+
+def enable_user(*, actor: AuthenticationContext, user: User) -> AccountStatus:
+    """Enable a disabled account, returning it to the state it was disabled in.
+
+    Preconditions: the actor holds the permission to enable accounts, and the
+    account is another account and is DISABLED. Side effects, in one
+    transaction: an account that had been activated becomes ACTIVE again,
+    with the password, roles, and second factor it had; one that had never
+    been activated becomes PENDING_VERIFICATION, with no token, so that its
+    verification message must be sent again. Enabling never verifies an email
+    address or activates an account by itself. `account_enabled` is recorded
+    naming the actor, and the change is logged. Returns the new state, which
+    is also set on the object passed in.
+
+    Raises PermissionDenied if the actor may not enable accounts or the
+    account is their own, and AccountChangeError if the account is not
+    disabled.
+    """
+    with transaction.atomic():
+        _serialize_account_changes()
+        selectors.require_permission(actor, Permission.ACCOUNTS_ENABLE)
+        if actor.user.pk == user.pk:
+            # A disabled account holds no permission, so this cannot happen
+            # today. It is checked all the same, so that the rule holds here
+            # by itself and not as a consequence of another rule.
+            logger.warning(
+                "Refused enabling the actor's own account",
+                extra={"event": "accounts.own_enabling_refused", "user_id": actor.user.pk},
+            )
+            raise PermissionDenied
+        target = User.objects.select_for_update().get(pk=user.pk)
+        if target.status != AccountStatus.DISABLED:
+            raise AccountChangeError("The account is not disabled.")
+        target.status = (
+            AccountStatus.ACTIVE
+            if target.activated_at is not None
+            else AccountStatus.PENDING_VERIFICATION
+        )
+        target.save(update_fields=["status", "updated_at"])
+        _record_account(AccountEventType.ACCOUNT_ENABLED, target, actor=actor.user)
+
+    user.status = target.status
+    logger.info(
+        "Account enabled",
+        extra={
+            "event": "accounts.enabled",
+            "user_id": user.pk,
+            "actor_id": actor.user.pk,
+            "status": target.status,
+        },
+    )
+    return AccountStatus(target.status)
 
 
 def _change_role(
@@ -742,7 +1031,7 @@ def _require_another_administrator(*, besides: User) -> None:
     not they have a second factor.
     """
     latest = (
-        RoleEvent.objects.filter(role=Role.ADMINISTRATOR, user__is_active=True)
+        RoleEvent.objects.filter(role=Role.ADMINISTRATOR, user__status=AccountStatus.ACTIVE)
         .exclude(user=besides)
         .order_by("user_id", "-id")
         .distinct("user_id")
@@ -905,6 +1194,112 @@ def _decide_enrollment(
         },
     )
     return MfaResult(MfaOutcome.ACCEPTED)
+
+
+@sensitive_variables("token")
+def _issue_activation(user: User) -> str:
+    """Give the account a new activation token, replacing any earlier one, and return it.
+
+    The token is 256 random bits. Only its keyed hash is stored. Must be
+    called inside a transaction.
+    """
+    token = secrets.token_urlsafe(32)
+    AccountActivation.objects.update_or_create(
+        user=user,
+        defaults={"token_key": _key("activation", token), "created_at": timezone.now()},
+    )
+    return token
+
+
+def _pending_activation(token_key: str) -> tuple[User | None, AccountActivation | None]:
+    """Return the account and activation with this token key, both locked, or neither.
+
+    The account row is locked before the activation row, as disabling locks
+    them, and the activation is read again under the lock: another request
+    may have used or replaced it meanwhile. Must be called inside a
+    transaction.
+    """
+    user_id = (
+        AccountActivation.objects.filter(token_key=token_key)
+        .values_list("user_id", flat=True)
+        .first()
+    )
+    if user_id is None:
+        return None, None
+    user = User.objects.select_for_update().get(pk=user_id)
+    activation = (
+        AccountActivation.objects.select_for_update()
+        .filter(token_key=token_key, user_id=user_id)
+        .first()
+    )
+    if activation is None:
+        return None, None
+    return user, activation
+
+
+@sensitive_variables("url")
+def _send_verification(user: User, url: str, source_key: str, actor: User) -> bool:
+    """Send the account its verification message, and record that if it was handed on.
+
+    Returns whether it was. A message that could not be sent is logged as an
+    error, without its content, and recorded nowhere: the account still
+    awaits a message.
+    """
+    lifetime_hours = int(settings.ACCOUNT_ACTIVATION_LIFETIME.total_seconds() // 3600)
+    try:
+        mail.deliver(
+            to=user.email,
+            subject=verification_subject(),
+            body=verification_body(url=url, lifetime_hours=lifetime_hours),
+        )
+    except mail.DeliveryError as error:
+        # No traceback: what a mail service says when it refuses a message
+        # can repeat the recipient's address.
+        logger.error(  # noqa: TRY400 - deliberately without the traceback, see above
+            "The verification message could not be sent",
+            extra={
+                "event": "accounts.verification_not_sent",
+                "user_id": user.pk,
+                "cause": type(error.__cause__).__name__,
+            },
+        )
+        return False
+    _record_account(AccountEventType.VERIFICATION_SENT, user, source_key, actor=actor)
+    logger.info(
+        "Verification message sent",
+        extra={"event": "accounts.verification_sent", "user_id": user.pk, "actor_id": actor.pk},
+    )
+    return True
+
+
+def verification_subject() -> str:
+    """Return the subject of the verification message."""
+    return _("Activate your CAIPO account")
+
+
+def verification_body(*, url: str, lifetime_hours: int) -> str:
+    """Return the text of the verification message.
+
+    The same for every recipient apart from the link: it names no person, no
+    email address, and no role, and holds no password, secret, or anything
+    about what the account can reach.
+    """
+    return _(
+        "An account has been created for this email address on CAIPO, the Central Asia"
+        " AI Policy Observatory.\n"
+        "\n"
+        "To confirm that this address is yours and choose your password, open this"
+        " link:\n"
+        "\n"
+        "%(url)s\n"
+        "\n"
+        "The link works once and stops working %(hours)d hours after this message was"
+        " sent. Do not pass it on: whoever opens it first sets the password of the"
+        " account.\n"
+        "\n"
+        "If you were not expecting this message, ignore it. Nothing happens unless the"
+        " link is used.\n"
+    ) % {"url": url, "hours": lifetime_hours}
 
 
 def _key(purpose: str, value: str) -> str:
@@ -1109,6 +1504,24 @@ def _record(
         user=user,
         actor=actor,
         identifier_key=identifier_key,
+        source_key=source_key,
+        correlation_id=get_correlation_id() or "",
+    )
+
+
+def _record_account(
+    event_type: AccountEventType,
+    user: User | None,
+    source_key: str = "",
+    *,
+    actor: User | None = None,
+) -> None:
+    """Append an account event. `source_key` is empty for a change made by a
+    service that no request reaches yet, and so has no source."""
+    AccountEvent.objects.create(
+        event_type=event_type,
+        user=user,
+        actor=actor,
         source_key=source_key,
         correlation_id=get_correlation_id() or "",
     )

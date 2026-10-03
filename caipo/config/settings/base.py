@@ -2,8 +2,8 @@
 
 This module reads nothing from the environment, so it imports anywhere,
 including under the type checker. Each environment module adds the values that
-come from the environment: SECRET_KEY, TOTP_ENCRYPTION_KEY, DATABASES, and
-ALLOWED_HOSTS.
+come from the environment: SECRET_KEY, TOTP_ENCRYPTION_KEY, DATABASES,
+ALLOWED_HOSTS, and PUBLIC_BASE_URL.
 
 Defaults here are the restrictive ones. An environment module loosens a value
 only where it must, and says why.
@@ -110,6 +110,30 @@ MFA_CHALLENGE_LIFETIME = timedelta(minutes=5)
 # before further codes are refused unexamined until earlier ones age out.
 MFA_THROTTLE_WINDOW = timedelta(minutes=15)
 MFA_THROTTLE_FAILURES = 5
+
+# Account activation (ADR-0015). Repository-versioned like the limits above.
+
+# The message that lets a new account verify its email address and choose its
+# password stops working after this time. An Administrator can send another.
+ACCOUNT_ACTIVATION_LIFETIME = timedelta(hours=48)
+# Refused activation attempts from one source before further attempts are
+# refused unexamined until earlier ones age out.
+ACCOUNT_ACTIVATION_THROTTLE_WINDOW = timedelta(minutes=15)
+ACCOUNT_ACTIVATION_THROTTLE_FAILURES = 10
+
+# The address of this site as its users reach it, scheme and host with no
+# path, for links in messages. It has no value here: each environment module
+# must supply it. It is never taken from a request, whose Host header a
+# client chooses.
+PUBLIC_BASE_URL: str
+
+# Email (ADR-0015). No delivery service is chosen: that belongs to deployment
+# (ADR-0008). Until an environment names a backend, every message is refused,
+# so nothing is sent by accident.
+EMAIL_BACKEND = "caipo.core.mail.RefusingEmailBackend"
+# A placeholder under a reserved name that can never receive mail (RFC 2606).
+# The real sender is set with the delivery service.
+DEFAULT_FROM_EMAIL = "CAIPO <no-reply@caipo.invalid>"
 
 # Sessions are held on the server; the cookie carries only an identifier. A
 # session ends when the browser closes and, whatever the browser does, twelve

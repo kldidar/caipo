@@ -67,7 +67,9 @@ UNAVAILABLE = MfaOutcome.UNAVAILABLE
 STEP = timedelta(seconds=30)
 ADMINISTRATIVE = {
     Permission.ROLES_MANAGE,
+    Permission.ACCOUNTS_CREATE,
     Permission.ACCOUNTS_DEACTIVATE,
+    Permission.ACCOUNTS_ENABLE,
     Permission.MFA_ENROLLMENT_APPROVE,
 }
 OWN_MFA = Permission.MFA_MANAGE_OWN
@@ -291,7 +293,7 @@ def test_a_deactivated_account_cannot_manage_a_second_factor(
     account: AccountFactory, operation: str
 ) -> None:
     user = account(Role.ADMINISTRATOR)
-    User.objects.filter(pk=user.pk).update(is_active=False)
+    User.objects.filter(pk=user.pk).update(status="disabled")
 
     with pytest.raises(PermissionDenied):
         _operations(signed_in(user))[operation]()
@@ -741,7 +743,7 @@ def test_an_account_deactivated_after_the_password_step_is_not_signed_in(
     user = account(Role.ADMINISTRATOR)
     enrolled_device(user)
     challenge = _challenge(user)
-    User.objects.filter(pk=user.pk).update(is_active=False)
+    User.objects.filter(pk=user.pk).update(status="disabled")
 
     result = _verify(challenge, code_at())
 
@@ -1061,7 +1063,7 @@ def test_a_service_called_directly_refuses_an_administrator_without_a_verified_c
             actor=without_mfa, user=target, role=Role.READER, reason="TEST attempt"
         )
     with pytest.raises(PermissionDenied):
-        services.deactivate_user(actor=without_mfa, user=target)
+        services.disable_user(actor=without_mfa, user=target)
     assert selectors.roles_of(target) == {Role.READER}
     assert User.objects.get(pk=target.pk).is_active is True
 
@@ -1296,7 +1298,7 @@ def test_no_secret_code_or_credential_reaches_the_logs_the_events_or_the_tables(
         [
             list(AuthenticationEvent.objects.values()),
             list(RoleEvent.objects.values()),
-            list(User.objects.values("id", "email", "is_active", "last_login")),
+            list(User.objects.values("id", "email", "status", "last_login")),
         ]
     )
     assert _events()[-1] == "mfa_disabled"
@@ -1512,7 +1514,11 @@ def test_the_account_table_has_no_column_that_could_record_enrolment() -> None:
         "password",
         "last_login",
         "email",
-        "is_active",
+        # The lifecycle of the account. None of the three says anything
+        # about a second factor.
+        "status",
+        "email_verified_at",
+        "activated_at",
         "created_at",
         "updated_at",
     }
@@ -1526,6 +1532,7 @@ def test_the_policy_and_the_decision_read_no_environment_and_no_setting_but_the_
     selectors_source = (PACKAGE_ROOT / "accounts" / "selectors.py").read_text()
     assert "environ" not in selectors_source
     assert set(re.findall(r"settings\.(\w+)", selectors_source)) == {
+        "ACCOUNT_ACTIVATION_LIFETIME",
         "MFA_ENROLLMENT_LIFETIME",
         "MFA_APPROVAL_LIFETIME",
     }

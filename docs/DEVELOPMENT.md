@@ -183,6 +183,33 @@ After 5 refused codes for one account within 15 minutes the pages answer 429 unt
 
 **A lost device.** There are no recovery codes and no reset by an Administrator. The account's row in `accounts_totpdevice` has to be deleted in the database by its owner; the account then signs in with its password and enrols again, with an Administrator's approval if it is a Reviewer or Administrator. For the only Administrator that approval cannot be given by anybody: locally, recreate the development database. Keep a second Administrator in any database that matters.
 
+## Creating accounts
+
+Decided in [ADR-0015](adr/0015-account-lifecycle-and-email-verification.md); what it protects is in [SECURITY.md](../SECURITY.md), "Account lifecycle as implemented".
+
+An Administrator, signed in with their second factor, opens `/administration/accounts/`, gives an email address, and chooses one role. The account is created awaiting verification and a message is sent to that address. The Administrator never sets a password.
+
+**No email is sent in development.** Each message is written to a file in `data/outbox/`, which git ignores. Open the newest file there to find the link:
+
+```sh
+ls -t data/outbox/ | head -1
+```
+
+The link is `http://127.0.0.1:8000/activate/#<token>`. Opening it shows a form with the token filled in; the person chooses a password and is sent to `/login/`. The link works once and for 48 hours. "Send the message again" on the accounts page writes a new file and makes the earlier link stop working. Delete the files in `data/outbox/` when you are done: each holds a link that can still be used.
+
+| Page | Method | What it does |
+|---|---|---|
+| `/administration/accounts/` | GET | For an Administrator signed in with a second factor: the form, and the accounts that await verification |
+| `/administration/accounts/create/` | POST | Creates an account that awaits verification and sends its message |
+| `/administration/accounts/<id>/send-verification/` | POST | Sends the message again, with a new link |
+| `/activate/` | GET, POST | Public. Verifies the address and sets the password, given the token from the message. |
+
+Disabling and enabling an account are `caipo.accounts.services.disable_user` and `enable_user`. They have no page yet.
+
+The limits and the lifetime are `ACCOUNT_ACTIVATION_*` in `caipo/config/settings/base.py`. The address used in links is `PUBLIC_BASE_URL`: fixed in development, and read from `CAIPO_PUBLIC_URL` in production, which accepts only `https://host[:port]` and refuses to start without it. In production no email service is configured yet (ADR-0008), so there a message is refused and the page says it could not be sent.
+
+A new Reviewer or Administrator account, once activated, still has to turn on two-step verification with an Administrator's approval before the role gives it anything (see above).
+
 ## Authorization
 
 No page uses this yet apart from the sign-in pages, which are public, and the second-factor pages. It is the layer that views and services are written against.
@@ -213,7 +240,7 @@ if selectors.can(actor, selectors.Permission.WORKSPACE_READ):
 
 A view passes `actor` on to the service it calls, as `services.grant_role(actor=actor, ...)` does. An account passed where a context is expected holds no permission. Code never asks whether an account has a second factor or which assurance it has: the policy decides which permissions need which.
 
-Code asks for a permission, never for a role. Roles, permissions, and the table connecting them are in `caipo/accounts/authorization.py`; add a permission there only when a feature needs to tell two accounts apart. Roles change only through `caipo.accounts.services.grant_role` and `revoke_role`, each of which appends a RoleEvent, and accounts are deactivated through `deactivate_user`. These refuse an actor changing their own roles and any change that would leave no Administrator.
+Code asks for a permission, never for a role. Roles, permissions, and the table connecting them are in `caipo/accounts/authorization.py`; add a permission there only when a feature needs to tell two accounts apart. Roles change only through `caipo.accounts.services.grant_role` and `revoke_role`, each of which appends a RoleEvent, and accounts are created through `create_user`, disabled through `disable_user`, and enabled through `enable_user`. These refuse an actor changing their own roles and any change that would leave no Administrator.
 
 Reviewer and Administrator roles confer their permissions only at the `MFA_VERIFIED` assurance. In tests, the `user_with_roles` fixture (in `caipo/accounts/tests/fixtures.py`) creates synthetic users with roles. The helpers beside it give the context to act in: `signed_in(user)` for a sign-in with the password alone, and `verified(user)`, which gives the account a real, encrypted, trusted second factor and returns the context the verification service returns for it. `enrolled_device(user, trusted=False)` gives the device an account enrols on its password alone, and `approving_administrator()` the context of an Administrator who can approve a request. `code_at()` computes the code an authenticator would show. For HTTP tests, `caipo/web/tests/helpers.py` puts a test client in either state. Nothing replaces the authorization decision in a test, and the application has no setting, variable, or input that switches the requirement off. Do not add one.
 

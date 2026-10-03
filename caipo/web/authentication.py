@@ -119,6 +119,8 @@ def sign_in(request: HttpRequest) -> HttpResponse:
         "next": local_destination,
         "can_manage_second_factor": selectors.can(actor, Permission.MFA_MANAGE_OWN),
         "can_approve_enrollments": selectors.can(actor, Permission.MFA_ENROLLMENT_APPROVE),
+        "can_create_accounts": selectors.can(actor, Permission.ACCOUNTS_CREATE),
+        "activated": "activated" in request.GET,
     }
     return render(request, "web/sign_in.html", context, status=status)
 

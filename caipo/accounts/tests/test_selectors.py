@@ -12,7 +12,13 @@ from django.test.utils import CaptureQueriesContext
 from caipo.accounts import selectors
 from caipo.accounts.models import RoleEvent, RoleEventType, User
 from caipo.accounts.selectors import Assurance, AuthenticationContext, Permission, Role
-from caipo.accounts.tests.fixtures import UserFactory, enrolled_device, signed_in, verified
+from caipo.accounts.tests.fixtures import (
+    UserFactory,
+    enrolled_device,
+    signed_in,
+    supporting_account,
+    verified,
+)
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
 
@@ -25,7 +31,7 @@ OWN_MFA = Permission.MFA_MANAGE_OWN
 
 
 def _record(user: User, role: Role, event_type: RoleEventType) -> None:
-    seeder, _ = User.objects.get_or_create(email="test.seed@caipo.test")
+    seeder = supporting_account("test.seed@caipo.test")
     RoleEvent.objects.create(
         user=user, role=role, event_type=event_type, actor=seeder, reason="TEST fixture"
     )
@@ -110,7 +116,14 @@ def test_what_each_role_can_do_on_a_password_alone(
         (Role.REVIEWER, {READ, CONTRIBUTE, REVIEW, OWN_MFA}),
         (
             Role.ADMINISTRATOR,
-            {MANAGE_ROLES, DEACTIVATE, OWN_MFA, Permission.MFA_ENROLLMENT_APPROVE},
+            {
+                MANAGE_ROLES,
+                Permission.ACCOUNTS_CREATE,
+                DEACTIVATE,
+                Permission.ACCOUNTS_ENABLE,
+                OWN_MFA,
+                Permission.MFA_ENROLLMENT_APPROVE,
+            },
         ),
     ],
 )
@@ -166,7 +179,7 @@ def test_deactivation_takes_effect_for_an_object_loaded_earlier(
     user = user_with_roles(Role.READER)
     assert selectors.can(signed_in(user), READ)
 
-    User.objects.filter(pk=user.pk).update(is_active=False)
+    User.objects.filter(pk=user.pk).update(status="disabled")
 
     assert user.is_active is True, "the object in memory is stale on purpose"
     assert not selectors.can(signed_in(user), READ)

@@ -363,7 +363,7 @@ def test_the_rule_itself_refuses_when_no_other_administrator_would_remain(
     other = user_with_roles(Role.ADMINISTRATOR)
     services._require_another_administrator(besides=administrator)
 
-    User.objects.filter(pk=other.pk).update(is_active=False)
+    User.objects.filter(pk=other.pk).update(status="disabled")
     with pytest.raises(LastAdministratorError):
         services._require_another_administrator(besides=administrator)
 
@@ -388,7 +388,7 @@ def test_an_administrator_deactivates_another_account(
 ) -> None:
     user = user_with_roles(Role.RESEARCHER)
 
-    services.deactivate_user(actor=verified(administrator), user=user)
+    services.disable_user(actor=verified(administrator), user=user)
 
     assert user.is_active is False
     assert User.objects.get(pk=user.pk).is_active is False
@@ -404,9 +404,9 @@ def test_only_an_administrator_may_deactivate_an_account(
     target = user_with_roles(Role.READER)
 
     with pytest.raises(PermissionDenied):
-        services.deactivate_user(actor=verified(actor), user=target)
+        services.disable_user(actor=verified(actor), user=target)
     with pytest.raises(PermissionDenied):
-        services.deactivate_user(actor=verified(actor), user=actor)
+        services.disable_user(actor=verified(actor), user=actor)
 
     assert User.objects.get(pk=target.pk).is_active is True
     assert User.objects.get(pk=actor.pk).is_active is True
@@ -419,14 +419,14 @@ def test_an_administrator_without_a_second_factor_cannot_deactivate_an_account(
     target = user_with_roles()
 
     with pytest.raises(PermissionDenied):
-        services.deactivate_user(actor=signed_in(actor), user=target)
+        services.disable_user(actor=signed_in(actor), user=target)
 
     assert User.objects.get(pk=target.pk).is_active is True
 
 
 def test_the_last_administrator_cannot_be_deactivated(administrator: User) -> None:
     with pytest.raises(LastAdministratorError):
-        services.deactivate_user(actor=verified(administrator), user=administrator)
+        services.disable_user(actor=verified(administrator), user=administrator)
 
     assert administrator.is_active is True
     assert User.objects.get(pk=administrator.pk).is_active is True
@@ -442,7 +442,7 @@ def test_the_only_administrator_deactivating_themselves_changes_nothing(
 
     def stored_state() -> object:
         users = list(
-            User.objects.order_by("id").values_list("id", "is_active", "updated_at", "last_login")
+            User.objects.order_by("id").values_list("id", "status", "updated_at", "last_login")
         )
         events = list(
             RoleEvent.objects.order_by("id").values_list(
@@ -458,14 +458,16 @@ def test_the_only_administrator_deactivating_themselves_changes_nothing(
         caplog.at_level(logging.INFO, logger="caipo.accounts.services"),
         pytest.raises(LastAdministratorError),
     ):
-        services.deactivate_user(actor=verified(administrator), user=administrator)
+        services.disable_user(actor=verified(administrator), user=administrator)
 
     assert stored_state() == before
     assert administrator.is_active is True
     assert _administrators() == {administrator}
     assert selectors.permissions_of(verified(administrator)) == {
         Permission.ROLES_MANAGE,
+        Permission.ACCOUNTS_CREATE,
         Permission.ACCOUNTS_DEACTIVATE,
+        Permission.ACCOUNTS_ENABLE,
         Permission.MFA_MANAGE_OWN,
         Permission.MFA_ENROLLMENT_APPROVE,
     }
@@ -479,7 +481,7 @@ def test_an_inactive_administrator_does_not_count_as_another_administrator(
     user_with_roles(Role.ADMINISTRATOR, is_active=False)
 
     with pytest.raises(LastAdministratorError):
-        services.deactivate_user(actor=verified(administrator), user=administrator)
+        services.disable_user(actor=verified(administrator), user=administrator)
 
     assert User.objects.get(pk=administrator.pk).is_active is True
 
@@ -489,11 +491,11 @@ def test_one_of_two_administrators_can_be_deactivated_but_not_the_one_remaining(
 ) -> None:
     other = user_with_roles(Role.ADMINISTRATOR)
 
-    services.deactivate_user(actor=verified(administrator), user=other)
+    services.disable_user(actor=verified(administrator), user=other)
 
     assert User.objects.get(pk=other.pk).is_active is False
     with pytest.raises(LastAdministratorError):
-        services.deactivate_user(actor=verified(administrator), user=administrator)
+        services.disable_user(actor=verified(administrator), user=administrator)
     assert User.objects.get(pk=administrator.pk).is_active is True
 
 
@@ -502,7 +504,7 @@ def test_an_administrator_may_deactivate_their_own_account_when_another_remains(
 ) -> None:
     other = user_with_roles(Role.ADMINISTRATOR)
 
-    services.deactivate_user(actor=verified(administrator), user=administrator)
+    services.disable_user(actor=verified(administrator), user=administrator)
 
     assert User.objects.get(pk=administrator.pk).is_active is False
     assert selectors.permissions_of(verified(administrator)) == frozenset()
@@ -513,10 +515,10 @@ def test_a_deactivated_administrator_cannot_deactivate_the_remaining_one(
     administrator: User, user_with_roles: UserFactory
 ) -> None:
     other = user_with_roles(Role.ADMINISTRATOR)
-    services.deactivate_user(actor=verified(administrator), user=other)
+    services.disable_user(actor=verified(administrator), user=other)
 
     with pytest.raises(PermissionDenied):
-        services.deactivate_user(actor=verified(other), user=administrator)
+        services.disable_user(actor=verified(other), user=administrator)
 
     assert User.objects.get(pk=administrator.pk).is_active is True
 
@@ -527,7 +529,7 @@ def test_deactivating_an_inactive_account_is_refused(
     user = user_with_roles(is_active=False)
 
     with pytest.raises(AccountChangeError):
-        services.deactivate_user(actor=verified(administrator), user=user)
+        services.disable_user(actor=verified(administrator), user=user)
 
 
 def test_deactivation_decides_on_the_stored_account_not_the_object_passed_in(
@@ -535,11 +537,11 @@ def test_deactivation_decides_on_the_stored_account_not_the_object_passed_in(
 ) -> None:
     other = user_with_roles(Role.ADMINISTRATOR)
     stale = User.objects.get(pk=other.pk)
-    services.deactivate_user(actor=verified(administrator), user=other)
+    services.disable_user(actor=verified(administrator), user=other)
     assert stale.is_active is True, "the object in memory is stale on purpose"
 
     with pytest.raises(AccountChangeError):
-        services.deactivate_user(actor=verified(administrator), user=stale)
+        services.disable_user(actor=verified(administrator), user=stale)
 
 
 def test_a_deactivation_is_logged_by_identifier(
@@ -548,10 +550,10 @@ def test_a_deactivation_is_logged_by_identifier(
     user = user_with_roles()
 
     with caplog.at_level(logging.INFO, logger="caipo.accounts.services"):
-        services.deactivate_user(actor=verified(administrator), user=user)
+        services.disable_user(actor=verified(administrator), user=user)
 
     (record,) = caplog.records
-    assert record.__dict__["event"] == "accounts.deactivated"
+    assert record.__dict__["event"] == "accounts.disabled"
     assert record.__dict__["user_id"] == user.pk
     assert record.__dict__["actor_id"] == administrator.pk
     assert user.email not in str(record.__dict__)
@@ -582,7 +584,7 @@ def test_a_deactivation_is_undone_with_the_transaction_around_it(
     user = user_with_roles(Role.READER)
 
     with pytest.raises(RuntimeError), transaction.atomic():
-        services.deactivate_user(actor=verified(administrator), user=user)
+        services.disable_user(actor=verified(administrator), user=user)
         raise RuntimeError("TEST failure after the change")
 
     assert User.objects.get(pk=user.pk).is_active is True

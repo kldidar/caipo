@@ -17,6 +17,7 @@ SETTINGS_PACKAGE = "caipo.config.settings"
 # Visibly synthetic: these stand in for deployment secrets and protect nothing.
 TEST_SECRET_KEY = "TEST-secret-key-used-only-by-the-settings-tests-0123456789"
 TEST_DATABASE_PASSWORD = "TEST-database-password"
+TEST_PUBLIC_URL = "https://caipo.test"
 TEST_TOTP_KEY_BYTES = bytes(range(32))
 TEST_TOTP_KEY = base64.urlsafe_b64encode(TEST_TOTP_KEY_BYTES).decode()
 
@@ -32,6 +33,7 @@ def deployment_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "DJANGO_SECRET_KEY": TEST_SECRET_KEY,
         "TOTP_ENCRYPTION_KEY": TEST_TOTP_KEY,
         "DJANGO_ALLOWED_HOSTS": "caipo.test, www.caipo.test",
+        "CAIPO_PUBLIC_URL": TEST_PUBLIC_URL,
         "POSTGRES_DB": "TEST_db",
         "POSTGRES_USER": "TEST_user",
         "POSTGRES_PASSWORD": TEST_DATABASE_PASSWORD,
@@ -106,6 +108,7 @@ def test_production_reads_its_configuration_from_the_environment() -> None:
     assert production["SECRET_KEY"] == TEST_SECRET_KEY
     assert production["TOTP_ENCRYPTION_KEY"] == TEST_TOTP_KEY_BYTES
     assert production["ALLOWED_HOSTS"] == ["caipo.test", "www.caipo.test"]
+    assert production["PUBLIC_BASE_URL"] == TEST_PUBLIC_URL
     assert production["DATABASES"]["default"]["PASSWORD"] == TEST_DATABASE_PASSWORD
     assert production["SESSION_COOKIE_SECURE"] is True
     assert production["CSRF_COOKIE_SECURE"] is True
@@ -118,6 +121,7 @@ def test_production_reads_its_configuration_from_the_environment() -> None:
         "DJANGO_SECRET_KEY",
         "TOTP_ENCRYPTION_KEY",
         "DJANGO_ALLOWED_HOSTS",
+        "CAIPO_PUBLIC_URL",
         "POSTGRES_PASSWORD",
         "POSTGRES_HOST",
     ],
@@ -279,6 +283,11 @@ def test_development_relaxes_only_what_local_http_requires() -> None:
         # The development server speaks plain HTTP.
         "SESSION_COOKIE_SECURE",
         "CSRF_COOKIE_SECURE",
+        # Links in messages point at the development server, and messages are
+        # written to local files and sent nowhere.
+        "PUBLIC_BASE_URL",
+        "EMAIL_BACKEND",
+        "EMAIL_FILE_PATH",
     }
 
 
@@ -289,4 +298,104 @@ def test_production_changes_nothing_but_what_comes_from_the_environment() -> Non
         "TOTP_ENCRYPTION_KEY",
         "DATABASES",
         "ALLOWED_HOSTS",
+        "PUBLIC_BASE_URL",
     }
+
+
+# --- The public address of the site, and email (ADR-0015) -------------------------------
+
+
+@pytest.mark.usefixtures("deployment_environment")
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("https://caipo.test", "https://caipo.test"),
+        ("https://caipo.test/", "https://caipo.test"),
+        ("https://caipo.test:8443", "https://caipo.test:8443"),
+    ],
+)
+def test_production_takes_the_public_address_from_the_environment(
+    monkeypatch: pytest.MonkeyPatch, value: str, expected: str
+) -> None:
+    monkeypatch.setenv("CAIPO_PUBLIC_URL", value)
+
+    assert _load("production")["PUBLIC_BASE_URL"] == expected
+
+
+@pytest.mark.usefixtures("deployment_environment")
+@pytest.mark.parametrize(
+    "value",
+    [
+        "http://caipo.test",
+        "caipo.test",
+        "//caipo.test",
+        "ftp://caipo.test",
+        "javascript:alert(1)",
+        "https://",
+        "https:///activate",
+        "https://caipo.test/path",
+        "https://caipo.test/?next=https://evil.test",
+        "https://caipo.test#fragment",
+        "https://user:TEST-pw@caipo.test",
+        "https://caipo.test:notaport",
+        "https://caipo.test:99999",
+        "HTTP://caipo.test",
+    ],
+)
+def test_production_refuses_a_public_address_that_is_not_a_plain_https_origin(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv("CAIPO_PUBLIC_URL", value)
+
+    with pytest.raises(ImproperlyConfigured, match="CAIPO_PUBLIC_URL") as error:
+        _load("production")
+
+    # The message names the variable and never repeats its value.
+    assert "TEST-pw" not in str(error.value)
+    assert "evil.test" not in str(error.value)
+
+
+def test_base_settings_hold_no_public_address() -> None:
+    assert not hasattr(base, "PUBLIC_BASE_URL")
+
+
+@pytest.mark.usefixtures("deployment_environment")
+def test_development_points_links_at_the_development_server_and_reads_no_variable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CAIPO_PUBLIC_URL", "https://evil.test")
+
+    assert _load("development")["PUBLIC_BASE_URL"] == "http://127.0.0.1:8000"
+
+
+@pytest.mark.usefixtures("deployment_environment")
+def test_no_environment_sends_real_email() -> None:
+    """Production has no delivery service yet, and so refuses; the others keep messages local."""
+    assert _load("production")["EMAIL_BACKEND"] == "caipo.core.mail.RefusingEmailBackend"
+    development = _load("development")
+    assert development["EMAIL_BACKEND"] == "django.core.mail.backends.filebased.EmailBackend"
+    assert settings.EMAIL_BACKEND == "django.core.mail.backends.locmem.EmailBackend"
+    for loaded in (_load("production"), development):
+        for name in ("EMAIL_HOST_PASSWORD", "EMAIL_HOST_USER", "EMAIL_HOST"):
+            assert name not in loaded
+
+
+@pytest.mark.usefixtures("deployment_environment")
+def test_the_development_outbox_is_a_directory_that_git_ignores() -> None:
+    outbox = _load("development")["EMAIL_FILE_PATH"]
+
+    assert outbox == base.BASE_DIR / "data" / "outbox"
+    ignored = (base.BASE_DIR / ".gitignore").read_text().splitlines()
+    assert "/data/" in ignored
+
+
+def test_the_default_backend_refuses_and_the_default_sender_can_never_receive_mail() -> None:
+    assert base.EMAIL_BACKEND == "caipo.core.mail.RefusingEmailBackend"
+    # A reserved name (RFC 2606) until the delivery service sets the real one.
+    assert base.DEFAULT_FROM_EMAIL.endswith("@caipo.invalid>")
+
+
+def test_the_activation_limits_are_repository_settings() -> None:
+    assert base.ACCOUNT_ACTIVATION_LIFETIME == timedelta(hours=48)
+    assert base.ACCOUNT_ACTIVATION_THROTTLE_WINDOW == timedelta(minutes=15)
+    assert base.ACCOUNT_ACTIVATION_THROTTLE_FAILURES == 10

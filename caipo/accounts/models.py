@@ -1,5 +1,5 @@
-"""Users, the record of their roles, the record of sign-ins, and second factors
-(ADR-0007, ADR-0014).
+"""Users and their lifecycle, the record of their roles, the record of sign-ins,
+second factors, and account activation (ADR-0007, ADR-0014, ADR-0015).
 
 The general audit record and redaction records are not here yet.
 """
@@ -10,9 +10,24 @@ from typing import Any, ClassVar, NoReturn
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.db.models.functions import Lower
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from caipo.accounts.authorization import Role
+
+
+class AccountStatus(models.TextChoices):
+    """Where an account stands in its lifecycle (ADR-0015). There are no other states."""
+
+    # The account exists and nobody has yet shown that its email address is
+    # theirs. It has no password anybody knows and cannot be signed in to.
+    PENDING_VERIFICATION = "pending_verification", _("Awaiting verification")
+    # The account can be signed in to, according to its roles and the
+    # second-factor policy.
+    ACTIVE = "active", _("Active")
+    # An Administrator disabled the account. It cannot be signed in to and
+    # holds no permission. Its roles stay on record.
+    DISABLED = "disabled", _("Disabled")
 
 
 class UserManager(BaseUserManager["User"]):
@@ -34,6 +49,11 @@ class UserManager(BaseUserManager["User"]):
     def create_user(self, email: str, password: str | None = None) -> User:
         """Create and save an active user.
 
+        This is not how an Administrator creates an account: that is
+        `caipo.accounts.services.create_user`, which creates it awaiting
+        verification. This makes the account active at once and says nothing
+        about its email address. The first-Administrator bootstrap uses it.
+
         With no password the account gets an unusable one and cannot sign in
         until a password is set. Raises ValueError if the email is empty, and
         IntegrityError if an account with that email already exists.
@@ -41,7 +61,7 @@ class UserManager(BaseUserManager["User"]):
         email = self.normalize_email(email)
         if not email:
             raise ValueError("An email address is required.")
-        user = self.model(email=email)
+        user = self.model(email=email, status=AccountStatus.ACTIVE, activated_at=timezone.now())
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -53,10 +73,25 @@ class User(AbstractBaseUser):
     There is deliberately no is_staff or is_superuser flag, and no role field.
     Access follows from the roles recorded in RoleEvent, and a superuser flag
     would bypass the deny-by-default permission checks they require.
+
+    `status` is the lifecycle state, and the only place it is stored. Two
+    times keep what the state alone would lose: `email_verified_at`, when the
+    holder of the email address proved it was theirs, and `activated_at`, when
+    the account first became active. A disabled account keeps both, so
+    enabling it returns it to where it was.
     """
 
     email = models.EmailField(_("email address"), unique=True)
-    is_active = models.BooleanField(_("active"), default=True)
+    status = models.CharField(
+        _("status"),
+        max_length=20,
+        choices=AccountStatus,
+        default=AccountStatus.PENDING_VERIFICATION,
+    )
+    # Empty for the first Administrator, whose account is created at the
+    # server: nobody verified that address by email.
+    email_verified_at = models.DateTimeField(_("email verified at"), null=True, blank=True)
+    activated_at = models.DateTimeField(_("activated at"), null=True, blank=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
@@ -73,10 +108,31 @@ class User(AbstractBaseUser):
             # The manager stores addresses lower-cased. This holds the rule for
             # any row written without it.
             models.UniqueConstraint(Lower("email"), name="accounts_user_email_case_insensitive"),
+            models.CheckConstraint(
+                condition=models.Q(status__in=AccountStatus.values),
+                name="accounts_user_status_known",
+            ),
+            # An account that awaits verification has never been verified or
+            # active, and an active one records when it became so.
+            models.CheckConstraint(
+                condition=models.Q(
+                    status=AccountStatus.PENDING_VERIFICATION,
+                    email_verified_at__isnull=True,
+                    activated_at__isnull=True,
+                )
+                | models.Q(status=AccountStatus.ACTIVE, activated_at__isnull=False)
+                | models.Q(status=AccountStatus.DISABLED),
+                name="accounts_user_status_matches_history",
+            ),
         ]
 
     def __str__(self) -> str:
         return self.email
+
+    @property
+    def is_active(self) -> bool:  # type: ignore[override]  # Django declares a class attribute; here it is derived from the one stored state
+        """Whether the account can be signed in to. What Django's authentication asks."""
+        return self.status == AccountStatus.ACTIVE
 
 
 class AppendOnlyError(Exception):
@@ -429,3 +485,131 @@ class MfaChallenge(models.Model):
 
     def __str__(self) -> str:
         return f"challenge for user {self.user_id}"
+
+
+class AccountActivation(models.Model):
+    """An account that awaits verification, and the token that can activate it (ADR-0015).
+
+    Created with the account and replaced when the verification message is
+    sent again, so there is at most one for an account and an earlier token
+    stops working. Removed when it is used and when the account is disabled.
+    It grants nothing by itself. Operational state, like MfaChallenge.
+
+    `token_key` is a keyed hash of the token that was sent to the account's
+    email address. The token itself is stored nowhere.
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.PROTECT, related_name="+", verbose_name=_("user")
+    )
+    token_key = models.CharField(_("token key"), max_length=64, unique=True)
+    created_at = models.DateTimeField(_("created at"))
+
+    class Meta:
+        verbose_name = _("account activation")
+        verbose_name_plural = _("account activations")
+
+    def __str__(self) -> str:
+        return f"activation for user {self.user_id}"
+
+
+class AccountEventType(models.TextChoices):
+    ACCOUNT_CREATED = "account_created", _("Account created")
+    VERIFICATION_SENT = "verification_sent", _("Verification message sent")
+    VERIFICATION_SUCCEEDED = "verification_succeeded", _("Email address verified")
+    VERIFICATION_FAILED = "verification_failed", _("Verification refused")
+    ACCOUNT_DISABLED = "account_disabled", _("Account disabled")
+    ACCOUNT_ENABLED = "account_enabled", _("Account enabled")
+
+
+# What an Administrator does to an account. Only these name an actor.
+ADMINISTRATIVE_ACCOUNT_EVENT_TYPES = (
+    AccountEventType.ACCOUNT_CREATED,
+    AccountEventType.VERIFICATION_SENT,
+    AccountEventType.ACCOUNT_DISABLED,
+    AccountEventType.ACCOUNT_ENABLED,
+)
+
+
+class AccountEvent(AppendOnlyModel):
+    """One step in the lifecycle of an account (ADR-0015).
+
+    Append-only. It records that an account was created, sent its verification
+    message, verified, disabled, or enabled, and each refused attempt to
+    verify: what happened, when, to which account if that is known, who did
+    it if an Administrator did, and under which request. It is also what the
+    throttling of verification attempts counts. It is not the general audit
+    record.
+
+    It never holds a verification token or its hash, a password, a
+    second-factor secret, or an email address. Where a verification attempt
+    came from is kept only as a keyed hash.
+    """
+
+    event_type = models.CharField(_("event type"), max_length=32, choices=AccountEventType)
+    # Empty for a refused verification whose token belongs to no account.
+    user = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name=_("user"),
+        null=True,
+        blank=True,
+    )
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name=_("actor"),
+        null=True,
+        blank=True,
+    )
+    # Empty for a change made by a service that no request reaches.
+    source_key = models.CharField(_("source key"), max_length=64, blank=True)
+    correlation_id = models.CharField(_("correlation ID"), max_length=32, blank=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    objects = AppendOnlyQuerySet["AccountEvent"].as_manager()
+
+    class Meta:
+        verbose_name = _("account event")
+        verbose_name_plural = _("account events")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(event_type__in=AccountEventType.values),
+                name="accounts_accountevent_event_type_known",
+            ),
+            # Only a refused verification can be without a user.
+            models.CheckConstraint(
+                condition=models.Q(user__isnull=False)
+                | models.Q(event_type=AccountEventType.VERIFICATION_FAILED),
+                name="accounts_accountevent_user_known_unless_failure",
+            ),
+            # What an Administrator does names the Administrator, and nothing
+            # else names an actor.
+            models.CheckConstraint(
+                condition=models.Q(
+                    actor__isnull=False, event_type__in=ADMINISTRATIVE_ACCOUNT_EVENT_TYPES
+                )
+                | (
+                    models.Q(actor__isnull=True)
+                    & ~models.Q(event_type__in=ADMINISTRATIVE_ACCOUNT_EVENT_TYPES)
+                ),
+                name="accounts_accountevent_actor_iff_administrative",
+            ),
+            # Nobody creates, invites, or enables their own account. Disabling
+            # one's own is allowed while another Administrator remains
+            # (ADR-0012).
+            models.CheckConstraint(
+                condition=~models.Q(actor=models.F("user"))
+                | models.Q(event_type=AccountEventType.ACCOUNT_DISABLED),
+                name="accounts_accountevent_actor_is_not_user_unless_disabling",
+            ),
+        ]
+        indexes = [
+            # Every verification attempt counts recent refusals from its source.
+            models.Index(fields=["source_key", "created_at"], name="accounts_acctevent_source"),
+        ]
+
+    def __str__(self) -> str:
+        return self.event_type

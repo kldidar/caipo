@@ -1,6 +1,8 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
+from caipo.accounts.selectors import Role
+
 
 class SignInForm(forms.Form):
     """The fields of the sign-in page. It checks shape only; it authenticates nothing."""
@@ -74,3 +76,48 @@ class EnrollmentApprovalForm(forms.Form):
         if self.data.get("confirmed") != "on":
             raise forms.ValidationError(_("Tick the confirmation."))
         return True
+
+
+class AccountCreationForm(forms.Form):
+    """Who a new account is for and which one role it starts with. Shape only.
+
+    There is no password field: the Administrator who creates an account
+    never chooses or sees its password.
+    """
+
+    email = forms.EmailField(
+        label=_("Email address"),
+        max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "off"}),
+    )
+    role = forms.ChoiceField(label=_("Role"), choices=Role.choices)
+
+
+class ActivationForm(forms.Form):
+    """The code from the verification message and the password its owner chooses. Shape only."""
+
+    token = forms.CharField(
+        label=_("Activation code"),
+        # A token is 43 characters. Bounded, so that hashing what was
+        # submitted has a bounded cost.
+        max_length=128,
+        widget=forms.TextInput(attrs={"autocomplete": "off", "spellcheck": "false"}),
+    )
+    password = forms.CharField(
+        label=_("New password"),
+        max_length=1024,
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}, render_value=False),
+    )
+    password_again = forms.CharField(
+        label=_("New password again"),
+        max_length=1024,
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}, render_value=False),
+    )
+
+    def clean(self) -> dict[str, object]:
+        cleaned = super().clean() or {}
+        if cleaned.get("password") != cleaned.get("password_again"):
+            raise forms.ValidationError(_("The two passwords are not the same."))
+        return cleaned

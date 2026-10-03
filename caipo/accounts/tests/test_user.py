@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth import authenticate, get_user_model
 from django.db import IntegrityError, transaction
 
-from caipo.accounts.models import User
+from caipo.accounts.models import AccountStatus, User
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
 
@@ -78,7 +78,7 @@ def test_saving_moves_updated_at_and_keeps_created_at() -> None:
     user = User.objects.create_user(EMAIL, PASSWORD)
     created_at, updated_at = user.created_at, user.updated_at
 
-    user.is_active = False
+    user.status = AccountStatus.DISABLED
     user.save()
 
     stored = User.objects.get(pk=user.pk)
@@ -125,10 +125,15 @@ def test_authentication_rejects_a_wrong_password() -> None:
     assert authenticate(email=EMAIL, password=PASSWORD + "-wrong") is None
 
 
-def test_authentication_rejects_an_inactive_user() -> None:
+@pytest.mark.parametrize("status", [AccountStatus.DISABLED, AccountStatus.PENDING_VERIFICATION])
+def test_authentication_rejects_a_user_that_is_not_active(status: AccountStatus) -> None:
     user = User.objects.create_user(EMAIL, PASSWORD)
-    user.is_active = False
-    user.save()
+    assert authenticate(email=EMAIL, password=PASSWORD) == user
+    User.objects.filter(pk=user.pk).update(
+        status=status,
+        # An account that awaits verification has never been active.
+        activated_at=None if status == AccountStatus.PENDING_VERIFICATION else user.activated_at,
+    )
 
     assert authenticate(email=EMAIL, password=PASSWORD) is None
 
@@ -142,7 +147,9 @@ def test_there_are_no_staff_or_superuser_privileges() -> None:
         "password",
         "last_login",
         "email",
-        "is_active",
+        "status",
+        "email_verified_at",
+        "activated_at",
         "created_at",
         "updated_at",
     }

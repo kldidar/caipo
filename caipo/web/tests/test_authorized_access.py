@@ -284,7 +284,7 @@ def test_a_deactivated_account_is_refused_on_its_next_request(
     signed_in(client, user)
     assert client.get("/read/").status_code == 200
 
-    User.objects.filter(pk=user.pk).update(is_active=False)
+    User.objects.filter(pk=user.pk).update(status="disabled")
 
     assert client.get("/read/").status_code == 403
 
