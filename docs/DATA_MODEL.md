@@ -80,11 +80,15 @@ erDiagram
 
 ### 3.1 `accounts`
 
-**User**, roles, and permissions. Roles are Reader, Researcher, Reviewer, Administrator; all are authenticated. An anonymous visitor to the public research site is not a role and has no User record (ADR-0007). A user may hold several roles. Permissions are not stored: which role holds which permission is a fixed table in code.
+**User**, roles, and permissions. A user has an email address, a lifecycle status (§4.10), the time its email address was verified, and the time it first became active. The status is the only place the state is stored; whether an account can be signed in to is derived from it. Roles are Reader, Researcher, Reviewer, Administrator; all are authenticated. An anonymous visitor to the public research site is not a role and has no User record (ADR-0007). A user may hold several roles. Permissions are not stored: which role holds which permission is a fixed table in code.
 
 **RoleEvent** (A-O). One change to a user's roles: user, role, event type (§4.7), acting user, reason, time. It is both the store of roles and their history: there is no current-role record to overwrite. The acting user is recorded and is never the user whose role changes. The one exception, defined in [ADR-0012](adr/0012-authorization-and-role-event-integrity.md) as amended, is the grant that creates the first Administrator, which is made by an operator at the server before any account exists: it has no acting user, names the bootstrap command and the operator's operating-system account in its reason, can only be a grant of the Administrator role, and the database allows it only once. Users referenced by a RoleEvent cannot be deleted. UPDATE and DELETE are refused by a database trigger as well as by the application. It records role changes only; the general AuditEvent below is not built yet.
 
 **AuthenticationEvent** (A-O). One sign-in, refused sign-in, sign-out, or change to a second factor: event type (§4.8), time, the user if the submitted email address belongs to an account, the acting user for a decision on another user's enrolment request and for nothing else, the request's correlation ID, and keyed hashes of the submitted email address and of the source address. No password, password hash, second-factor code or secret, challenge token, session identifier, header, or raw address. It is also what sign-in throttling and second-factor throttling count. Retention is a future data-governance decision: no period is set, and until one is, nothing deletes these events ([ADR-0013](adr/0013-authentication-core-and-first-administrator-bootstrap.md)). The keyed hashes depend on the application's secret key, so rotating it makes earlier events unmatchable to later ones by address or source. It is not the general AuditEvent.
+
+**AccountEvent** (A-O). One step in the lifecycle of a user ([ADR-0015](adr/0015-account-lifecycle-and-email-verification.md)): event type (§4.10), time, the user, the acting user where an Administrator caused it, the request's correlation ID, and a keyed hash of the source address of a verification attempt. A refused verification whose token belongs to no user names nobody. No token, token hash, password, or email address. The acting user is never the user the event is about, except when an Administrator disables their own account. It is also what the throttling of verification attempts counts. UPDATE and DELETE are refused by a database trigger as well as by the application. It is not the general AuditEvent.
+
+**AccountActivation.** A user that awaits verification and the token that can activate it: user, a keyed hash of the token that was sent to the user's email address, and when it was issued. A user has at most one. It is replaced when the message is sent again, removed when it is used or the user is disabled, and void after 48 hours. Operational state, not a provenance record.
 
 **AuditEvent** (A-O). Actor, action, object reference by type and public identifier (not a foreign key, because targets live in higher layers), time, details.
 
@@ -369,7 +373,7 @@ DatasetRelease (`imported`, `withdrawn`), AnalysisRun and SearchRun (`valid`, `i
 
 ### 4.7 RoleEvent
 
-Event types: `granted`, `revoked`. A user holds a role when the latest RoleEvent for that user and that role is `granted`. Holding a role and being able to use it are different things. A deactivated account holds its roles on record and gets nothing from them. A Reviewer or Administrator role confers its permissions only to a sign-in that verified a code from the account's active, trusted second factor; on a password alone it allows managing that second factor and nothing else ([ADR-0014](adr/0014-totp-mfa-and-authentication-assurance.md)).
+Event types: `granted`, `revoked`. A user holds a role when the latest RoleEvent for that user and that role is `granted`. Holding a role and being able to use it are different things. An account that is disabled, or that awaits verification, holds its roles on record and gets nothing from them. A Reviewer or Administrator role confers its permissions only to a sign-in that verified a code from the account's active, trusted second factor; on a password alone it allows managing that second factor and nothing else ([ADR-0014](adr/0014-totp-mfa-and-authentication-assurance.md)).
 
 ### 4.8 AuthenticationEvent
 
@@ -396,6 +400,25 @@ Event types: `login_success`, `login_failure`, `logout`, `password_confirmation_
 | (no device) | `active`, trusted | Only for the first Administrator, by the bootstrap command, in the transaction that creates the account, after a right code was typed at the terminal |
 
 A device is `active` if and only if it records when it was confirmed and the time step of an accepted code; a check constraint enforces this, and a unique constraint allows one device for a user.
+
+### 4.10 User and AccountEvent
+
+| Status | Meaning |
+|---|---|
+| `pending_verification` | Created by an Administrator. The email address has not been verified, the user has never been active, and cannot sign in. |
+| `active` | Can sign in, according to roles and the second-factor policy |
+| `disabled` | Disabled by an Administrator. Cannot sign in and holds no permission. Roles, second factor, and both times are kept. |
+
+| From | To | Condition |
+|---|---|---|
+| (no user) | `pending_verification` | An Administrator, acting at `MFA_VERIFIED`, creates the user with one role. `account_created`, then `verification_sent` if the message was handed on. |
+| (no user) | `active` | Only for the first Administrator, by the bootstrap command (ADR-0012, ADR-0014). The email address is not marked verified. |
+| `pending_verification` | `active` | The current, unlapsed token and a password that passes validation. The address is marked verified, the token is removed. `verification_succeeded`. |
+| `pending_verification` or `active` | `disabled` | An Administrator disables the user; never the last active Administrator. Any token is removed. `account_disabled`. |
+| `disabled` | `active` | An Administrator, not the user, enables a user that had been active. `account_enabled`. |
+| `disabled` | `pending_verification` | An Administrator enables a user that had never been active. A new message is needed. `account_enabled`. |
+
+AccountEvent types: `account_created`, `verification_sent`, `verification_succeeded`, `verification_failed`, `account_disabled`, `account_enabled`. Only `verification_failed` can be without a user. The four that an Administrator causes name that Administrator; the other two name no actor. Sending the verification message again changes no status and records `verification_sent`.
 
 ## 5. Conventions
 

@@ -165,29 +165,29 @@ What exists now, and what does not. Nothing here means authentication is complet
 **Implemented**
 
 - **Roles are records, not flags.** A role is held only because an append-only RoleEvent grants it and no later event revokes it. Each event names the acting user, the time, and a reason. There is no role field, no staff flag, and no superuser flag on the user, so there is nothing to overwrite silently.
-- **One place decides.** `caipo.accounts.authorization` holds the whole policy: four roles, seven permissions, two assurance levels, and which role holds which permission at which assurance. `caipo.accounts.selectors.can` and `require_permission` apply it to an authentication context: an account and the assurance it is acting at. Views and services both call these; neither contains role logic or asks whether an account has a second factor.
+- **One place decides.** `caipo.accounts.authorization` holds the whole policy: four roles, nine permissions, two assurance levels, and which role holds which permission at which assurance. `caipo.accounts.selectors.can` and `require_permission` apply it to an authentication context: an account and the assurance it is acting at. Views and services both call these; neither contains role logic or asks whether an account has a second factor.
 - **Views declare a permission, never a role.** `@requires(Permission.RESEARCH_REVIEW)` states the capability a view needs; only the policy knows which roles have it.
 - **Deny by default, at every step.** No role means no permission. An unknown role or permission means no. A view with no access declaration, or a malformed one, is refused. An anonymous visitor holds no permission and reaches only views declared public.
 - **Nothing from the browser is trusted.** The account and its assurance come from the server-side session, and its roles from the database, on every request. A role or a verified second factor named in a parameter, header, or cookie has no effect.
 - **Services check for themselves.** A service calls `require_permission` whatever the view has already checked, and it works without an HTTP request. It is given the acting context, never a bare account: an account passed without a context holds no permission, so a caller that bypasses HTTP cannot obtain a privileged operation without the assurance it requires.
 - **Second factor.** Reviewer and Administrator roles confer their permissions only to a sign-in that verified a TOTP code from the account's active, trusted second factor (ADR-0007 rule 4, ADR-0014). A second factor is trusted when an Administrator approved its enrolment, or when the first-Administrator bootstrap established it. On a password alone these roles allow one thing, managing the account's own second factor, so that the account can ask for an enrolment. The password cannot complete one. See "Multi-factor authentication as implemented" below.
 - **Nothing stands in for the second factor in tests.** The earlier test-only fixture that replaced the enrolment lookup is gone, with the lookup. Tests give an account a real device, encrypted with the real cipher, and either compute real codes or use the context that the verification service returns for that device. The authorization decision is never replaced.
-- **Administrator is not a superuser.** It holds the three administrative permissions, to manage roles, to deactivate accounts, and to approve the second-factor enrolment of another account, the permission every role has to manage its own second factor, and no research permission. There is no role hierarchy: a person who needs administrative and research capabilities is granted both roles explicitly.
+- **Administrator is not a superuser.** It holds the five administrative permissions, to manage roles, to create accounts, to disable them, to enable them, and to approve the second-factor enrolment of another account, the permission every role has to manage its own second factor, and no research permission. There is no role hierarchy: a person who needs administrative and research capabilities is granted both roles explicitly.
 - **Nobody changes their own roles.** Granting or revoking a role requires an authorised Administrator and a target who is a different user. The service refuses otherwise, and a database constraint refuses a role event whose actor is its own subject.
-- **There is always an Administrator.** The services refuse to revoke the Administrator role from, or to deactivate, the only active account that holds it. An Administrator may deactivate their own account only while another active Administrator remains; the only Administrator attempting it is refused by the same rule, with nothing changed.
+- **There is always an Administrator.** The services refuse to revoke the Administrator role from, or to disable, the only active account that holds it. An account that awaits verification is not active and does not count. An Administrator may disable their own account only while another active Administrator remains; the only Administrator attempting it is refused by the same rule, with nothing changed.
 - **Role history cannot be rewritten.** A PostgreSQL trigger on the role event table refuses every UPDATE and DELETE, for any database role and however the statement was sent (migration `accounts/0002_role_events`). The application also refuses, earlier and with a clearer error. Two things the trigger does not cover are left to database privileges, which are set with deployment (ADR-0008, Proposed): TRUNCATE, and dropping or disabling the trigger, which requires owning the table. The production application role must be able to do neither. In development the application connects as the database owner, so there the trigger guards against mistakes, not against the owner.
-- **Account changes happen one at a time.** Each role change or deactivation is one transaction holding a lock that admits one such change at a time, and the actor's permission is decided inside that lock. Two simultaneous changes cannot both be decided on the same earlier state, so they cannot leave the system without an Administrator or record a role twice.
-- **Deactivation is immediate.** A deactivated account keeps its role record and loses every permission on its next request.
+- **Account changes happen one at a time.** Each role change, account creation, disabling, or enabling is one transaction holding a lock that admits one such change at a time, and the actor's permission is decided inside that lock. Two simultaneous changes cannot both be decided on the same earlier state, so they cannot leave the system without an Administrator or record a role twice.
+- **Disabling is immediate.** A disabled account keeps its role record and loses every permission on its next request. So does an account that awaits verification: it holds nothing until it is activated. See "Account lifecycle as implemented" below.
 - **Refusals and role changes are logged** by account identifier, never by email address.
 
 **Not implemented**
 
-- Account creation by an Administrator, so the first Administrator is the only account the application can create. Password reset, email verification, account recovery.
+- Password reset and account recovery. Changing an account's email address.
+- **Sending email in production.** No delivery service is configured, so there an account can be created and its verification message cannot be sent (see "Account lifecycle as implemented").
 - Recovery from a lost second factor: no recovery codes and no administrator-assisted reset (see below).
-- Pages for role administration. The role services work for an Administrator with a verified second factor; no page calls them yet.
+- Pages for role administration and for disabling and enabling accounts. Those services work for an Administrator with a verified second factor; no page calls them yet.
 - Assistant quotas.
-- The general audit record (AuditEvent) for administrative actions. Role changes and sign-ins are recorded; a deactivation is logged, not yet recorded.
-- Reactivation of a deactivated account.
+- The general audit record (AuditEvent) for administrative actions. Role changes, sign-ins, and the lifecycle of accounts are each recorded in their own table.
 - A least-privilege database role for the application (see "Role history cannot be rewritten" above).
 - The Django admin. It is a later increment of its own (ADR-0007 rule 8).
 
@@ -197,7 +197,7 @@ Sign-in with an email address and a password, on Django's own authentication and
 
 **Signing in and out**
 
-- **One answer for every refusal.** A wrong password, an unknown email address, and a deactivated account get the same page, the same status, and the same log line. Nothing tells the three apart, including throttling, which behaves the same whether or not an account exists.
+- **One answer for every refusal.** A wrong password, an unknown email address, a disabled account, and an account that awaits verification get the same page, the same status, and the same log line. Nothing tells the three apart, including throttling, which behaves the same whether or not an account exists.
 - **Credentials only by POST, with a CSRF token.** Signing out is POST-only with a CSRF token too, so a link or an image cannot sign anyone out. It takes no destination.
 - **The session key is replaced on sign-in**, so a key known beforehand is worth nothing afterwards, and the session is deleted on the server on sign-out. For an account with a second factor it is replaced twice: when the password is accepted and again when the code is. A deactivated account, or one whose password changes, loses its sessions on the next request.
 - **After sign-in, only a path on this site is followed.** Any other destination is ignored.
@@ -255,6 +255,72 @@ python manage.py create_first_administrator
 - No web request, header, cookie, setting, environment variable, or database value creates an Administrator, nothing else in the application calls the bootstrap, and the role services refuse a change that names no actor. There is no second way to run this once it has been used.
 
 This is the one second factor that is trusted without an Administrator's approval, because no Administrator exists who could give it (ADR-0014, as amended). The first Administrator never exists without a verified second factor: its password alone signs nobody in, and the Administrator role grants nothing until a sign-in has been verified with a code from the authenticator set up at the terminal. No temporary permission is granted, and there is no bypass, on the web or anywhere else.
+
+### Account lifecycle as implemented
+
+How an account other than the first Administrator's comes to exist, how its owner verifies the email address and chooses a password, and how it is disabled and enabled. The decisions are in [ADR-0015](docs/adr/0015-account-lifecycle-and-email-verification.md). Password reset and account recovery are not implemented.
+
+**States**
+
+| State | Meaning |
+|---|---|
+| `pending_verification` | The account exists. Nobody has shown that its email address is theirs. It cannot be signed in to and holds no permission. |
+| `active` | It can be signed in to, according to its roles and the second-factor policy. |
+| `disabled` | An Administrator disabled it. It cannot be signed in to and holds no permission. Its roles and history are kept. |
+
+- The state is stored once, in the account's `status`. There is no separate active flag that could disagree with it.
+- `email_verified_at` records when the address was verified, and `activated_at` when the account first became active. Database constraints refuse an account that awaits verification and claims either, and an active account that never became active.
+- The first Administrator is created active at the server, and its address is not marked verified, because nobody verified it.
+
+**Creating an account**
+
+- **Only an Administrator signed in with a trusted second factor creates an account.** It needs the permission `accounts.create`, which only the Administrator role holds and which exists only at `MFA_VERIFIED`. The page and the service both check it, and nothing from the browser names the actor.
+- **There is no registration.** No page, setting, or request creates an account without an acting Administrator.
+- **The Administrator gives an email address and one role, and never a password.** The role must be one of the four. It is granted by the role service under its own rules and recorded as a RoleEvent naming the Administrator. Extra fields in a manipulated form are ignored: the account gets exactly one role, awaits verification, and has no password anybody knows.
+- **A privileged role given at creation confers nothing yet.** A new Reviewer or Administrator must be activated, then ask for a second factor, have it approved by an Administrator, verify it, and sign in with it (ADR-0014). Until then the role gives only the permission to manage its own second factor.
+- The account, its role event, its token, and the record of its creation are written in one transaction.
+
+**The password**
+
+- The owner of the account chooses it. No temporary password exists, none is emailed, and the Administrator never sees one.
+- A new account holds a hash of 256 random bits that were discarded, not an "unusable" marker, so that a sign-in attempt for it takes as long as for any other account and its existence cannot be told from the time taken.
+- The password is set only by activation and must pass the password validators.
+
+**The token**
+
+- 256 random bits, generated on the server. **Only its keyed hash (HMAC-SHA256) is stored.** The token is in the message and nowhere else: not in the database, a log, an event, a session, or a response.
+- It is bound to one account, works once, and lapses after 48 hours. Sending the message again replaces it, and disabling the account removes it.
+- It is refused for any account that does not await verification.
+- **It never reaches the server in a URL.** The link carries it after a `#`, which a browser does not send. A small script from the application's own static files moves it into the form and out of the address bar, and it is sent in the body of a POST. A token in a query string is ignored. Without the script the person pastes it.
+- Activation is by POST with a CSRF token, takes no account from the request, signs nobody in, and always goes to the sign-in page.
+- **One answer for every refused token**: unknown, used, replaced, lapsed, or belonging to a disabled or active account. Nothing that was submitted is put back into the page.
+- **Throttled per source**: 10 refused attempts in 15 minutes, then status 429 with the token unexamined and nothing stored. Counted in PostgreSQL, one attempt at a time for a source.
+
+**Email**
+
+- All mail goes through one function, `caipo.core.mail.deliver`. It knows nothing of accounts and logs nothing. Django's `EMAIL_BACKEND` setting names what carries the message; no provider is chosen and no library is added.
+- **Nothing is sent in any environment today.** The default backend refuses every message; production inherits it until the deployment decision (ADR-0008) names a service. Development writes messages to `data/outbox/`, which git ignores. Tests keep them in memory.
+- The message says what it is for, carries one link, says that the link works once and for how long, and says to ignore it if unexpected. It is the same for every recipient apart from the link, and holds no name, address, role, password, or secret.
+- **Links are built from a configured address, never from a request.** Production reads `CAIPO_PUBLIC_URL`, refuses to start without it, and accepts only `https://host[:port]`. A Host or forwarded header cannot change where a link points.
+
+**Disabling and enabling**
+
+- Service operations for an Administrator with a verified second factor, each behind its own permission. They have no page yet.
+- Disabling takes effect on the account's next request: its password signs nobody in and its sessions stop being recognised.
+- The last active Administrator cannot be disabled.
+- Enabling returns an account to the state it was disabled in and never further: an account that was never activated returns to awaiting verification, with no token, and needs a new message. Nobody enables their own account.
+
+**Records**
+
+- `AccountEvent` is append-only and protected by a database trigger like the other event tables. It records `account_created`, `verification_sent`, `verification_succeeded`, `verification_failed`, `account_disabled`, and `account_enabled`, with the account, the acting Administrator where there is one, the time, and the request's correlation ID.
+- It holds no token, token hash, password, or email address. Logs name accounts by identifier.
+
+**Residual risks**
+
+- **Whoever opens the link first sets the password.** The token is a bearer credential for 48 hours. Someone who can read the mailbox can use it, and so could a mail system that opens links and runs scripts. Sending the message again revokes it.
+- Behind a reverse proxy all visitors share one source until ADR-0008 names the header to trust, so ten refused activations by anyone would throttle everyone for fifteen minutes.
+- An account that is never activated stays in the list until an Administrator disables it.
+- The script on the activation page is not exercised by the automated tests, which have no browser. The tests check what it must and must not contain, and that the page works by pasting.
 
 ### Multi-factor authentication as implemented
 

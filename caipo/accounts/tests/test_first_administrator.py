@@ -358,7 +358,7 @@ def test_the_first_administrator_needs_the_bootstrap_device_for_every_privilege(
     with pytest.raises(PermissionDenied):
         services.grant_role(actor=password_only, user=other, role=Role.RESEARCHER, reason="TEST")
     with pytest.raises(PermissionDenied):
-        services.deactivate_user(actor=password_only, user=other)
+        services.disable_user(actor=password_only, user=other)
 
     # 3. Whoever knows the password cannot give the account another device.
     started = services.start_mfa_enrollment(actor=password_only, password=PASSWORD, source=SOURCE)

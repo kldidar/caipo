@@ -23,15 +23,26 @@ from django.utils import timezone
 
 from caipo.accounts.authentication import AuthenticationContext
 from caipo.accounts.authorization import Assurance, Permission, Role, permissions_for
-from caipo.accounts.models import RoleEvent, RoleEventType, TotpDevice, TotpDeviceState, User
+from caipo.accounts.models import (
+    AccountActivation,
+    AccountStatus,
+    RoleEvent,
+    RoleEventType,
+    TotpDevice,
+    TotpDeviceState,
+    User,
+)
 
 __all__ = [
+    "AccountAwaitingVerification",
+    "AccountStatus",
     "Assurance",
     "AuthenticationContext",
     "EnrollmentRequest",
     "MfaState",
     "Permission",
     "Role",
+    "accounts_awaiting_verification",
     "an_administrator_was_ever_created",
     "authentication_context",
     "can",
@@ -74,7 +85,7 @@ class EnrollmentRequest:
 def _granted_roles(user_id: int, *, active_accounts_only: bool) -> frozenset[Role]:
     events = RoleEvent.objects.filter(user_id=user_id)
     if active_accounts_only:
-        events = events.filter(user__is_active=True)
+        events = events.filter(user__status=AccountStatus.ACTIVE)
     # The latest event for each role decides. Ordered by identifier, which the
     # database issues in sequence, not by timestamp, which can tie.
     latest = events.order_by("role", "-id").distinct("role").values_list("role", "event_type")
@@ -192,6 +203,53 @@ def authentication_context(
     if isinstance(verified_device_id, int) and not isinstance(verified_device_id, bool):
         return AuthenticationContext(user, Assurance.MFA_VERIFIED, verified_device_id)
     return AuthenticationContext(user, Assurance.PASSWORD_AUTHENTICATED)
+
+
+@dataclass(frozen=True)
+class AccountAwaitingVerification:
+    """An account that was created and has not been activated.
+
+    `verification_expires_at` is when the message last sent stops working, or
+    None if no usable message is outstanding and one must be sent again.
+    """
+
+    user_id: int
+    email: str
+    created_at: datetime
+    verification_expires_at: datetime | None
+
+
+def activation_expires_at(activation: AccountActivation) -> datetime:
+    """Return when an activation token stops working."""
+    return activation.created_at + settings.ACCOUNT_ACTIVATION_LIFETIME
+
+
+def accounts_awaiting_verification(
+    context: AuthenticationContext,
+) -> list[AccountAwaitingVerification]:
+    """Return the accounts that await verification, oldest first.
+
+    Raises PermissionDenied if the context may not create accounts.
+    """
+    require_permission(context, Permission.ACCOUNTS_CREATE)
+    now = timezone.now()
+    expiries = {
+        activation.user_id: activation_expires_at(activation)
+        for activation in AccountActivation.objects.all()
+    }
+    return [
+        AccountAwaitingVerification(
+            user_id=user.pk,
+            email=user.email,
+            created_at=user.created_at,
+            verification_expires_at=(
+                expiries[user.pk] if user.pk in expiries and now < expiries[user.pk] else None
+            ),
+        )
+        for user in User.objects.filter(status=AccountStatus.PENDING_VERIFICATION).order_by(
+            "created_at", "id"
+        )
+    ]
 
 
 def _proven_assurance(context: AuthenticationContext) -> Assurance:

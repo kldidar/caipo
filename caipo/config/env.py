@@ -7,6 +7,7 @@ live in repository-versioned files (CLAUDE.md, coding standards).
 import base64
 import os
 from typing import Any
+from urllib.parse import urlsplit
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -61,6 +62,34 @@ def encryption_key(name: str) -> bytes:
             "use 32 random bytes, encoded as URL-safe Base64."
         )
     return key
+
+
+def https_origin(name: str) -> str:
+    """Return the public address of the site from the environment: `https://host[:port]`.
+
+    Used for links in messages, so it must be exactly what users are meant to
+    open. Raises ImproperlyConfigured if the variable is unset, is not an
+    https address, or carries anything besides scheme, host, and port.
+    """
+    value = required(name).rstrip("/")
+    parts = urlsplit(value)
+    try:
+        port_is_valid = parts.port is None or parts.port > 0
+    except ValueError:
+        port_is_valid = False
+    if (
+        parts.scheme != "https"
+        or not parts.hostname
+        or not port_is_valid
+        or parts.username is not None
+        or parts.path
+        or parts.query
+        or parts.fragment
+    ):
+        raise ImproperlyConfigured(
+            f"The environment variable {name} is not a site address: use https://host with no path."
+        )
+    return value
 
 
 def host_list(name: str) -> list[str]:

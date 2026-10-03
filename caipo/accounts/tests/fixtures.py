@@ -15,7 +15,14 @@ from django.utils import timezone
 
 from caipo.accounts import totp
 from caipo.accounts.authorization import Assurance, Role
-from caipo.accounts.models import RoleEvent, RoleEventType, TotpDevice, TotpDeviceState, User
+from caipo.accounts.models import (
+    AccountStatus,
+    RoleEvent,
+    RoleEventType,
+    TotpDevice,
+    TotpDeviceState,
+    User,
+)
 from caipo.accounts.selectors import AuthenticationContext
 
 type UserFactory = Callable[..., User]
@@ -58,6 +65,16 @@ def logged(records: Iterable[logging.LogRecord]) -> str:
     return " ".join(f"{record.getMessage()} {extra(record)}" for record in records)
 
 
+def supporting_account(email: str) -> User:
+    """Return the active synthetic account with this email address, creating it on first use.
+
+    For the accounts that stand behind a fixture: the one that seeds roles and
+    the ones that approve. Created through the manager, which makes an account
+    active, as the first-Administrator bootstrap does.
+    """
+    return User.objects.filter(email=email).first() or User.objects.create_user(email)
+
+
 def signed_in(user: User) -> AuthenticationContext:
     """Return the context of the account after a sign-in with its password alone."""
     return AuthenticationContext(user, Assurance.PASSWORD_AUTHENTICATED)
@@ -79,7 +96,7 @@ def enrolled_device(
     now = timezone.now()
     approval = {}
     if trusted:
-        approver, _ = User.objects.get_or_create(email="test.approver@caipo.test")
+        approver = supporting_account("test.approver@caipo.test")
         approval = {"approved_at": now, "approved_by": approver}
     device, _ = TotpDevice.objects.get_or_create(
         user=user,
@@ -111,9 +128,11 @@ def approving_administrator() -> AuthenticationContext:
     The account is created on first use, with its role and its trusted second
     factor written directly, like every other precondition here.
     """
-    user, created = User.objects.get_or_create(email="test.approving.administrator@caipo.test")
+    email = "test.approving.administrator@caipo.test"
+    created = not User.objects.filter(email=email).exists()
+    user = supporting_account(email)
     if created:
-        seeder, _ = User.objects.get_or_create(email="test.seed@caipo.test")
+        seeder = supporting_account("test.seed@caipo.test")
         RoleEvent.objects.create(
             user=user,
             role=Role.ADMINISTRATOR,
@@ -153,7 +172,7 @@ def user_with_roles(db: None) -> UserFactory:
     def make(*roles: Role, is_active: bool = True) -> User:
         user = User.objects.create_user(f"test.user{next(numbers)}@caipo.test")
         if roles:
-            seeder, _ = User.objects.get_or_create(email="test.seed@caipo.test")
+            seeder = supporting_account("test.seed@caipo.test")
             for role in roles:
                 RoleEvent.objects.create(
                     user=user,
@@ -163,7 +182,7 @@ def user_with_roles(db: None) -> UserFactory:
                     reason="TEST fixture",
                 )
         if not is_active:
-            User.objects.filter(pk=user.pk).update(is_active=False)
+            User.objects.filter(pk=user.pk).update(status=AccountStatus.DISABLED)
             user.refresh_from_db()
         return user
 

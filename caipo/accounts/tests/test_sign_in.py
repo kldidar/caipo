@@ -72,7 +72,7 @@ def test_an_unknown_email_is_refused_and_recorded_against_nobody(user: User) -> 
 
 
 def test_a_deactivated_account_is_refused_even_with_the_right_password(user: User) -> None:
-    User.objects.filter(pk=user.pk).update(is_active=False)
+    User.objects.filter(pk=user.pk).update(status="disabled")
 
     result = services.sign_in(email=EMAIL, password=PASSWORD, source=SOURCE)
 
@@ -89,7 +89,7 @@ def test_an_account_without_a_usable_password_is_refused() -> None:
 
 def test_every_kind_of_refusal_gives_the_caller_the_same_answer(user: User) -> None:
     inactive = User.objects.create_user("test.inactive@caipo.test", PASSWORD)
-    User.objects.filter(pk=inactive.pk).update(is_active=False)
+    User.objects.filter(pk=inactive.pk).update(status="disabled")
 
     answers = {
         services.sign_in(email=EMAIL, password=WRONG, source=SOURCE),

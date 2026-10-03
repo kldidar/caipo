@@ -2,7 +2,7 @@
 
 Status: Draft for owner review · Last updated: 2026-10-02
 
-This document describes the target architecture. Only the Phase 1 skeleton is implemented: the Django project; the User foundation, role events, the authorization policy with its assurance levels, sign-in with its throttling and records, TOTP second factors and the approval of their enrolment, and the first-Administrator bootstrap in `accounts`; the access-declaration rule, the sign-in, verification, sign-out, second-factor, and enrolment-approval pages, and health endpoints in `web`; and correlation IDs and JSON log formatting in `core`. The readiness endpoint checks the database only. Decisions are recorded in [adr/](adr/README.md). ADR-0001, 0002, 0005, 0007, 0009, 0010, 0012, 0013, and 0014 are Accepted; the others are Proposed and must not be built on. Where this document and an Accepted ADR differ, the ADR governs.
+This document describes the target architecture. Only the Phase 1 skeleton is implemented: the Django project; the User foundation, role events, the authorization policy with its assurance levels, sign-in with its throttling and records, TOTP second factors and the approval of their enrolment, the first-Administrator bootstrap, and the account lifecycle with its activation tokens and events in `accounts`; the access-declaration rule, the sign-in, verification, sign-out, second-factor, enrolment-approval, account-creation, and activation pages, and health endpoints in `web`; and correlation IDs, JSON log formatting, and the email boundary in `core`. The readiness endpoint checks the database only. Decisions are recorded in [adr/](adr/README.md). ADR-0001, 0002, 0005, 0007, 0009, 0010, 0012, 0013, 0014, and 0015 are Accepted; the others are Proposed and must not be built on. Where this document and an Accepted ADR differ, the ADR governs.
 
 ## 1. System context
 
@@ -53,8 +53,8 @@ An app may import only from apps in lower layers. Apps in the same layer do not 
 
 | Layer | App | Responsibility |
 |---|---|---|
-| 0 | `core` | Shared base classes, identifiers, correlation IDs. No domain knowledge and no reference to users. |
-| 1 | `accounts` | Users, roles, permissions, second factors, authentication events, audit events, redaction records |
+| 0 | `core` | Shared base classes, identifiers, correlation IDs, the email boundary. No domain knowledge and no reference to users. |
+| 1 | `accounts` | Users and their lifecycle, roles, permissions, second factors, authentication events, account events, audit events, redaction records |
 | 1 | `registry` | Countries, institutions, languages |
 | 2 | `sources` | Sources, documents, versions, artifacts, acquisition records, reviews, rights, extractions, segments, passages |
 | 3 | `ingestion` | Ingestion requests and their lifecycle; orchestration of guarded fetch, upload intake, and parsing; validation of output from the isolated workers. The untrusted-input boundary. Writes through `sources` services. |

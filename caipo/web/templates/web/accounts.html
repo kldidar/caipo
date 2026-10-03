@@ -1,0 +1,48 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Accounts" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Accounts" %}</h1>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% elif created %}
+    <p role="status">{% translate "The account was created and its verification message was sent." %}</p>
+  {% elif sent %}
+    <p role="status">{% translate "The verification message was sent again. The earlier one no longer works." %}</p>
+  {% endif %}
+
+  <h2>{% translate "Create an account" %}</h2>
+  <p>{% translate "The person receives a message at this address with a link that works once. They confirm the address and choose their own password; you never set or see it. The account can do nothing until then. A Reviewer or Administrator account must also turn on two-step verification, with an Administrator's approval, before that role gives it anything." %}</p>
+  <form method="post" action="{% url 'account-create' %}" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <p>
+        {{ field.label_tag }}
+        {{ field }}
+        {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+      </p>
+    {% endfor %}
+    <button type="submit">{% translate "Create the account" %}</button>
+  </form>
+
+  <h2>{% translate "Awaiting verification" %}</h2>
+  {% for account in pending %}
+    <p>
+      {{ account.email }}:
+      {% if account.verification_expires_at %}
+        {% blocktranslate with expires=account.verification_expires_at|date:"c" %}the message sent works until {{ expires }}.{% endblocktranslate %}
+      {% else %}
+        {% translate "no message that still works is outstanding." %}
+      {% endif %}
+    </p>
+    <form method="post" action="{% url 'account-send-verification' account.user_id %}">
+      {% csrf_token %}
+      <button type="submit">{% translate "Send the message again" %}</button>
+    </form>
+  {% empty %}
+    <p>{% translate "No account awaits verification." %}</p>
+  {% endfor %}
+  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+{% endblock %}

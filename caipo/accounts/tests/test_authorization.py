@@ -22,6 +22,8 @@ MANAGE_ROLES = Permission.ROLES_MANAGE
 DEACTIVATE = Permission.ACCOUNTS_DEACTIVATE
 OWN_MFA = Permission.MFA_MANAGE_OWN
 APPROVE = Permission.MFA_ENROLLMENT_APPROVE
+CREATE = Permission.ACCOUNTS_CREATE
+ENABLE = Permission.ACCOUNTS_ENABLE
 
 PASSWORD = Assurance.PASSWORD_AUTHENTICATED
 MFA = Assurance.MFA_VERIFIED
@@ -37,7 +39,9 @@ def test_the_permission_vocabulary_is_exactly_this() -> None:
         "research.contribute",
         "research.review",
         "accounts.roles.manage",
+        "accounts.create",
         "accounts.deactivate",
+        "accounts.enable",
         "accounts.mfa.manage_own",
         "accounts.mfa.approve_enrollment",
     }
@@ -64,7 +68,7 @@ def test_every_role_has_an_explicit_entry_in_the_policy() -> None:
         (Role.READER, {READ, OWN_MFA}),
         (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA}),
         (Role.REVIEWER, {READ, CONTRIBUTE, REVIEW, OWN_MFA}),
-        (Role.ADMINISTRATOR, {MANAGE_ROLES, DEACTIVATE, OWN_MFA, APPROVE}),
+        (Role.ADMINISTRATOR, {MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, OWN_MFA, APPROVE}),
     ],
 )
 def test_each_role_confers_exactly_its_permissions_with_a_verified_second_factor(
@@ -130,7 +134,7 @@ def test_administrator_holds_no_research_permission() -> None:
     assert administrator.isdisjoint({READ, CONTRIBUTE, REVIEW})
 
 
-@pytest.mark.parametrize("permission", [MANAGE_ROLES, DEACTIVATE])
+@pytest.mark.parametrize("permission", [MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE])
 def test_only_administrator_holds_the_administrative_permissions(permission: Permission) -> None:
     holders = {role for role in Role if permission in ROLE_PERMISSIONS[role]}
 
@@ -139,7 +143,7 @@ def test_only_administrator_holds_the_administrative_permissions(permission: Per
 
 @pytest.mark.parametrize("role", [Role.READER, Role.RESEARCHER, Role.REVIEWER])
 def test_research_roles_hold_no_administrative_permission(role: Role) -> None:
-    assert ROLE_PERMISSIONS[role].isdisjoint({MANAGE_ROLES, DEACTIVATE, APPROVE})
+    assert ROLE_PERMISSIONS[role].isdisjoint({MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, APPROVE})
 
 
 def test_only_administrator_can_approve_an_enrolment_and_never_on_a_password() -> None:
@@ -181,7 +185,7 @@ def test_only_reviewer_can_review() -> None:
 def test_several_roles_confer_the_union_of_their_permissions() -> None:
     held = permissions_for([Role.RESEARCHER, Role.ADMINISTRATOR], assurance=MFA)
 
-    assert held == {READ, CONTRIBUTE, MANAGE_ROLES, DEACTIVATE, OWN_MFA, APPROVE}
+    assert held == {READ, CONTRIBUTE, MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, OWN_MFA, APPROVE}
 
 
 def test_on_a_password_an_account_keeps_the_roles_that_need_no_second_factor() -> None:

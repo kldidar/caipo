@@ -53,9 +53,9 @@ class Assurance(StrEnum):
 class Permission(StrEnum):
     """What the system can ask about an account.
 
-    Kept as small as the system is. ROLES_MANAGE, ACCOUNTS_DEACTIVATE,
-    MFA_MANAGE_OWN, and MFA_ENROLLMENT_APPROVE are checked by services and
-    selectors today. The other three exist so
+    Kept as small as the system is. ROLES_MANAGE, the three ACCOUNTS
+    permissions, MFA_MANAGE_OWN, and MFA_ENROLLMENT_APPROVE are checked by
+    services and selectors today. The other three exist so
     that the four roles are distinguishable and views can declare the access
     they require; no operation consumes them yet. They are deliberately coarse
     and are to be split only when a feature needs a finer distinction.
@@ -74,8 +74,12 @@ class Permission(StrEnum):
     RESEARCH_REVIEW = "research.review"
     # Grant and revoke roles.
     ROLES_MANAGE = "accounts.roles.manage"
-    # Deactivate an account.
+    # Create an account, and send its verification message again.
+    ACCOUNTS_CREATE = "accounts.create"
+    # Disable an account.
     ACCOUNTS_DEACTIVATE = "accounts.deactivate"
+    # Enable a disabled account.
+    ACCOUNTS_ENABLE = "accounts.enable"
     # Enrol, confirm, and disable the account's own second factor.
     MFA_MANAGE_OWN = "accounts.mfa.manage_own"
     # Approve or reject another account's request to enrol a second factor.
@@ -108,7 +112,9 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
         Role.ADMINISTRATOR: frozenset(
             {
                 Permission.ROLES_MANAGE,
+                Permission.ACCOUNTS_CREATE,
                 Permission.ACCOUNTS_DEACTIVATE,
+                Permission.ACCOUNTS_ENABLE,
                 Permission.MFA_MANAGE_OWN,
                 Permission.MFA_ENROLLMENT_APPROVE,
             }

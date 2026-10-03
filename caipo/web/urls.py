@@ -1,6 +1,13 @@
 from django.urls import path
 
-from caipo.web import authentication, health, second_factor, second_factor_requests
+from caipo.web import (
+    accounts,
+    activation,
+    authentication,
+    health,
+    second_factor,
+    second_factor_requests,
+)
 
 urlpatterns = [
     path("health/live/", health.live, name="health-live"),
@@ -8,6 +15,14 @@ urlpatterns = [
     path("login/", authentication.sign_in, name="login"),
     path("login/verify/", authentication.verify_second_factor, name="login-verify"),
     path("logout/", authentication.sign_out, name="logout"),
+    path("activate/", activation.activate, name="activate"),
+    path("administration/accounts/", accounts.overview, name="accounts"),
+    path("administration/accounts/create/", accounts.create, name="account-create"),
+    path(
+        "administration/accounts/<int:user_id>/send-verification/",
+        accounts.send_verification,
+        name="account-send-verification",
+    ),
     path("account/second-factor/", second_factor.overview, name="second-factor"),
     path("account/second-factor/enrol/", second_factor.enrol, name="second-factor-enrol"),
     path("account/second-factor/confirm/", second_factor.confirm, name="second-factor-confirm"),

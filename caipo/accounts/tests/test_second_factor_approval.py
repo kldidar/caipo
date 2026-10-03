@@ -193,7 +193,7 @@ def test_a_compromised_administrator_password_changes_no_role_and_no_account(
         with pytest.raises(PermissionDenied):
             services.revoke_role(actor=context, user=other, role=Role.READER, reason="TEST")
         with pytest.raises(PermissionDenied):
-            services.deactivate_user(actor=context, user=other)
+            services.disable_user(actor=context, user=other)
 
     assert RoleEvent.objects.count() == roles_before
     assert User.objects.get(pk=other.pk).is_active is True
@@ -429,7 +429,7 @@ def test_only_an_administrator_verified_against_a_trusted_device_approves_or_rej
         actor = AuthenticationContext(administrator, Assurance.MFA_VERIFIED, own)
     elif kind == "deactivated-administrator":
         actor = verified(administrator)
-        User.objects.filter(pk=administrator.pk).update(is_active=False)
+        User.objects.filter(pk=administrator.pk).update(status="disabled")
     elif kind == "no-role":
         actor = verified(user_with_roles())
     else:

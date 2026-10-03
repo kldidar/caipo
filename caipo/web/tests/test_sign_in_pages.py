@@ -130,7 +130,7 @@ def test_the_email_never_appears_in_a_url(client: Client, user: User) -> None:
 )
 def test_bad_credentials_are_refused(client: Client, user: User, email: str, password: str) -> None:
     User.objects.create_user("test.inactive@caipo.test", PASSWORD)
-    User.objects.filter(email="test.inactive@caipo.test").update(is_active=False)
+    User.objects.filter(email="test.inactive@caipo.test").update(status="disabled")
 
     response = _sign_in(client, email, password)
 
@@ -142,7 +142,7 @@ def test_bad_credentials_are_refused(client: Client, user: User, email: str, pas
 
 def test_every_refusal_is_the_same_response(client: Client, user: User) -> None:
     User.objects.create_user("test.inactive@caipo.test", PASSWORD)
-    User.objects.filter(email="test.inactive@caipo.test").update(is_active=False)
+    User.objects.filter(email="test.inactive@caipo.test").update(status="disabled")
 
     responses = [
         _sign_in(Client(), EMAIL, WRONG),
@@ -436,11 +436,11 @@ def test_signing_out_changes_nothing_but_the_session_and_the_record(
 ) -> None:
     other = user_with_roles(Role.READER)
     _sign_in(client)
-    users_before = list(User.objects.order_by("id").values("id", "is_active", "password", "email"))
+    users_before = list(User.objects.order_by("id").values("id", "status", "password", "email"))
 
     client.post(LOGOUT)
 
-    assert list(User.objects.order_by("id").values("id", "is_active", "password", "email")) == (
+    assert list(User.objects.order_by("id").values("id", "status", "password", "email")) == (
         users_before
     )
     assert AuthenticationEvent.objects.filter(user=other).count() == 0
@@ -477,7 +477,7 @@ def test_signing_in_gives_what_the_roles_give_and_no_more(
 def test_a_deactivated_account_loses_its_session(client: Client, user: User) -> None:
     _sign_in(client)
 
-    User.objects.filter(pk=user.pk).update(is_active=False)
+    User.objects.filter(pk=user.pk).update(status="disabled")
 
     assert EMAIL not in client.get(LOGIN).content.decode()
 
