@@ -5,6 +5,7 @@ from caipo.web import (
     activation,
     authentication,
     health,
+    password_reset,
     second_factor,
     second_factor_requests,
 )
@@ -16,6 +17,8 @@ urlpatterns = [
     path("login/verify/", authentication.verify_second_factor, name="login-verify"),
     path("logout/", authentication.sign_out, name="logout"),
     path("activate/", activation.activate, name="activate"),
+    path("password-reset/", password_reset.request_reset, name="password-reset"),
+    path("password-reset/confirm/", password_reset.confirm_reset, name="password-reset-confirm"),
     path("administration/accounts/", accounts.overview, name="accounts"),
     path("administration/accounts/create/", accounts.create, name="account-create"),
     path(

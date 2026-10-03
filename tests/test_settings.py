@@ -399,3 +399,13 @@ def test_the_activation_limits_are_repository_settings() -> None:
     assert base.ACCOUNT_ACTIVATION_LIFETIME == timedelta(hours=48)
     assert base.ACCOUNT_ACTIVATION_THROTTLE_WINDOW == timedelta(minutes=15)
     assert base.ACCOUNT_ACTIVATION_THROTTLE_FAILURES == 10
+
+
+def test_the_password_reset_limits_are_repository_settings() -> None:
+    assert base.PASSWORD_RESET_LIFETIME == timedelta(hours=1)
+    assert base.PASSWORD_RESET_REQUEST_EMAIL_WINDOW == timedelta(hours=1)
+    assert base.PASSWORD_RESET_REQUEST_EMAIL_LIMIT == 5
+    assert base.PASSWORD_RESET_REQUEST_SOURCE_WINDOW == timedelta(minutes=15)
+    assert base.PASSWORD_RESET_REQUEST_SOURCE_LIMIT == 20
+    assert base.PASSWORD_RESET_THROTTLE_WINDOW == timedelta(minutes=15)
+    assert base.PASSWORD_RESET_THROTTLE_FAILURES == 10

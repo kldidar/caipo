@@ -93,16 +93,11 @@ class AccountCreationForm(forms.Form):
     role = forms.ChoiceField(label=_("Role"), choices=Role.choices)
 
 
-class ActivationForm(forms.Form):
-    """The code from the verification message and the password its owner chooses. Shape only."""
+class _NewPasswordForm(forms.Form):
+    """A code from a message and the password its holder chooses, typed twice."""
 
-    token = forms.CharField(
-        label=_("Activation code"),
-        # A token is 43 characters. Bounded, so that hashing what was
-        # submitted has a bounded cost.
-        max_length=128,
-        widget=forms.TextInput(attrs={"autocomplete": "off", "spellcheck": "false"}),
-    )
+    field_order = ("token", "password", "password_again")
+
     password = forms.CharField(
         label=_("New password"),
         max_length=1024,
@@ -121,3 +116,49 @@ class ActivationForm(forms.Form):
         if cleaned.get("password") != cleaned.get("password_again"):
             raise forms.ValidationError(_("The two passwords are not the same."))
         return cleaned
+
+
+def _token_field() -> forms.CharField:
+    return forms.CharField(
+        # A token is 43 characters. Bounded, so that hashing what was
+        # submitted has a bounded cost.
+        max_length=128,
+        widget=forms.TextInput(attrs={"autocomplete": "off", "spellcheck": "false"}),
+    )
+
+
+class ActivationForm(_NewPasswordForm):
+    """The code from the verification message and the password its owner chooses. Shape only."""
+
+    token = _token_field()
+    token.label = _("Activation code")
+
+
+class PasswordResetRequestForm(forms.Form):
+    """The email address a reset message is asked for. Shape only; it looks nothing up."""
+
+    email = forms.EmailField(
+        label=_("Email address"),
+        max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "username", "autofocus": True}),
+    )
+
+
+class PasswordResetForm(_NewPasswordForm):
+    """The code from the reset message and the new password its owner chooses. Shape only."""
+
+    token = _token_field()
+    token.label = _("Reset code")
+
+    @classmethod
+    def carrying(cls, token: str) -> PasswordResetForm:
+        """Return an empty form that carries a token out of sight, in a hidden field.
+
+        For the one case in which a token is kept across a response: the
+        service found it good and refused the password. The token is then
+        sent again in the body of the next POST and is nowhere in the visible
+        page.
+        """
+        form = cls(initial={"token": token})
+        form.fields["token"].widget = forms.HiddenInput()
+        return form

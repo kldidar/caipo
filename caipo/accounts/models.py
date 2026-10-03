@@ -1,5 +1,6 @@
 """Users and their lifecycle, the record of their roles, the record of sign-ins,
-second factors, and account activation (ADR-0007, ADR-0014, ADR-0015).
+second factors, account activation, and password reset (ADR-0007, ADR-0014,
+ADR-0015, ADR-0016).
 
 The general audit record and redaction records are not here yet.
 """
@@ -272,6 +273,12 @@ class AuthenticationEventType(models.TextChoices):
     MFA_ENROLLMENT_REJECTED = "mfa_enrollment_rejected", _("Second-factor enrolment rejected")
     # An active second factor was given up, on both proofs, for a new enrolment.
     MFA_DEVICE_REPLACED = "mfa_device_replaced", _("Second factor replaced")
+    # Somebody who is not signed in asked for a reset message, used a reset
+    # token to set a new password, or presented a token that was refused
+    # (ADR-0016).
+    PASSWORD_RESET_REQUESTED = "password_reset_requested", _("Password reset requested")
+    PASSWORD_RESET_SUCCEEDED = "password_reset_succeeded", _("Password reset")
+    PASSWORD_RESET_FAILED = "password_reset_failed", _("Password reset refused")
 
 
 # The events that one account causes for another. Only these name an actor.
@@ -280,26 +287,36 @@ DECISION_EVENT_TYPES = (
     AuthenticationEventType.MFA_ENROLLMENT_REJECTED,
 )
 
+# The events that can name nobody: what was submitted, an email address or a
+# reset token, may belong to no account.
+USERLESS_EVENT_TYPES = (
+    AuthenticationEventType.LOGIN_FAILURE,
+    AuthenticationEventType.PASSWORD_RESET_REQUESTED,
+    AuthenticationEventType.PASSWORD_RESET_FAILED,
+)
+
 
 class AuthenticationEvent(AppendOnlyModel):
-    """One sign-in, failed sign-in, sign-out, or change to a second factor.
+    """One sign-in, failed sign-in, sign-out, change to a second factor, or
+    step of a password reset.
 
     Append-only, and deliberately small. It records that something happened,
     when, to which account if that is known, and under which request. It is
-    also what sign-in and second-factor throttling count. It is not the
-    general audit record.
+    also what sign-in, second-factor, and password-reset throttling count. It
+    is not the general audit record.
 
     It never holds a password, a password hash, a second-factor code or
-    secret, a session identifier, or anything else from the request. What was
-    typed as the email address and where the request came from are kept only
-    as keyed hashes: enough to count attempts that belong together, not enough
-    to read back what was submitted. People do type passwords into the email
-    field.
+    secret, a reset token or its hash, a session identifier, or anything else
+    from the request. What was typed as the email address and where the
+    request came from are kept only as keyed hashes: enough to count attempts
+    that belong together, not enough to read back what was submitted. People
+    do type passwords into the email field.
     """
 
     event_type = models.CharField(_("event type"), max_length=32, choices=AuthenticationEventType)
-    # Empty for a failed sign-in with an email address that belongs to no
-    # account: there is nobody to name, and naming somebody would be wrong.
+    # Empty for a failed sign-in or a reset request with an email address
+    # that belongs to no account, and for a refused reset token that belongs
+    # to none: there is nobody to name, and naming somebody would be wrong.
     user = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -319,6 +336,8 @@ class AuthenticationEvent(AppendOnlyModel):
         null=True,
         blank=True,
     )
+    # Empty for a refused reset token that belongs to no account: no email
+    # address was submitted, and nothing derived from the token is kept.
     identifier_key = models.CharField(_("identifier key"), max_length=64)
     source_key = models.CharField(_("source key"), max_length=64)
     correlation_id = models.CharField(_("correlation ID"), max_length=32, blank=True)
@@ -334,10 +353,11 @@ class AuthenticationEvent(AppendOnlyModel):
                 condition=models.Q(event_type__in=AuthenticationEventType.values),
                 name="accounts_authenticationevent_event_type_known",
             ),
-            # Only a failure can be without a user.
+            # Only a failed sign-in, a reset request, and a refused reset can
+            # be without a user.
             models.CheckConstraint(
                 condition=models.Q(user__isnull=False)
-                | models.Q(event_type=AuthenticationEventType.LOGIN_FAILURE),
+                | models.Q(event_type__in=USERLESS_EVENT_TYPES),
                 name="accounts_authenticationevent_user_known_unless_failure",
             ),
             # A decision names who made it, and nothing else names an actor.
@@ -353,7 +373,8 @@ class AuthenticationEvent(AppendOnlyModel):
             ),
         ]
         indexes = [
-            # Every sign-in attempt counts recent events by each of these.
+            # Every sign-in attempt and every reset request counts recent
+            # events by each of these.
             models.Index(
                 fields=["identifier_key", "created_at"], name="accounts_authevent_identifier"
             ),
@@ -511,6 +532,42 @@ class AccountActivation(models.Model):
 
     def __str__(self) -> str:
         return f"activation for user {self.user_id}"
+
+
+class PasswordReset(models.Model):
+    """An active account whose owner asked to replace a forgotten password, and
+    the token that can do it (ADR-0016).
+
+    Created when a reset is asked for and replaced when it is asked for again,
+    so there is at most one for an account and an earlier token stops working.
+    Removed when it is used and when the account is disabled. It grants
+    nothing by itself. Operational state, like AccountActivation, and
+    separate from it: neither token is accepted where the other is expected.
+
+    `token_key` is a keyed hash of the token that was sent to the account's
+    email address. The token itself is stored nowhere. `expires_at` is when
+    the token stops working, fixed when it was issued.
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.PROTECT, related_name="+", verbose_name=_("user")
+    )
+    token_key = models.CharField(_("token key"), max_length=64, unique=True)
+    created_at = models.DateTimeField(_("created at"))
+    expires_at = models.DateTimeField(_("expires at"))
+
+    class Meta:
+        verbose_name = _("password reset")
+        verbose_name_plural = _("password resets")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(expires_at__gt=models.F("created_at")),
+                name="accounts_passwordreset_expires_after_created",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"password reset for user {self.user_id}"
 
 
 class AccountEventType(models.TextChoices):

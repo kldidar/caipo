@@ -93,7 +93,8 @@ def test_only_the_health_and_sign_in_endpoints_are_public() -> None:
     # Signing in, with or without a second factor, must be reachable by someone
     # who is not signed in, and signing out when not signed in must be harmless.
     # Activating an account is done by someone whose account cannot be signed
-    # in to yet.
+    # in to yet, and a password is reset by someone who cannot sign in
+    # (ADR-0016).
     assert public_routes == {
         "health-live",
         "health-ready",
@@ -101,4 +102,6 @@ def test_only_the_health_and_sign_in_endpoints_are_public() -> None:
         "login-verify",
         "logout",
         "activate",
+        "password-reset",
+        "password-reset-confirm",
     }
