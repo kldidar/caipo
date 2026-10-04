@@ -4,7 +4,7 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-Nine ADRs were accepted by the project owner on 2026-10-02, and ADR-0015 and ADR-0016 on 2026-10-03. Five remain Proposed; the last column says what stands between each of those and acceptance.
+Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, and ADR-0017 on 2026-10-04. Five remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
@@ -24,6 +24,7 @@ Nine ADRs were accepted by the project owner on 2026-10-02, and ADR-0015 and ADR
 | [0014](0014-totp-mfa-and-authentication-assurance.md) | TOTP multi-factor authentication and authentication assurance | Accepted | — (amended on 2026-10-03: enrolment for Reviewer and Administrator accounts needs an Administrator's approval, and the first Administrator's second factor is set up by the bootstrap; key management in production waits for ADR-0008) |
 | [0015](0015-account-lifecycle-and-email-verification.md) | Account lifecycle, provisioning by an Administrator, and email verification | Accepted | — (the email delivery service in production waits for ADR-0008) |
 | [0016](0016-password-reset.md) | Password reset by email | Accepted | — (accepted before its implementation, which followed; the email delivery service in production waits for ADR-0008) |
+| [0017](0017-account-recovery.md) | Account recovery after loss of the second factor | Accepted | — (accepted before its implementation; it changes points of ADR-0014, which it names; the operational audit trail and instructions for its break-glass command, and email delivery in production, wait for ADR-0008) |
 
 ## Statuses
 
