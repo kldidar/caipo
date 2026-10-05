@@ -1,17 +1,20 @@
 """Users and their lifecycle, the record of their roles, the record of sign-ins,
-second factors, account activation, and password reset (ADR-0007, ADR-0014,
-ADR-0015, ADR-0016).
+second factors, account activation, password reset, and requests to recover a
+lost second factor (ADR-0007, ADR-0014, ADR-0015, ADR-0016, ADR-0017).
 
 The general audit record and redaction records are not here yet.
 """
 
 import unicodedata
+from collections.abc import Iterator
 from typing import Any, ClassVar, NoReturn
 
+from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.db.models.functions import Lower
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext_lazy as _
 
 from caipo.accounts.authorization import Role
@@ -29,6 +32,11 @@ class AccountStatus(models.TextChoices):
     # An Administrator disabled the account. It cannot be signed in to and
     # holds no permission. Its roles stay on record.
     DISABLED = "disabled", _("Disabled")
+
+
+# Not Django's salt: a session value of an epoch above 0 must never equal the
+# value Django computes for the same password.
+_EPOCH_SESSION_SALT = "caipo.accounts.models.User.session_auth_hash"
 
 
 class UserManager(BaseUserManager["User"]):
@@ -80,6 +88,11 @@ class User(AbstractBaseUser):
     holder of the email address proved it was theirs, and `activated_at`, when
     the account first became active. A disabled account keeps both, so
     enabling it returns it to where it was.
+
+    `session_epoch` counts how many times the account's sessions were ended
+    without its password changing (ADR-0017 point 46). It starts at 0, and at
+    0 a session is bound to the account exactly as Django binds it, so a
+    session established before this field existed is still recognised.
     """
 
     email = models.EmailField(_("email address"), unique=True)
@@ -93,6 +106,7 @@ class User(AbstractBaseUser):
     # server: nobody verified that address by email.
     email_verified_at = models.DateTimeField(_("email verified at"), null=True, blank=True)
     activated_at = models.DateTimeField(_("activated at"), null=True, blank=True)
+    session_epoch = models.PositiveIntegerField(_("session epoch"), default=0)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
@@ -134,6 +148,36 @@ class User(AbstractBaseUser):
     def is_active(self) -> bool:  # type: ignore[override]  # Django declares a class attribute; here it is derived from the one stored state
         """Whether the account can be signed in to. What Django's authentication asks."""
         return self.status == AccountStatus.ACTIVE
+
+    def get_session_auth_hash(self) -> str:
+        """Return what a session of this account must hold to be recognised.
+
+        At epoch 0 this is Django's own value, unchanged. Above 0 the epoch
+        is part of it, under a salt of its own, so no value from one epoch
+        equals a value from another. The password is part of it throughout:
+        changing the password ends the account's sessions at every epoch.
+        """
+        if self.session_epoch == 0:
+            return super().get_session_auth_hash()
+        return self._epoch_session_auth_hash(secret=None)
+
+    def get_session_auth_fallback_hash(self) -> Iterator[str]:
+        """Yield the same value under each retired secret key, as Django does."""
+        if self.session_epoch == 0:
+            yield from super().get_session_auth_fallback_hash()
+            return
+        for secret in settings.SECRET_KEY_FALLBACKS:
+            yield self._epoch_session_auth_hash(secret=secret)
+
+    def _epoch_session_auth_hash(self, *, secret: str | bytes | None) -> str:
+        # The epoch is decimal digits and is followed by a colon, so where it
+        # ends and the password hash begins cannot be read two ways.
+        return salted_hmac(
+            _EPOCH_SESSION_SALT,
+            f"{self.session_epoch}:{self.password}",
+            secret=secret,
+            algorithm="sha256",
+        ).hexdigest()
 
 
 class AppendOnlyError(Exception):
@@ -279,26 +323,51 @@ class AuthenticationEventType(models.TextChoices):
     PASSWORD_RESET_REQUESTED = "password_reset_requested", _("Password reset requested")
     PASSWORD_RESET_SUCCEEDED = "password_reset_succeeded", _("Password reset")
     PASSWORD_RESET_FAILED = "password_reset_failed", _("Password reset refused")
+    # Recovery of a lost second factor (ADR-0017). The names are fixed: the
+    # table is append-only and its rows cannot be renamed.
+    MFA_RECOVERY_REQUESTED = "mfa_recovery_requested", _("Second-factor recovery requested")
+    MFA_RECOVERY_FAILED = "mfa_recovery_failed", _("Second-factor recovery request refused")
+    # An Administrator rejected, or authorised, another account's recovery
+    # request. The event names the account and, as its actor, the Administrator.
+    MFA_RECOVERY_REJECTED = "mfa_recovery_rejected", _("Second-factor recovery rejected")
+    MFA_RECOVERY_AUTHORIZED = "mfa_recovery_authorized", _("Second-factor recovery authorised")
+    MFA_RECOVERY_COMPLETED = "mfa_recovery_completed", _("Second-factor recovery completed")
+    # An emergency action of the command at the server's terminal. It names
+    # the account and no actor: whoever ran it is not an account.
+    MFA_RECOVERY_BREAK_GLASS = (
+        "mfa_recovery_break_glass",
+        _("Second-factor recovery by break-glass"),
+    )
+
+
+class BreakGlassAction(models.TextChoices):
+    """What one `mfa_recovery_break_glass` event records. There are no others."""
+
+    REVOKE_DEVICE = "revoke_device", _("Lost device revoked")
+    APPROVE_ENROLLMENT = "approve_enrollment", _("Enrolment approved")
 
 
 # The events that one account causes for another. Only these name an actor.
 DECISION_EVENT_TYPES = (
     AuthenticationEventType.MFA_ENROLLMENT_APPROVED,
     AuthenticationEventType.MFA_ENROLLMENT_REJECTED,
+    AuthenticationEventType.MFA_RECOVERY_REJECTED,
+    AuthenticationEventType.MFA_RECOVERY_AUTHORIZED,
 )
 
-# The events that can name nobody: what was submitted, an email address or a
-# reset token, may belong to no account.
+# The events that can name nobody: what was submitted, an email address, a
+# reset token, or a second-factor challenge, may belong to no account.
 USERLESS_EVENT_TYPES = (
     AuthenticationEventType.LOGIN_FAILURE,
     AuthenticationEventType.PASSWORD_RESET_REQUESTED,
     AuthenticationEventType.PASSWORD_RESET_FAILED,
+    AuthenticationEventType.MFA_RECOVERY_FAILED,
 )
 
 
 class AuthenticationEvent(AppendOnlyModel):
-    """One sign-in, failed sign-in, sign-out, change to a second factor, or
-    step of a password reset.
+    """One sign-in, failed sign-in, sign-out, change to a second factor, step
+    of a password reset, or step of the recovery of a lost second factor.
 
     Append-only, and deliberately small. It records that something happened,
     when, to which account if that is known, and under which request. It is
@@ -315,8 +384,9 @@ class AuthenticationEvent(AppendOnlyModel):
 
     event_type = models.CharField(_("event type"), max_length=32, choices=AuthenticationEventType)
     # Empty for a failed sign-in or a reset request with an email address
-    # that belongs to no account, and for a refused reset token that belongs
-    # to none: there is nobody to name, and naming somebody would be wrong.
+    # that belongs to no account, and for a refused reset token or a refused
+    # recovery submission that belongs to none: there is nobody to name, and
+    # naming somebody would be wrong.
     user = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -325,9 +395,9 @@ class AuthenticationEvent(AppendOnlyModel):
         null=True,
         blank=True,
     )
-    # Set only for a decision on another account's enrolment request: the
-    # Administrator who made it. Every other event is caused by the account it
-    # names, or by nobody known.
+    # Set only for a decision on another account's enrolment request or
+    # recovery request: the Administrator who made it. Every other event is
+    # caused by the account it names, or by nobody known.
     actor = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -339,8 +409,15 @@ class AuthenticationEvent(AppendOnlyModel):
     # Empty for a refused reset token that belongs to no account: no email
     # address was submitted, and nothing derived from the token is kept.
     identifier_key = models.CharField(_("identifier key"), max_length=64)
+    # Empty on a break-glass event, and the database requires it there: the
+    # command at the server's terminal is not a request and has no address.
     source_key = models.CharField(_("source key"), max_length=64)
     correlation_id = models.CharField(_("correlation ID"), max_length=32, blank=True)
+    # Which of its two actions a break-glass event records. Empty, and never
+    # null, on every other event: a null would pass a check it should fail.
+    break_glass_action = models.CharField(
+        _("break-glass action"), max_length=20, choices=BreakGlassAction, blank=True, default=""
+    )
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
 
     objects = AppendOnlyQuerySet["AuthenticationEvent"].as_manager()
@@ -353,8 +430,8 @@ class AuthenticationEvent(AppendOnlyModel):
                 condition=models.Q(event_type__in=AuthenticationEventType.values),
                 name="accounts_authenticationevent_event_type_known",
             ),
-            # Only a failed sign-in, a reset request, and a refused reset can
-            # be without a user.
+            # Only a failed sign-in, a reset request, a refused reset, and a
+            # refused recovery submission can be without a user.
             models.CheckConstraint(
                 condition=models.Q(user__isnull=False)
                 | models.Q(event_type__in=USERLESS_EVENT_TYPES),
@@ -366,10 +443,30 @@ class AuthenticationEvent(AppendOnlyModel):
                 | (models.Q(actor__isnull=True) & ~models.Q(event_type__in=DECISION_EVENT_TYPES)),
                 name="accounts_authenticationevent_actor_iff_decision",
             ),
-            # Nobody decides on their own enrolment.
+            # Nobody decides on their own enrolment or their own recovery.
             models.CheckConstraint(
                 condition=~models.Q(actor=models.F("user")),
                 name="accounts_authenticationevent_actor_is_not_user",
+            ),
+            # A break-glass event states which of its two actions it records,
+            # and no other event states one.
+            models.CheckConstraint(
+                condition=models.Q(
+                    event_type=AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS,
+                    break_glass_action__in=BreakGlassAction.values,
+                )
+                | (
+                    ~models.Q(event_type=AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS)
+                    & models.Q(break_glass_action="")
+                ),
+                name="accounts_authenticationevent_action_iff_break_glass",
+            ),
+            # A break-glass event records no network address. What any other
+            # event holds here is not decided by this constraint.
+            models.CheckConstraint(
+                condition=~models.Q(event_type=AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS)
+                | models.Q(source_key=""),
+                name="accounts_authenticationevent_break_glass_has_no_source",
             ),
         ]
         indexes = [
@@ -568,6 +665,71 @@ class PasswordReset(models.Model):
 
     def __str__(self) -> str:
         return f"password reset for user {self.user_id}"
+
+
+class RecoveryRequestChangeError(Exception):
+    """An attempt was made to change a recovery request where it stands."""
+
+
+class MfaRecoveryRequestQuerySet(models.QuerySet["MfaRecoveryRequest"]):
+    """Refuses the bulk operations that would change a request where it stands.
+
+    Removing requests is not refused: that is how one is used up, rejected,
+    or replaced.
+    """
+
+    def update(self, **kwargs: Any) -> NoReturn:
+        raise RecoveryRequestChangeError("A recovery request is replaced, never updated.")
+
+    def bulk_update(self, *args: Any, **kwargs: Any) -> NoReturn:
+        raise RecoveryRequestChangeError("A recovery request is replaced, never updated.")
+
+    def bulk_create(self, *args: Any, **kwargs: Any) -> NoReturn:
+        # It can be told to overwrite the row it conflicts with, which is an
+        # update. Requests are made one at a time.
+        raise RecoveryRequestChangeError("Recovery requests are created one at a time.")
+
+
+class MfaRecoveryRequest(models.Model):
+    """An account whose owner asked for a lost second factor to be revoked (ADR-0017).
+
+    The identifier of the row is the number of the request: what its owner is
+    shown and gives to an Administrator, who authorises or rejects that number
+    and no other. There is at most one for an account. It grants nothing by
+    itself. Operational state, like MfaChallenge.
+
+    Unlike the other operational records, a request is never changed where it
+    stands. Which account it is for and when it was made decide whether it
+    may be authorised, and the number names exactly that. A new request
+    therefore removes this row and creates another, which has another number,
+    and the earlier number names nothing. The guards here and in
+    MfaRecoveryRequestQuerySet refuse an update made through the model or its
+    manager, which is every way the application writes this table. Unlike an
+    append-only record, no database trigger stands behind them: SQL sent
+    past the model is not refused.
+
+    It holds no token, no secret, and nothing about how the person was
+    identified.
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.PROTECT, related_name="+", verbose_name=_("user")
+    )
+    created_at = models.DateTimeField(_("created at"))
+
+    objects = MfaRecoveryRequestQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _("second-factor recovery request")
+        verbose_name_plural = _("second-factor recovery requests")
+
+    def __str__(self) -> str:
+        return f"recovery request for user {self.user_id}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self._state.adding:
+            raise RecoveryRequestChangeError("A recovery request is replaced, never updated.")
+        super().save(*args, **kwargs)
 
 
 class AccountEventType(models.TextChoices):

@@ -55,10 +55,12 @@ class Permission(StrEnum):
 
     Kept as small as the system is. ROLES_MANAGE, the three ACCOUNTS
     permissions, MFA_MANAGE_OWN, and MFA_ENROLLMENT_APPROVE are checked by
-    services and selectors today. The other three exist so
+    services and selectors today. The three research permissions exist so
     that the four roles are distinguishable and views can declare the access
     they require; no operation consumes them yet. They are deliberately coarse
     and are to be split only when a feature needs a finer distinction.
+    MFA_RECOVERY_AUTHORIZE is decided by ADR-0017, and the operations that
+    check it are not built yet.
 
     Reading the public research site needs no permission: it is open to
     anonymous visitors, who hold none.
@@ -84,6 +86,9 @@ class Permission(StrEnum):
     MFA_MANAGE_OWN = "accounts.mfa.manage_own"
     # Approve or reject another account's request to enrol a second factor.
     MFA_ENROLLMENT_APPROVE = "accounts.mfa.approve_enrollment"
+    # Authorise or reject another account's request to recover a lost second
+    # factor.
+    MFA_RECOVERY_AUTHORIZE = "accounts.mfa.authorize_recovery"
 
 
 # Each role's permissions, written out in full (PROJECT_SPECIFICATION.md §3).
@@ -117,6 +122,7 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.ACCOUNTS_ENABLE,
                 Permission.MFA_MANAGE_OWN,
                 Permission.MFA_ENROLLMENT_APPROVE,
+                Permission.MFA_RECOVERY_AUTHORIZE,
             }
         ),
     }

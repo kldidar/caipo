@@ -1126,6 +1126,7 @@ def test_no_event_and_no_log_holds_a_token_its_hash_a_password_an_address_or_a_l
         "identifier_key",
         "source_key",
         "correlation_id",
+        "break_glass_action",
         "created_at",
     }
 

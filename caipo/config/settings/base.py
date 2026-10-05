@@ -140,6 +140,27 @@ PASSWORD_RESET_REQUEST_SOURCE_LIMIT = 20
 PASSWORD_RESET_THROTTLE_WINDOW = timedelta(minutes=15)
 PASSWORD_RESET_THROTTLE_FAILURES = 10
 
+# Recovery of a lost second factor (ADR-0017). Repository-versioned like the
+# limits above.
+
+# A recovery request that no Administrator has authorised within this time is
+# void. The person reaches an Administrator first and asks second.
+MFA_RECOVERY_REQUEST_LIFETIME = timedelta(minutes=30)
+# No recovery is finalised within this time of the account's latest
+# successful password reset.
+MFA_RECOVERY_COOLING_OFF = timedelta(hours=24)
+# Recovery requests for one account before further requests for it are
+# refused until earlier ones age out.
+MFA_RECOVERY_REQUEST_ACCOUNT_WINDOW = timedelta(hours=1)
+MFA_RECOVERY_REQUEST_ACCOUNT_LIMIT = 5
+# The same, for requests from one source.
+MFA_RECOVERY_REQUEST_SOURCE_WINDOW = timedelta(minutes=15)
+MFA_RECOVERY_REQUEST_SOURCE_LIMIT = 20
+# Refused recovery submissions from one source before further submissions are
+# refused unexamined until earlier ones age out.
+MFA_RECOVERY_THROTTLE_WINDOW = timedelta(minutes=15)
+MFA_RECOVERY_THROTTLE_FAILURES = 10
+
 # The address of this site as its users reach it, scheme and host with no
 # path, for links in messages. It has no value here: each environment module
 # must supply it. It is never taken from a request, whose Host header a

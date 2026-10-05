@@ -470,6 +470,7 @@ def test_the_only_administrator_deactivating_themselves_changes_nothing(
         Permission.ACCOUNTS_ENABLE,
         Permission.MFA_MANAGE_OWN,
         Permission.MFA_ENROLLMENT_APPROVE,
+        Permission.MFA_RECOVERY_AUTHORIZE,
     }
     # Nothing was reported as done.
     assert [record.__dict__.get("event") for record in caplog.records] == []

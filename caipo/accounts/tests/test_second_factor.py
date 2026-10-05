@@ -71,6 +71,7 @@ ADMINISTRATIVE = {
     Permission.ACCOUNTS_DEACTIVATE,
     Permission.ACCOUNTS_ENABLE,
     Permission.MFA_ENROLLMENT_APPROVE,
+    Permission.MFA_RECOVERY_AUTHORIZE,
 }
 OWN_MFA = Permission.MFA_MANAGE_OWN
 
@@ -1372,6 +1373,7 @@ def test_every_event_names_the_account_and_none_holds_more_than_the_columns(
         "identifier_key",
         "source_key",
         "correlation_id",
+        "break_glass_action",
         "created_at",
     }
 
@@ -1472,7 +1474,8 @@ def test_the_only_second_factor_settings_are_these() -> None:
 
     assert "SECRET_KEY" in dir(django_settings), "the settings were not listed at all"
 
-    # An issuer name, a drift window, a key, three lifetimes, and a throttle.
+    # An issuer name, a drift window, a key, three lifetimes, and a throttle,
+    # and for recovery (ADR-0017) a lifetime, a cooling-off, and three limits.
     # None of them says whether a second factor, or its approval, is required.
     assert names == {
         "TOTP_ISSUER",
@@ -1483,6 +1486,14 @@ def test_the_only_second_factor_settings_are_these() -> None:
         "MFA_CHALLENGE_LIFETIME",
         "MFA_THROTTLE_WINDOW",
         "MFA_THROTTLE_FAILURES",
+        "MFA_RECOVERY_REQUEST_LIFETIME",
+        "MFA_RECOVERY_COOLING_OFF",
+        "MFA_RECOVERY_REQUEST_ACCOUNT_WINDOW",
+        "MFA_RECOVERY_REQUEST_ACCOUNT_LIMIT",
+        "MFA_RECOVERY_REQUEST_SOURCE_WINDOW",
+        "MFA_RECOVERY_REQUEST_SOURCE_LIMIT",
+        "MFA_RECOVERY_THROTTLE_WINDOW",
+        "MFA_RECOVERY_THROTTLE_FAILURES",
     }
 
 
@@ -1519,6 +1530,9 @@ def test_the_account_table_has_no_column_that_could_record_enrolment() -> None:
         "status",
         "email_verified_at",
         "activated_at",
+        # How many times the account's sessions were ended (ADR-0017). It
+        # says nothing about a second factor either.
+        "session_epoch",
         "created_at",
         "updated_at",
     }
