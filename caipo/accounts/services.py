@@ -1,6 +1,7 @@
 """Write interface of the accounts app: signing in and out, the second factor
-and its approval, changing roles, creating, activating, disabling, and enabling
-accounts, resetting a forgotten password, and creating the first Administrator.
+and its approval, asking for a lost second factor to be recovered, changing
+roles, creating, activating, disabling, and enabling accounts, resetting a
+forgotten password, and creating the first Administrator.
 
 Every account change here runs as one transaction and holds a lock that lets
 only one of them proceed at a time, so each decides on what the previous one
@@ -49,6 +50,7 @@ from caipo.accounts.models import (
     AuthenticationEvent,
     AuthenticationEventType,
     MfaChallenge,
+    MfaRecoveryRequest,
     PasswordReset,
     RoleEvent,
     RoleEventType,
@@ -73,6 +75,10 @@ _ACTIVATION_LOCK = 4
 # email address lock and the second-factor lock of the token's account, and
 # never after them.
 _PASSWORD_RESET_LOCK = 5
+# One recovery submission at a time for a source. Taken before the email
+# address lock and the second-factor lock of the challenge's account, and
+# never after them.
+_RECOVERY_LOCK = 6
 
 # What stands for the network address in the one event that no request causes.
 BOOTSTRAP_SOURCE = "create_first_administrator command"
@@ -136,6 +142,24 @@ class PasswordResetResult:
     # Set only when the outcome is PASSWORD_REFUSED: what the password
     # validators said. They describe rules and never repeat the password.
     password_errors: tuple[str, ...] = ()
+
+
+class RecoveryRequestOutcome(StrEnum):
+    REQUESTED = "requested"
+    # A challenge that is unknown, lapsed, or already used, and an account
+    # that is not eligible, are one outcome on purpose: a caller cannot tell
+    # them apart, so neither can whoever is asking.
+    REFUSED = "refused"
+    # Whichever of the three limits was met. A caller cannot tell which.
+    THROTTLED = "throttled"
+
+
+@dataclass(frozen=True)
+class RecoveryRequestResult:
+    outcome: RecoveryRequestOutcome
+    # Set only when the outcome is REQUESTED: the number of the request, for
+    # the person who made it to give to an Administrator.
+    number: int | None = None
 
 
 @dataclass(frozen=True)
@@ -349,6 +373,87 @@ def cancel_second_factor_challenge(*, challenge: str) -> None:
     unknown or already gone. Records nothing.
     """
     MfaChallenge.objects.filter(token_key=_key("challenge", challenge)).delete()
+
+
+@sensitive_variables("challenge")
+def request_mfa_recovery(*, challenge: str, source: str) -> RecoveryRequestResult:
+    """Record that the owner of an account asks for its lost second factor to be revoked.
+
+    `challenge` is the token `sign_in` returned: the password was accepted
+    and a code is awaited. It decides which account the request is for;
+    nothing else does. `source` is the network address the submission came
+    from, as the caller established it.
+
+    Preconditions for REQUESTED: submissions from the source are not
+    throttled; the challenge exists and is younger than
+    MFA_CHALLENGE_LIFETIME; requests for its account are not throttled; and
+    the account is ACTIVE, has an active second factor, trusted or not, and
+    holds a role that requires one. Side effects when REQUESTED, in one
+    transaction that holds the lock on the account's email address that a
+    sign-in holds, the account's second-factor lock, and the account's row
+    lock: the challenge is removed, so it can no longer complete a sign-in,
+    any earlier request of the account is removed and a new one is created,
+    which has another number, and `mfa_recovery_requested` is recorded. The
+    result carries the number.
+
+    Nothing else is touched. The request authorises nothing: the second
+    factor stays active, and so do the account's sessions, password, status,
+    and roles, and the counts that throttle sign-in and second-factor codes.
+    Nobody is signed in, and the result carries no authentication context.
+
+    Never raises for a bad challenge. Returns THROTTLED, before the challenge
+    or any account is looked up, once MFA_RECOVERY_REQUEST_SOURCE_LIMIT
+    requests were made from the source within
+    MFA_RECOVERY_REQUEST_SOURCE_WINDOW or MFA_RECOVERY_THROTTLE_FAILURES
+    submissions from it were refused within MFA_RECOVERY_THROTTLE_WINDOW; and,
+    after the challenge has identified the account, once
+    MFA_RECOVERY_REQUEST_ACCOUNT_LIMIT requests were made for that account
+    within MFA_RECOVERY_REQUEST_ACCOUNT_WINDOW. A throttled submission is
+    logged and changes nothing: no event, no request removed or created, and
+    the challenge is left as it was. Returns REFUSED for a challenge that is
+    unknown, lapsed, or already used, and for an account that is not
+    eligible, and records `mfa_recovery_failed`, naming the account only if
+    the challenge is that account's current one. Then nothing else is
+    changed, and the challenge is left as it was.
+    """
+    source_key = _key("source", source)
+    with transaction.atomic():
+        _lock_attempts(_RECOVERY_LOCK, source_key)
+        # Before the challenge or any account is looked up, so that the
+        # answer says nothing about either.
+        if _recovery_throttled_by_source(source_key):
+            return RecoveryRequestResult(RecoveryRequestOutcome.THROTTLED)
+
+        user, pending = _challenge_for_recovery(_key("challenge", challenge))
+        if (
+            user is None
+            or pending is None
+            or timezone.now() >= pending.created_at + settings.MFA_CHALLENGE_LIFETIME
+        ):
+            return _recovery_refused(user, source_key)
+
+        identifier_key = _key("identifier", user.email)
+        if _recovery_throttled_for_account(identifier_key):
+            return RecoveryRequestResult(RecoveryRequestOutcome.THROTTLED)
+        if not (
+            user.status == AccountStatus.ACTIVE
+            and TotpDevice.objects.filter(user=user, state=TotpDeviceState.ACTIVE).exists()
+            and enrollment_requires_approval(selectors.roles_of(user))
+        ):
+            return _recovery_refused(user, source_key)
+
+        pending.delete()
+        # Removed and made again, never changed where it stands: the new
+        # request must not answer to the number of the one it replaces.
+        MfaRecoveryRequest.objects.filter(user=user).delete()
+        request = MfaRecoveryRequest.objects.create(user=user, created_at=timezone.now())
+        _record(AuthenticationEventType.MFA_RECOVERY_REQUESTED, user, identifier_key, source_key)
+
+    logger.info(
+        "Second-factor recovery requested",
+        extra={"event": "mfa_recovery.requested", "user_id": user.pk},
+    )
+    return RecoveryRequestResult(RecoveryRequestOutcome.REQUESTED, number=request.pk)
 
 
 @sensitive_variables("password", "secret")
@@ -1716,6 +1821,111 @@ def _pending_challenge(token_key: str) -> MfaChallenge | None:
     if pending is None or timezone.now() >= pending.created_at + settings.MFA_CHALLENGE_LIFETIME:
         return None
     return pending
+
+
+def _challenge_for_recovery(token_key: str) -> tuple[User | None, MfaChallenge | None]:
+    """Return the account and challenge with this token key, both locked, or neither.
+
+    Unlike `_pending_challenge`, a challenge that has lapsed is returned: it
+    still says which account it was issued to. Four locks, in the order
+    every other operation takes them: the lock on the account's email
+    address that a sign-in holds, so that a sign-in for this account cannot
+    replace the challenge alongside; the account's second-factor lock, which
+    whoever examines a code for the challenge holds; the account row, as
+    disabling locks it; and the challenge row, which is read again under the
+    locks, because another request may have used or replaced it meanwhile.
+    Must be called inside a transaction.
+    """
+    found = (
+        MfaChallenge.objects.filter(token_key=token_key)
+        .values_list("user_id", "user__email")
+        .first()
+    )
+    if found is None:
+        return None, None
+    user_id, email = found
+    _lock_attempts(_IDENTIFIER_LOCK, _key("identifier", email))
+    _lock_second_factor(user_id)
+    user = User.objects.select_for_update().get(pk=user_id)
+    pending = (
+        MfaChallenge.objects.select_for_update()
+        .filter(token_key=token_key, user_id=user_id)
+        .first()
+    )
+    if pending is None:
+        return None, None
+    return user, pending
+
+
+def _recovery_throttled_by_source(source_key: str) -> bool:
+    """Return whether a limit on recovery submissions from the source is met now.
+
+    Two limits: the requests made from the source, and the submissions from
+    it that were refused. Reads no challenge and no account. Must be called
+    holding the source's recovery lock.
+    """
+    now = timezone.now()
+    events = AuthenticationEvent.objects.filter(source_key=source_key)
+    requested = events.filter(
+        event_type=AuthenticationEventType.MFA_RECOVERY_REQUESTED,
+        created_at__gte=now - settings.MFA_RECOVERY_REQUEST_SOURCE_WINDOW,
+    ).count()
+    if requested >= settings.MFA_RECOVERY_REQUEST_SOURCE_LIMIT:
+        scope = "source_requests"
+    elif (
+        events.filter(
+            event_type=AuthenticationEventType.MFA_RECOVERY_FAILED,
+            created_at__gte=now - settings.MFA_RECOVERY_THROTTLE_WINDOW,
+        ).count()
+        >= settings.MFA_RECOVERY_THROTTLE_FAILURES
+    ):
+        scope = "source_failures"
+    else:
+        return False
+    logger.warning(
+        "Second-factor recovery request throttled",
+        extra={"event": "mfa_recovery.throttled", "scope": scope},
+    )
+    return True
+
+
+def _recovery_throttled_for_account(identifier_key: str) -> bool:
+    """Return whether the limit on recovery requests for the account is met now.
+
+    Must be called holding the lock on the account's email address.
+    """
+    requested = AuthenticationEvent.objects.filter(
+        event_type=AuthenticationEventType.MFA_RECOVERY_REQUESTED,
+        identifier_key=identifier_key,
+        created_at__gte=timezone.now() - settings.MFA_RECOVERY_REQUEST_ACCOUNT_WINDOW,
+    ).count()
+    if requested < settings.MFA_RECOVERY_REQUEST_ACCOUNT_LIMIT:
+        return False
+    logger.warning(
+        "Second-factor recovery request throttled",
+        extra={"event": "mfa_recovery.throttled", "scope": "account"},
+    )
+    return True
+
+
+def _recovery_refused(user: User | None, source_key: str) -> RecoveryRequestResult:
+    """Record a recovery submission that the application refused, and return the refusal.
+
+    `user` is the account the challenge identified, if it identified one.
+    Must be called inside a transaction, which the caller then leaves
+    without changing anything else.
+    """
+    _record(
+        AuthenticationEventType.MFA_RECOVERY_FAILED,
+        user,
+        _key("identifier", user.email) if user is not None else "",
+        source_key,
+    )
+    logger.warning(
+        "Second-factor recovery request refused",
+        extra={"event": "mfa_recovery.refused", "user_id": user.pk if user else None},
+    )
+    return RecoveryRequestResult(RecoveryRequestOutcome.REFUSED)
 
 
 def _lock_second_factor(user_id: int) -> None:

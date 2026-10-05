@@ -184,7 +184,7 @@ What exists now, and what does not. Nothing here means authentication is complet
 
 - Account recovery. Changing an account's email address. Password reset by email is implemented ([ADR-0016](docs/adr/0016-password-reset.md)); it changes a password and recovers nothing else.
 - **Sending email in production.** No delivery service is configured, so there an account can be created and its verification message cannot be sent (see "Account lifecycle as implemented"), and a password reset can be asked for and its message cannot be sent.
-- Recovery from a lost second factor: no recovery codes and no administrator-assisted reset (see below).
+- Recovery from a lost second factor ([ADR-0017](docs/adr/0017-account-recovery.md)). Only its first step is built: the owner of an account can ask for recovery (see "Asking for recovery of a lost second factor"). Nothing authorises, rejects, or completes a request yet, there is no break-glass command, and no notification is sent. A lost device is therefore still the database operation described under "Replacing, disabling, and recovery". There are no recovery codes.
 - Pages for role administration and for disabling and enabling accounts. Those services work for an Administrator with a verified second factor; no page calls them yet.
 - Assistant quotas.
 - The general audit record (AuditEvent) for administrative actions. Role changes, sign-ins, and the lifecycle of accounts are each recorded in their own table.
@@ -389,8 +389,33 @@ The password of a Reviewer or Administrator account must not be enough to give t
 - An account can remove only its own second factor, and only with its password and a current, unused code in the same request. There is no parameter, setting, or flag that disables a second factor.
 - **An active second factor is replaced only on both proofs, and the new one is approved again.** Replacing asks for the password and a current, unused code from the device being given up; starting an enrolment is refused while a second factor is active, so a password alone replaces nothing. The new device inherits no trust: for a Reviewer or Administrator it is a request that awaits approval like any other. Both protections apply, not either: the code shows that the person held the old device, and the approval is what makes the new one trusted. The old device stops working when the new key is issued, the session loses what the old device proved, and the account has no privilege until the new device is approved and verified. This is recorded as `mfa_device_replaced`.
 - After disabling, enrolling again needs approval where enrolling did.
-- **There are no recovery codes, and an Administrator cannot reset another account's second factor.** A person who loses their device cannot sign in. Until recovery is designed, the remedy is a deliberate operation on the database by its owner: deleting that account's device row, after which the account signs in with its password and enrols again, with an Administrator's approval if it is a Reviewer or Administrator. Recovery is future work.
+- **There are no recovery codes, and an Administrator cannot reset another account's second factor.** A person who loses their device cannot sign in. Recovery is decided in [ADR-0017](docs/adr/0017-account-recovery.md) and only its request step is built, so the remedy is still a deliberate operation on the database by its owner: deleting that account's device row, after which the account signs in with its password and enrols again, with an Administrator's approval if it is a Reviewer or Administrator. The rest of recovery is future work.
 - **The only Administrator cannot renew its own second factor.** If it replaces, disables, or loses its device, the new enrolment awaits an approval that nobody can give, and the bootstrap cannot be run again. Recovery is then a deliberate operation on the database by its owner, outside the application. A second Administrator should exist before either changes their second factor.
+
+**Asking for recovery of a lost second factor**
+
+The first step of [ADR-0017](docs/adr/0017-account-recovery.md), and the only one built. A request authorises nothing: no page, service, or command acts on one yet.
+
+- **Who can ask.** Only the owner of the account, from a sign-in whose password was accepted and whose code is awaited. The offer is on the page that takes the code and on no page that a visitor who is not signed in can otherwise reach. It is the same page for every account.
+- **What the request takes.** A POST with a CSRF token, and nothing else. The account is the one the pending challenge was issued to, and the challenge is held on the server: no form field, parameter, header, or cookie can name an account or a challenge.
+- **Who is eligible.** An active account with an active second factor, trusted or not, that holds a role requiring one: Reviewer or Administrator. A Reader or Researcher account is refused.
+- **What an accepted request does.** In one transaction it removes the pending challenge, removes any earlier request of the account, creates a new one with a new number, and records `mfa_recovery_requested`. The number is shown once, with the 30 minutes after which the request lapses.
+- **What it does not do.** Nobody is signed in, and the session gains nothing. The second factor stays active and still signs the account in. The account's other sessions, password, status, and roles, and the counts that throttle sign-in and codes, are untouched.
+- **Limits**, counted in PostgreSQL from the authentication events under advisory locks, as sign-in attempts are:
+  - 20 requests from one source in 15 minutes, and 10 refused submissions from one source in 15 minutes. Both are applied before the challenge or any account is looked up.
+  - 5 requests for one account in 1 hour, applied after the challenge has identified the account.
+  - A submission stopped by any of the three gets status 429 and the same page, records nothing, uses up no challenge, replaces no request, and leaves the session as it was. Status 429 for the account limit is an implementation choice that follows the source limits (ADR-0017 point 74; ADR-0014 point 29).
+- **Refusals.** An unknown, lapsed, or already used challenge and an account that is not eligible get one page and one message, and the session is left as it was. Each is recorded as `mfa_recovery_failed`, naming the account only if the challenge is still that account's current one: a lapsed challenge and an ineligible account name it, an unknown or used challenge names nobody.
+- **What a response reveals.** Nothing to a visitor who has not passed an account's password. To one who has, whether that account is eligible.
+- **Without a pending sign-in** there is nothing to submit: the visitor is sent to the sign-in page and nothing is recorded.
+- No event and no log line holds the challenge, its hash, a session key, or an email or network address other than as a keyed hash.
+
+**Residual risks of the request step**
+
+- Whoever knows the password of an eligible account can make requests for it. That replaces the owner's request, and five in an hour stop the owner from asking until the hour has passed. It gains nothing: nothing acts on a request.
+- Behind a reverse proxy every visitor shares one source until the deployment decision names the header to trust (ADR-0008), so the two limits by source are then shared by everyone.
+- Asking ends the sign-in it was made from. A person who finds the device afterwards gives the password again.
+- A request that has lapsed stays in the table until it is replaced.
 
 **Key management assumptions**
 

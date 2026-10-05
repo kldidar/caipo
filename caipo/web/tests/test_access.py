@@ -94,12 +94,15 @@ def test_only_the_health_and_sign_in_endpoints_are_public() -> None:
     # who is not signed in, and signing out when not signed in must be harmless.
     # Activating an account is done by someone whose account cannot be signed
     # in to yet, and a password is reset by someone who cannot sign in
-    # (ADR-0016).
+    # (ADR-0016). Recovery of a lost second factor is asked for from a sign-in
+    # that awaits its code, by someone who is therefore not signed in
+    # (ADR-0017).
     assert public_routes == {
         "health-live",
         "health-ready",
         "login",
         "login-verify",
+        "login-recover",
         "logout",
         "activate",
         "password-reset",
