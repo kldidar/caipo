@@ -22,6 +22,7 @@ MANAGE_ROLES = Permission.ROLES_MANAGE
 DEACTIVATE = Permission.ACCOUNTS_DEACTIVATE
 OWN_MFA = Permission.MFA_MANAGE_OWN
 APPROVE = Permission.MFA_ENROLLMENT_APPROVE
+AUTHORIZE_RECOVERY = Permission.MFA_RECOVERY_AUTHORIZE
 CREATE = Permission.ACCOUNTS_CREATE
 ENABLE = Permission.ACCOUNTS_ENABLE
 
@@ -44,6 +45,7 @@ def test_the_permission_vocabulary_is_exactly_this() -> None:
         "accounts.enable",
         "accounts.mfa.manage_own",
         "accounts.mfa.approve_enrollment",
+        "accounts.mfa.authorize_recovery",
     }
 
 
@@ -68,7 +70,10 @@ def test_every_role_has_an_explicit_entry_in_the_policy() -> None:
         (Role.READER, {READ, OWN_MFA}),
         (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA}),
         (Role.REVIEWER, {READ, CONTRIBUTE, REVIEW, OWN_MFA}),
-        (Role.ADMINISTRATOR, {MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, OWN_MFA, APPROVE}),
+        (
+            Role.ADMINISTRATOR,
+            {MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, OWN_MFA, APPROVE, AUTHORIZE_RECOVERY},
+        ),
     ],
 )
 def test_each_role_confers_exactly_its_permissions_with_a_verified_second_factor(
@@ -143,7 +148,9 @@ def test_only_administrator_holds_the_administrative_permissions(permission: Per
 
 @pytest.mark.parametrize("role", [Role.READER, Role.RESEARCHER, Role.REVIEWER])
 def test_research_roles_hold_no_administrative_permission(role: Role) -> None:
-    assert ROLE_PERMISSIONS[role].isdisjoint({MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, APPROVE})
+    assert ROLE_PERMISSIONS[role].isdisjoint(
+        {MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, APPROVE, AUTHORIZE_RECOVERY}
+    )
 
 
 def test_only_administrator_can_approve_an_enrolment_and_never_on_a_password() -> None:
@@ -152,6 +159,24 @@ def test_only_administrator_can_approve_an_enrolment_and_never_on_a_password() -
     assert holders == {Role.ADMINISTRATOR}
     assert APPROVE not in permissions_for(list(Role), assurance=PASSWORD)
     assert APPROVE in permissions_for([Role.ADMINISTRATOR], assurance=MFA)
+
+
+def test_only_administrator_can_authorise_a_recovery_and_never_on_a_password() -> None:
+    holders = {role for role in Role if AUTHORIZE_RECOVERY in ROLE_PERMISSIONS[role]}
+
+    assert holders == {Role.ADMINISTRATOR}
+    assert AUTHORIZE_RECOVERY not in permissions_for(list(Role), assurance=PASSWORD)
+    assert AUTHORIZE_RECOVERY in permissions_for([Role.ADMINISTRATOR], assurance=MFA)
+
+
+@pytest.mark.parametrize("role", [Role.READER, Role.RESEARCHER, Role.REVIEWER])
+def test_no_other_role_can_authorise_a_recovery_at_any_assurance(role: Role) -> None:
+    for assurance in (PASSWORD, MFA):
+        assert AUTHORIZE_RECOVERY not in permissions_for([role], assurance=assurance)
+
+
+def test_authorising_a_recovery_is_not_available_before_a_second_factor() -> None:
+    assert AUTHORIZE_RECOVERY not in PERMISSIONS_BEFORE_MFA
 
 
 @pytest.mark.parametrize(
@@ -185,7 +210,17 @@ def test_only_reviewer_can_review() -> None:
 def test_several_roles_confer_the_union_of_their_permissions() -> None:
     held = permissions_for([Role.RESEARCHER, Role.ADMINISTRATOR], assurance=MFA)
 
-    assert held == {READ, CONTRIBUTE, MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, OWN_MFA, APPROVE}
+    assert held == {
+        READ,
+        CONTRIBUTE,
+        MANAGE_ROLES,
+        CREATE,
+        DEACTIVATE,
+        ENABLE,
+        OWN_MFA,
+        APPROVE,
+        AUTHORIZE_RECOVERY,
+    }
 
 
 def test_on_a_password_an_account_keeps_the_roles_that_need_no_second_factor() -> None:

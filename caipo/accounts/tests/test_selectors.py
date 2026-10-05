@@ -123,6 +123,7 @@ def test_what_each_role_can_do_on_a_password_alone(
                 Permission.ACCOUNTS_ENABLE,
                 OWN_MFA,
                 Permission.MFA_ENROLLMENT_APPROVE,
+                Permission.MFA_RECOVERY_AUTHORIZE,
             },
         ),
     ],

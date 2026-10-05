@@ -9,6 +9,7 @@ from caipo.accounts.models import (
     AppendOnlyError,
     AuthenticationEvent,
     AuthenticationEventType,
+    BreakGlassAction,
     User,
 )
 
@@ -17,8 +18,33 @@ pytestmark = [pytest.mark.services, pytest.mark.django_db]
 APPEND_ONLY = "accounts_authenticationevent is append-only"
 KEY = "0" * 64
 # What was submitted may belong to no account: an email address at sign-in or
-# in a reset request, and a reset token (ADR-0013, ADR-0016).
-MAY_NAME_NOBODY = ["login_failure", "password_reset_requested", "password_reset_failed"]
+# in a reset request, a reset token, and the challenge of a recovery
+# submission (ADR-0013, ADR-0016, ADR-0017).
+MAY_NAME_NOBODY = [
+    "login_failure",
+    "password_reset_requested",
+    "password_reset_failed",
+    "mfa_recovery_failed",
+]
+# Who decides for another account: on an enrolment request (ADR-0014) and on a
+# recovery request (ADR-0017).
+DECISIONS = [
+    "mfa_enrollment_approved",
+    "mfa_enrollment_rejected",
+    "mfa_recovery_rejected",
+    "mfa_recovery_authorized",
+]
+BREAK_GLASS = "mfa_recovery_break_glass"
+
+
+def _own(event_type: str) -> dict[str, str]:
+    """Return what only a break-glass event carries or lacks: an action, and no source.
+
+    So that a test finds only the fault it plants.
+    """
+    if event_type == BREAK_GLASS:
+        return {"source_key": "", "break_glass_action": BreakGlassAction.REVOKE_DEVICE}
+    return {"source_key": KEY, "break_glass_action": ""}
 
 
 @pytest.fixture
@@ -47,6 +73,7 @@ def test_the_table_holds_exactly_these_columns() -> None:
         "identifier_key",
         "source_key",
         "correlation_id",
+        "break_glass_action",
         "created_at",
     }
 
@@ -69,6 +96,12 @@ def test_the_event_types_are_exactly_these() -> None:
         "password_reset_requested",
         "password_reset_succeeded",
         "password_reset_failed",
+        "mfa_recovery_requested",
+        "mfa_recovery_failed",
+        "mfa_recovery_rejected",
+        "mfa_recovery_authorized",
+        "mfa_recovery_completed",
+        "mfa_recovery_break_glass",
     ]
 
 
@@ -99,6 +132,8 @@ def test_the_trigger_is_installed_and_enabled() -> None:
         "UPDATE accounts_authenticationevent SET event_type = 'logout' WHERE id = %s",
         "UPDATE accounts_authenticationevent SET user_id = NULL WHERE id = %s",
         "UPDATE accounts_authenticationevent SET created_at = now() WHERE id = %s",
+        "UPDATE accounts_authenticationevent SET break_glass_action = 'revoke_device'"
+        " WHERE id = %s",
         "DELETE FROM accounts_authenticationevent WHERE id = %s",
     ],
 )
@@ -171,12 +206,16 @@ def test_the_database_rejects_any_other_event_without_a_user(
         transaction.atomic(),
     ):
         AuthenticationEvent.objects.create(
-            event_type=event_type, user=None, actor=actor, identifier_key=KEY, source_key=KEY
+            event_type=event_type,
+            user=None,
+            actor=actor,
+            identifier_key=KEY,
+            **_own(event_type),
         )
 
 
 @pytest.mark.parametrize("event_type", MAY_NAME_NOBODY)
-def test_the_database_accepts_a_failure_or_a_reset_request_without_a_user(event_type: str) -> None:
+def test_the_database_accepts_an_event_that_may_name_nobody_without_a_user(event_type: str) -> None:
     AuthenticationEvent.objects.create(
         event_type=event_type, user=None, identifier_key=KEY, source_key=KEY
     )
@@ -209,7 +248,11 @@ def test_the_database_rejects_an_unknown_event_type(user: User) -> None:
         )
 
 
-# --- Who decided on an enrolment request ---------------------------------------
+# --- Who decided on an enrolment request or a recovery request ------------------
+
+
+def test_the_events_that_name_an_actor_are_exactly_these() -> None:
+    assert list(DECISION_EVENT_TYPES) == DECISIONS
 
 
 @pytest.mark.parametrize("event_type", DECISION_EVENT_TYPES)
@@ -235,7 +278,7 @@ def test_the_database_rejects_a_decision_without_an_actor(user: User, event_type
 
 
 @pytest.mark.parametrize("event_type", DECISION_EVENT_TYPES)
-def test_the_database_rejects_a_decision_on_ones_own_enrolment(user: User, event_type: str) -> None:
+def test_the_database_rejects_a_decision_on_ones_own_account(user: User, event_type: str) -> None:
     with (
         pytest.raises(IntegrityError, match="accounts_authenticationevent_actor_is_not_user"),
         transaction.atomic(),
@@ -257,7 +300,11 @@ def test_the_database_rejects_an_actor_on_any_other_event(user: User, event_type
         transaction.atomic(),
     ):
         AuthenticationEvent.objects.create(
-            event_type=event_type, user=user, actor=actor, identifier_key=KEY, source_key=KEY
+            event_type=event_type,
+            user=user,
+            actor=actor,
+            identifier_key=KEY,
+            **_own(event_type),
         )
 
 

@@ -409,3 +409,15 @@ def test_the_password_reset_limits_are_repository_settings() -> None:
     assert base.PASSWORD_RESET_REQUEST_SOURCE_LIMIT == 20
     assert base.PASSWORD_RESET_THROTTLE_WINDOW == timedelta(minutes=15)
     assert base.PASSWORD_RESET_THROTTLE_FAILURES == 10
+
+
+def test_the_recovery_limits_are_repository_settings() -> None:
+    # ADR-0017 points 26, 50, and 71.
+    assert base.MFA_RECOVERY_REQUEST_LIFETIME == timedelta(minutes=30)
+    assert base.MFA_RECOVERY_COOLING_OFF == timedelta(hours=24)
+    assert base.MFA_RECOVERY_REQUEST_ACCOUNT_WINDOW == timedelta(hours=1)
+    assert base.MFA_RECOVERY_REQUEST_ACCOUNT_LIMIT == 5
+    assert base.MFA_RECOVERY_REQUEST_SOURCE_WINDOW == timedelta(minutes=15)
+    assert base.MFA_RECOVERY_REQUEST_SOURCE_LIMIT == 20
+    assert base.MFA_RECOVERY_THROTTLE_WINDOW == timedelta(minutes=15)
+    assert base.MFA_RECOVERY_THROTTLE_FAILURES == 10

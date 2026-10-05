@@ -150,6 +150,7 @@ def test_there_are_no_staff_or_superuser_privileges() -> None:
         "status",
         "email_verified_at",
         "activated_at",
+        "session_epoch",
         "created_at",
         "updated_at",
     }
