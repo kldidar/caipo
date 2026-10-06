@@ -24,4 +24,10 @@
     {% csrf_token %}
     <button type="submit">{% translate "Cancel and start again" %}</button>
   </form>
+  <h2>{% translate "Lost your authenticator?" %}</h2>
+  <p>{% translate "If you can no longer use the device, you can ask for it to be recovered. You will be given a request number to pass to an Administrator. Asking ends this sign-in." %}</p>
+  <form method="post" action="{% url 'login-recover' %}">
+    {% csrf_token %}
+    <button type="submit">{% translate "Request recovery" %}</button>
+  </form>
 {% endblock %}

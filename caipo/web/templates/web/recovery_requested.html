@@ -1,0 +1,13 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Recovery requested" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Recovery requested" %}</h1>
+  <p>{% blocktranslate %}Your request number is <strong>{{ number }}</strong>.{% endblocktranslate %}</p>
+  <p>{% translate "Give this number to an Administrator yourself, and not through this site. Nothing about your account has changed: your authenticator application is still its second factor, and it stays so unless an Administrator authorises this request." %}</p>
+  <p>{% blocktranslate count minutes=lifetime_minutes %}The request lapses after {{ minutes }} minute.{% plural %}The request lapses after {{ minutes }} minutes.{% endblocktranslate %} {% translate "Asking again makes a new request with a new number." %}</p>
+  <p>{% translate "You have not been signed in. To sign in, start again with your password." %}</p>
+  <p><a href="{% url 'login' %}">{% translate "Go to the sign-in page" %}</a></p>
+{% endblock %}
