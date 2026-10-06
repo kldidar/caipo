@@ -1549,6 +1549,7 @@ def test_the_policy_and_the_decision_read_no_environment_and_no_setting_but_the_
         "ACCOUNT_ACTIVATION_LIFETIME",
         "MFA_ENROLLMENT_LIFETIME",
         "MFA_APPROVAL_LIFETIME",
+        "MFA_RECOVERY_REQUEST_LIFETIME",
     }
 
 

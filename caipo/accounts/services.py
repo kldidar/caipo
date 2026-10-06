@@ -1,7 +1,8 @@
 """Write interface of the accounts app: signing in and out, the second factor
-and its approval, asking for a lost second factor to be recovered, changing
-roles, creating, activating, disabling, and enabling accounts, resetting a
-forgotten password, and creating the first Administrator.
+and its approval, asking for a lost second factor to be recovered and
+authorising or rejecting that request, changing roles, creating, activating,
+disabling, and enabling accounts, resetting a forgotten password, and creating
+the first Administrator.
 
 Every account change here runs as one transaction and holds a lock that lets
 only one of them proceed at a time, so each decides on what the previous one
@@ -28,6 +29,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
 from django.db import connection, transaction
+from django.db.models import F
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext as _
@@ -65,7 +67,8 @@ logger = logging.getLogger(__name__)
 
 # Advisory lock classes: one sign-in attempt at a time for a source, and for
 # an email address, and one second-factor operation at a time for an account.
-# Always taken in this order.
+# Always taken in this order. The lock on the role event table, where an
+# operation takes it, is taken before any of them.
 _SOURCE_LOCK = 1
 _IDENTIFIER_LOCK = 2
 _SECOND_FACTOR_LOCK = 3
@@ -160,6 +163,36 @@ class RecoveryRequestResult:
     # Set only when the outcome is REQUESTED: the number of the request, for
     # the person who made it to give to an Administrator.
     number: int | None = None
+
+
+class RecoveryDecisionOutcome(StrEnum):
+    AUTHORIZED = "authorized"
+    REJECTED = "rejected"
+    # Every reason for which a decision is not made is one outcome on
+    # purpose: a caller cannot tell them apart, so neither can the
+    # Administrator who is deciding.
+    UNAVAILABLE = "unavailable"
+
+
+@dataclass(frozen=True)
+class RecoveryDecisionResult:
+    outcome: RecoveryDecisionOutcome
+
+
+class RecoveryRefusalReason(StrEnum):
+    """Why a decision on a recovery request was not made.
+
+    Written to the log and nowhere else: it is not in the result, so no page
+    can show it. A fixed set of values and never free text.
+    """
+
+    # No such request: it never existed, or was replaced, rejected, or used.
+    UNKNOWN_REQUEST = "unknown_request"
+    LAPSED = "lapsed"
+    REQUEST_PRECEDES_RESET = "request_precedes_reset"
+    COOLING_OFF = "cooling_off"
+    NOT_ELIGIBLE = "not_eligible"
+    NO_OTHER_ADMINISTRATOR = "no_other_administrator"
 
 
 @dataclass(frozen=True)
@@ -435,11 +468,7 @@ def request_mfa_recovery(*, challenge: str, source: str) -> RecoveryRequestResul
         identifier_key = _key("identifier", user.email)
         if _recovery_throttled_for_account(identifier_key):
             return RecoveryRequestResult(RecoveryRequestOutcome.THROTTLED)
-        if not (
-            user.status == AccountStatus.ACTIVE
-            and TotpDevice.objects.filter(user=user, state=TotpDeviceState.ACTIVE).exists()
-            and enrollment_requires_approval(selectors.roles_of(user))
-        ):
+        if not _eligible_for_recovery(user):
             return _recovery_refused(user, source_key)
 
         pending.delete()
@@ -454,6 +483,135 @@ def request_mfa_recovery(*, challenge: str, source: str) -> RecoveryRequestResul
         extra={"event": "mfa_recovery.requested", "user_id": user.pk},
     )
     return RecoveryRequestResult(RecoveryRequestOutcome.REQUESTED, number=request.pk)
+
+
+def authorize_mfa_recovery(
+    *, actor: AuthenticationContext, request_number: int, source: str
+) -> RecoveryDecisionResult:
+    """Authorise another account's recovery request, which revokes its lost second factor.
+
+    `request_number` is the number the person who made the request was shown.
+    The authorising Administrator is expected to have identified them by a
+    means other than this system and to have been given the number by them.
+    Nothing about how is taken or stored.
+
+    Preconditions for AUTHORIZED: the actor holds the permission to authorise
+    recoveries, which the policy gives only to a context verified against a
+    trusted second factor, and the request is not the actor's own; and,
+    inside the transaction and under its locks (ADR-0017 point 38), the
+    request is the account's current one and younger than
+    MFA_RECOVERY_REQUEST_LIFETIME, its `mfa_recovery_requested` event was
+    recorded after the account's latest `password_reset_succeeded` event,
+    MFA_RECOVERY_COOLING_OFF has passed since the time of that reset, the
+    account is still ACTIVE with an active second factor and a
+    role that requires one, and an Administrator who is able to act and is
+    neither the actor nor the account exists to approve the enrolment that
+    follows.
+
+    One transaction. It checks the permission, then takes, in this order: the
+    lock on the role event table that every change to a role or a status
+    holds; the lock on the account's email address that a sign-in holds; and
+    the second-factor locks of the actor and of the account, in ascending
+    order. The permission is then decided again, on what those locks hold
+    still: the actor's roles and status, and the device the actor's context
+    names. Last come the account's row lock and the request's.
+
+    Side effects when AUTHORIZED, all in that transaction: the account's
+    device and its secret are deleted; its session epoch is raised by one, so
+    that every session of the account stops being recognised on its next
+    request; every pending second-factor challenge, any password-reset token,
+    and the recovery request of the account are removed; and
+    `mfa_recovery_authorized` is recorded for the account, naming the actor.
+    Nothing else is touched: not the password, the status, the roles, the
+    email address or its verification, nor the counts that throttle sign-in
+    and second-factor codes. Nobody is signed in, no device is created, and
+    the result carries no authentication context. Until a trusted device of
+    the account has become active, the actor is refused the approval of its
+    enrolment (`approve_mfa_enrollment`).
+
+    Raises PermissionDenied if the actor may not authorise recoveries or the
+    request is their own. Returns UNAVAILABLE if any other precondition does
+    not hold, whichever it is: then nothing is changed, no event is recorded,
+    and only the log says which, as a RecoveryRefusalReason.
+    """
+    with transaction.atomic():
+        held = _recovery_request_for_decision(actor, request_number)
+        if isinstance(held, RecoveryRefusalReason):
+            return _recovery_decision_unavailable(actor, held, authorize=True)
+        user = held
+        refusal = _recovery_authorization_refusal(actor, user)
+        if refusal is not None:
+            return _recovery_decision_unavailable(actor, refusal, authorize=True)
+
+        TotpDevice.objects.filter(user=user).delete()
+        # In the database, not from the object read above: the count goes up
+        # by one whatever value another transaction left there.
+        User.objects.filter(pk=user.pk).update(
+            session_epoch=F("session_epoch") + 1, updated_at=timezone.now()
+        )
+        MfaChallenge.objects.filter(user=user).delete()
+        PasswordReset.objects.filter(user=user).delete()
+        MfaRecoveryRequest.objects.filter(user=user).delete()
+        _record(
+            AuthenticationEventType.MFA_RECOVERY_AUTHORIZED,
+            user,
+            _key("identifier", user.email),
+            _key("source", source),
+            actor=actor.user,
+        )
+
+    logger.info(
+        "Second-factor recovery authorised",
+        extra={
+            "event": "mfa_recovery.authorized",
+            "user_id": user.pk,
+            "actor_id": actor.user.pk,
+        },
+    )
+    return RecoveryDecisionResult(RecoveryDecisionOutcome.AUTHORIZED)
+
+
+def reject_mfa_recovery(
+    *, actor: AuthenticationContext, request_number: int, source: str
+) -> RecoveryDecisionResult:
+    """Reject another account's recovery request, which removes it.
+
+    Preconditions for REJECTED: the actor holds the permission to authorise
+    recoveries, the request is not the actor's own, and the request is the
+    account's current one and younger than MFA_RECOVERY_REQUEST_LIFETIME.
+    The permission is checked, the locks are taken, and the permission is
+    decided again exactly as by `authorize_mfa_recovery`.
+
+    Side effects when REJECTED, in one transaction: the request is removed,
+    and `mfa_recovery_rejected` is recorded for the account, naming the
+    actor. Nothing else is touched: the account's second factor, sessions,
+    password, reset token, and pending challenge are as they were, and the
+    account may ask again.
+
+    Raises PermissionDenied if the actor may not authorise recoveries or the
+    request is their own. Returns UNAVAILABLE if there is no such request or
+    it has lapsed: then nothing is changed, no event is recorded, and only
+    the log says which.
+    """
+    with transaction.atomic():
+        held = _recovery_request_for_decision(actor, request_number)
+        if isinstance(held, RecoveryRefusalReason):
+            return _recovery_decision_unavailable(actor, held, authorize=False)
+        user = held
+        MfaRecoveryRequest.objects.filter(user=user).delete()
+        _record(
+            AuthenticationEventType.MFA_RECOVERY_REJECTED,
+            user,
+            _key("identifier", user.email),
+            _key("source", source),
+            actor=actor.user,
+        )
+
+    logger.info(
+        "Second-factor recovery rejected",
+        extra={"event": "mfa_recovery.rejected", "user_id": user.pk, "actor_id": actor.user.pk},
+    )
+    return RecoveryDecisionResult(RecoveryDecisionOutcome.REJECTED)
 
 
 @sensitive_variables("password", "secret")
@@ -639,17 +797,22 @@ def approve_mfa_enrollment(
 
     Preconditions: the actor holds the permission to approve enrolments, which
     the policy gives only to a context verified against a trusted second
-    factor; the request exists, still awaits approval, and has not lapsed; and
-    it is not the actor's own. Side effects when ACCEPTED, in one transaction:
+    factor; the request exists, still awaits approval, and has not lapsed; it
+    is not the actor's own; and the actor did not authorise the account's
+    open recovery (ADR-0017 point 37): the Administrator who revoked a lost
+    device does not approve the device that follows, until a trusted device
+    of the account has become active. Side effects when ACCEPTED, in one
+    transaction:
     the device awaits its first code and records the actor and the time of the
     approval, and `mfa_enrollment_approved` is recorded for the account,
     naming the actor. Nothing is enabled: the account holds no further
     permission until `confirm_mfa_enrollment` accepts a code and a sign-in is
     verified against the device.
 
-    Raises PermissionDenied if the actor may not approve enrolments or the
-    request is their own. Returns UNAVAILABLE if no such request awaits
-    approval: it is unknown, was replaced or already decided, or has lapsed.
+    Raises PermissionDenied if the actor may not approve enrolments, the
+    request is their own, or the actor authorised the account's open
+    recovery. Returns UNAVAILABLE if no such request awaits approval: it is
+    unknown, was replaced or already decided, or has lapsed.
     """
     return _decide_enrollment(actor, request_number, source, approve=True)
 
@@ -659,7 +822,9 @@ def reject_mfa_enrollment(
 ) -> MfaResult:
     """Reject another account's enrolment request, discarding its secret.
 
-    Preconditions and errors are those of `approve_mfa_enrollment`. Side
+    Preconditions and errors are those of `approve_mfa_enrollment`, except
+    that the Administrator who authorised the account's recovery is not
+    refused: a rejection makes no device trusted. Side
     effects when ACCEPTED, in one transaction: the pending device and its
     secret are deleted, and `mfa_enrollment_rejected` is recorded for the
     account, naming the actor. The account may make a new request.
@@ -1460,6 +1625,16 @@ def _decide_enrollment(
                 extra={"event": "mfa.own_enrollment_decision_refused", "user_id": actor.user.pk},
             )
             raise PermissionDenied
+        if approve and selectors.open_recovery_authorizer_id(device.user_id) == actor.user.pk:
+            logger.warning(
+                "Refused the approval of an enrolment to whoever authorised the account's recovery",
+                extra={
+                    "event": "mfa.recovery_authorizer_approval_refused",
+                    "user_id": device.user_id,
+                    "actor_id": actor.user.pk,
+                },
+            )
+            raise PermissionDenied
 
         user = User.objects.get(pk=device.user_id)
         if approve:
@@ -1928,6 +2103,150 @@ def _recovery_refused(user: User | None, source_key: str) -> RecoveryRequestResu
     return RecoveryRequestResult(RecoveryRequestOutcome.REFUSED)
 
 
+def _eligible_for_recovery(user: User) -> bool:
+    """Return whether the account may have a lost second factor recovered now.
+
+    It is ACTIVE, has an active second factor, trusted or not, and holds a
+    role that requires one (ADR-0017 points 15 and 16). Read from the
+    database for the account passed in, whose status the caller has just
+    read under the account's row lock.
+    """
+    return (
+        user.status == AccountStatus.ACTIVE
+        and TotpDevice.objects.filter(user=user, state=TotpDeviceState.ACTIVE).exists()
+        and enrollment_requires_approval(selectors.roles_of(user))
+    )
+
+
+def _recovery_request_for_decision(
+    actor: AuthenticationContext, request_number: int
+) -> User | RecoveryRefusalReason:
+    """Return the account of a recovery request that the actor may decide on now, locked.
+
+    Where every decision on a recovery request starts, so that every one
+    takes the same locks in the same order. Must be called inside a
+    transaction, which holds them until it ends:
+
+    1. The permission is checked before anything is locked or looked up, so
+       that a caller without it holds no lock and learns nothing.
+    2. The lock on the role event table. Every change to a role or to a
+       status holds it, so from here the roles and the status of the actor,
+       of the account, and of every Administrator stay as they are.
+    3. The lock on the account's email address that a sign-in holds, so that
+       no sign-in for the account and no submission of its reset token runs
+       alongside.
+    4. The second-factor locks of the actor and of the account, in ascending
+       order. The actor's own keeps the device its context names from being
+       disabled or replaced; the account's is held by whoever examines a
+       code for it.
+    5. The permission again. This is the decision that counts: it is made on
+       roles, a status, and a device that the locks above hold still, so the
+       actor is MFA_VERIFIED when the transaction commits and not only when
+       it began.
+    6. The account's row, as disabling locks it, and the request's row, which
+       is read again under the locks: it may have been replaced, rejected, or
+       used meanwhile.
+
+    Raises PermissionDenied if the actor may not authorise recoveries or the
+    request is their own. Returns the reason if there is no such request or
+    it has lapsed.
+    """
+    selectors.require_permission(actor, Permission.MFA_RECOVERY_AUTHORIZE)
+    _serialize_account_changes()
+    found = (
+        MfaRecoveryRequest.objects.filter(pk=request_number)
+        .values_list("user_id", "user__email")
+        .first()
+    )
+    if found is None:
+        return RecoveryRefusalReason.UNKNOWN_REQUEST
+    user_id, email = found
+    if user_id == actor.user.pk:
+        logger.warning(
+            "Refused a decision on the actor's own recovery request",
+            extra={"event": "mfa_recovery.own_decision_refused", "user_id": actor.user.pk},
+        )
+        raise PermissionDenied
+    _lock_attempts(_IDENTIFIER_LOCK, _key("identifier", email))
+    _lock_second_factors(actor.user.pk, user_id)
+    selectors.require_permission(actor, Permission.MFA_RECOVERY_AUTHORIZE)
+
+    user = User.objects.select_for_update().get(pk=user_id)
+    request = (
+        MfaRecoveryRequest.objects.select_for_update()
+        .filter(pk=request_number, user_id=user_id)
+        .first()
+    )
+    if request is None:
+        return RecoveryRefusalReason.UNKNOWN_REQUEST
+    if timezone.now() >= selectors.recovery_request_expires_at(request):
+        return RecoveryRefusalReason.LAPSED
+    return user
+
+
+def _recovery_authorization_refusal(
+    actor: AuthenticationContext, user: User
+) -> RecoveryRefusalReason | None:
+    """Return why the account's current recovery request may not be authorised now, or None.
+
+    The conditions of ADR-0017 point 38 that `_recovery_request_for_decision`
+    has not already decided. Must be called with the locks that function
+    takes: the account's request, its request and password-reset events, its
+    status, roles, and device cannot change under them.
+    """
+    events = AuthenticationEvent.objects.filter(user=user).order_by("-id")
+    last_reset = (
+        events.filter(event_type=AuthenticationEventType.PASSWORD_RESET_SUCCEEDED)
+        .values_list("id", "created_at")
+        .first()
+    )
+    if last_reset is not None:
+        reset_event_id, reset_at = last_reset
+        # Which came first is read from the identifiers of the two events,
+        # which the database issues in sequence, and never from their times:
+        # a request and a reset of one account hold the same locks, so one
+        # is recorded wholly before the other, while the clocks of two hosts
+        # may disagree or tie. A new request replaces the earlier one and
+        # records its event in the same transaction, so the account's latest
+        # `mfa_recovery_requested` event is the event of its current request.
+        requested_event_id = (
+            events.filter(event_type=AuthenticationEventType.MFA_RECOVERY_REQUESTED)
+            .values_list("id", flat=True)
+            .first()
+        )
+        if requested_event_id is None or requested_event_id < reset_event_id:
+            return RecoveryRefusalReason.REQUEST_PRECEDES_RESET
+        # How long ago the reset was is a matter of time, and of its time.
+        if timezone.now() < reset_at + settings.MFA_RECOVERY_COOLING_OFF:
+            return RecoveryRefusalReason.COOLING_OFF
+    if not _eligible_for_recovery(user):
+        return RecoveryRefusalReason.NOT_ELIGIBLE
+    if not selectors.an_administrator_is_able_to_act(besides=(actor.user.pk, user.pk)):
+        return RecoveryRefusalReason.NO_OTHER_ADMINISTRATOR
+    return None
+
+
+def _recovery_decision_unavailable(
+    actor: AuthenticationContext, reason: RecoveryRefusalReason, *, authorize: bool
+) -> RecoveryDecisionResult:
+    """Log why a decision on a recovery request was not made, and return the one answer for all.
+
+    Records no event: a decision that was not made is not a refused
+    submission (ADR-0017 point 72) and counts towards no limit. The log line
+    names the actor and the reason, and not the account or the request.
+    """
+    logger.warning(
+        "Second-factor recovery decision unavailable",
+        extra={
+            "event": "mfa_recovery.decision_unavailable",
+            "decision": "authorize" if authorize else "reject",
+            "reason": reason.value,
+            "actor_id": actor.user.pk,
+        },
+    )
+    return RecoveryDecisionResult(RecoveryDecisionOutcome.UNAVAILABLE)
+
+
 def _lock_second_factor(user_id: int) -> None:
     """Hold, until the transaction ends, the lock for one account's second factor.
 
@@ -1938,6 +2257,17 @@ def _lock_second_factor(user_id: int) -> None:
         cursor.execute(
             "SELECT pg_advisory_xact_lock(%s, %s)", [_SECOND_FACTOR_LOCK, user_id % 2**31]
         )
+
+
+def _lock_second_factors(*user_ids: int) -> None:
+    """Hold the second-factor locks of several accounts, taken in ascending order.
+
+    The only way an operation holds more than one of them: two operations
+    that each need the same two then ask for them in the same order, and
+    neither can hold one while waiting for the other.
+    """
+    for user_id in sorted(set(user_ids)):
+        _lock_second_factor(user_id)
 
 
 def _second_factor_throttled(user: User, identifier_key: str) -> bool:

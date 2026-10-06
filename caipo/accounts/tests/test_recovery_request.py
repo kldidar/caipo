@@ -1,6 +1,7 @@
 """Asking for a lost second factor to be recovered (ADR-0017, points 21 to 27 and 71 to 76).
 
-The request only. Nothing here authorises one, and nothing does yet.
+The request only. Authorising and rejecting one are tested in
+test_recovery_authorization.py.
 """
 
 import inspect

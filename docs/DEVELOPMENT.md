@@ -174,14 +174,17 @@ From then on `/login/` asks for the password and then, at `/login/verify/`, for 
 | `/account/second-factor/replace/` | POST | Password and a current code; gives up the present key and issues a new one, which needs approval where enrolling did |
 | `/account/second-factor/disable/` | POST | Password and a current code; turns it off |
 | `/administration/second-factor-requests/` | GET | For an Administrator signed in with a second factor: the requests that await a decision |
-| `/administration/second-factor-requests/<number>/approve/` | POST | Approves one request; needs the ticked confirmation |
+| `/administration/second-factor-requests/<number>/approve/` | POST | Approves one request; needs the ticked confirmation. Refused to the Administrator who authorised the account's recovery. |
 | `/administration/second-factor-requests/<number>/reject/` | POST | Rejects one request and discards its key |
+| `/administration/recovery-requests/` | GET | For an Administrator signed in with a second factor: the recovery requests that await a decision |
+| `/administration/recovery-requests/<number>/authorize/` | POST | Authorises one request, which revokes the account's lost device; needs the ticked confirmation |
+| `/administration/recovery-requests/<number>/reject/` | POST | Rejects one request and removes it |
 
 After 5 refused codes for one account within 15 minutes the pages answer 429 until earlier refusals are 15 minutes old. Nothing lifts that sooner. The limits and lifetimes are `MFA_*` and `TOTP_*` in `caipo/config/settings/base.py`.
 
 **The encryption key.** TOTP secrets are stored encrypted under `TOTP_ENCRYPTION_KEY`. Changing that key, or losing it, makes every enrolled second factor unusable: each enrolled account is refused at the code step. Locally, recreate the development database (`docker compose down -v`) or delete the rows of `accounts_totpdevice`. Rotating the key without that loss is not built; it is designed with the deployment decision (ADR-0008).
 
-**A lost device.** There are no recovery codes and no reset by an Administrator. The account's row in `accounts_totpdevice` has to be deleted in the database by its owner; the account then signs in with its password and enrols again, with an Administrator's approval if it is a Reviewer or Administrator. For the only Administrator that approval cannot be given by anybody: locally, recreate the development database. Keep a second Administrator in any database that matters.
+**A lost device.** There are no recovery codes. A Reviewer or Administrator asks for recovery on the page that takes the code (`/login/verify/`) and is shown a request number. An Administrator who is signed in with a trusted second factor authorises or rejects that number at `/administration/recovery-requests/` within 30 minutes; authorising deletes the lost device and ends the account's sessions. The account then signs in with its password and enrols again, and a different Administrator approves at `/administration/second-factor-requests/`: the one who authorised is refused. An authorisation that is not made answers with one sentence and status 409 whatever the reason; the reason is in the log line `mfa_recovery.decision_unavailable`. Two things to know locally: no recovery is authorised within 24 hours of the account's password reset, and recovering an Administrator needs two other Administrators with trusted second factors, a Reviewer two Administrators. With fewer, and for a Reader or Researcher, the account's row in `accounts_totpdevice` has to be deleted in the database by its owner, or the development database recreated. The decisions are in [ADR-0017](adr/0017-account-recovery.md); the break-glass command it describes is not built. Keep a second Administrator in any database that matters.
 
 ## Creating accounts
 

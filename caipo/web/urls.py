@@ -7,6 +7,7 @@ from caipo.web import (
     health,
     password_reset,
     recovery,
+    recovery_requests,
     second_factor,
     second_factor_requests,
 )
@@ -47,5 +48,20 @@ urlpatterns = [
         "administration/second-factor-requests/<int:number>/reject/",
         second_factor_requests.reject,
         name="second-factor-request-reject",
+    ),
+    path(
+        "administration/recovery-requests/",
+        recovery_requests.overview,
+        name="recovery-requests",
+    ),
+    path(
+        "administration/recovery-requests/<int:number>/authorize/",
+        recovery_requests.authorize,
+        name="recovery-request-authorize",
+    ),
+    path(
+        "administration/recovery-requests/<int:number>/reject/",
+        recovery_requests.reject,
+        name="recovery-request-reject",
     ),
 ]
