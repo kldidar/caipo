@@ -62,13 +62,8 @@ class DisableSecondFactorForm(forms.Form):
     code = _code_field()
 
 
-class EnrollmentApprovalForm(forms.Form):
-    """The explicit confirmation without which an enrolment request is not approved."""
-
-    confirmed = forms.BooleanField(
-        label=_("I asked this person for their request number, and it is this one."),
-        required=True,
-    )
+class _ExplicitConfirmationForm(forms.Form):
+    """A form with a `confirmed` box that must be ticked. Each one says what the tick confirms."""
 
     def clean_confirmed(self) -> bool:
         # Only what a ticked box sends counts. Django would also take "0" or
@@ -76,6 +71,31 @@ class EnrollmentApprovalForm(forms.Form):
         if self.data.get("confirmed") != "on":
             raise forms.ValidationError(_("Tick the confirmation."))
         return True
+
+
+class EnrollmentApprovalForm(_ExplicitConfirmationForm):
+    """The explicit confirmation without which an enrolment request is not approved."""
+
+    confirmed = forms.BooleanField(
+        label=_("I asked this person for their request number, and it is this one."),
+        required=True,
+    )
+
+
+class RecoveryAuthorizationForm(_ExplicitConfirmationForm):
+    """The explicit confirmation without which a recovery request is not authorised.
+
+    A tick and nothing else: there is no field for how the person was
+    identified, because nothing about that is stored (ADR-0017 point 33).
+    """
+
+    confirmed = forms.BooleanField(
+        label=_(
+            "I identified this person by a means other than this site, and they gave me"
+            " this request number."
+        ),
+        required=True,
+    )
 
 
 class AccountCreationForm(forms.Form):

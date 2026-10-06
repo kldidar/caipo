@@ -12,6 +12,7 @@ decision for code that must stop when the answer is no.
 """
 
 import logging
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -26,6 +27,9 @@ from caipo.accounts.authorization import Assurance, Permission, Role, permission
 from caipo.accounts.models import (
     AccountActivation,
     AccountStatus,
+    AuthenticationEvent,
+    AuthenticationEventType,
+    MfaRecoveryRequest,
     RoleEvent,
     RoleEventType,
     TotpDevice,
@@ -41,15 +45,20 @@ __all__ = [
     "EnrollmentRequest",
     "MfaState",
     "Permission",
+    "RecoveryRequest",
     "Role",
     "accounts_awaiting_verification",
+    "an_administrator_is_able_to_act",
     "an_administrator_was_ever_created",
     "authentication_context",
     "can",
     "enrollment_request_number_of",
     "enrollment_requests_awaiting_approval",
     "mfa_state_of",
+    "open_recovery_authorizer_id",
     "permissions_of",
+    "recovery_request_expires_at",
+    "recovery_requests_awaiting_decision",
     "require_permission",
     "roles_of",
 ]
@@ -75,6 +84,19 @@ class EnrollmentRequest:
 
     `number` is what the person who made the request was shown, so that the
     Administrator can ask them for it before approving.
+    """
+
+    number: int
+    email: str
+    requested_at: datetime
+
+
+@dataclass(frozen=True)
+class RecoveryRequest:
+    """A request to recover a lost second factor that waits for an Administrator's decision.
+
+    `number` is what the person who made the request was shown, so that the
+    Administrator can ask them for it before authorising.
     """
 
     number: int
@@ -186,6 +208,119 @@ def enrollment_requests_awaiting_approval(
         for device in devices
         if now < enrollment_expires_at(device)
     ]
+
+
+def recovery_request_expires_at(request: MfaRecoveryRequest) -> datetime:
+    """Return when a recovery request lapses and can no longer be decided on."""
+    return request.created_at + settings.MFA_RECOVERY_REQUEST_LIFETIME
+
+
+def recovery_requests_awaiting_decision(
+    context: AuthenticationContext,
+) -> list[RecoveryRequest]:
+    """Return the recovery requests the context may decide on, oldest first.
+
+    Never the context's own, and none that has lapsed. Whether a request
+    would be authorised is not decided here and is not shown: that is
+    answered only by the service, and only as done or unavailable. Raises
+    PermissionDenied if the context may not authorise recoveries.
+    """
+    require_permission(context, Permission.MFA_RECOVERY_AUTHORIZE)
+    now = timezone.now()
+    requests = (
+        MfaRecoveryRequest.objects.exclude(user_id=context.user.pk)
+        .select_related("user")
+        .order_by("created_at", "id")
+    )
+    return [
+        RecoveryRequest(
+            number=request.pk, email=request.user.email, requested_at=request.created_at
+        )
+        for request in requests
+        if now < recovery_request_expires_at(request)
+    ]
+
+
+def an_administrator_is_able_to_act(*, besides: Collection[int]) -> bool:
+    """Return whether an Administrator who is able to act exists, other than these accounts.
+
+    Able to act (ADR-0017 point 39): the account is active, holds the
+    Administrator role on record, and has an active, trusted second factor.
+    This is narrower than the count behind the last-Administrator rule, which
+    asks for no second factor. `besides` holds account identifiers.
+    """
+    latest = (
+        RoleEvent.objects.filter(role=Role.ADMINISTRATOR, user__status=AccountStatus.ACTIVE)
+        .exclude(user_id__in=besides)
+        .order_by("user_id", "-id")
+        .distinct("user_id")
+        .values_list("user_id", "event_type")
+    )
+    administrators = [
+        user_id for user_id, event_type in latest if event_type == RoleEventType.GRANTED
+    ]
+    return TotpDevice.objects.filter(
+        user_id__in=administrators, state=TotpDeviceState.ACTIVE, approved_at__isnull=False
+    ).exists()
+
+
+def open_recovery_authorizer_id(user_id: int) -> int | None:
+    """Return who authorised the account's open recovery, or None if it has no open recovery.
+
+    This is the one place that says whether an account has an open recovery
+    (ADR-0017 point 37). A recovery is opened by the account's most recent
+    `mfa_recovery_authorized` event, and it stays open until a trusted device
+    of the account has become active after that event. Until it has, the
+    Administrator named here does not approve the account's enrolment.
+
+    No event says by itself that a trusted device became active, so this
+    reads it from the enrolment events recorded after the authorisation: an
+    `mfa_enrollment_succeeded` closes the recovery if the enrolment it
+    completes was approved, which is an `mfa_enrollment_approved` with no
+    `mfa_enrollment_started` after it. An enrolment that was confirmed
+    without approval made an untrusted device and closes nothing. Events are
+    ordered by identifier, which the database issues in sequence.
+
+    To be extended, not replaced: when `mfa_recovery_completed` is recorded
+    (ADR-0017 point 49), it is recorded at exactly the moment this function
+    finds, and is then read here as what closes a recovery. When the
+    break-glass command can revoke a device, its event opens a recovery here
+    too, with nobody to return. No second record of recovery state is to be
+    kept anywhere else.
+    """
+    authorized = (
+        AuthenticationEvent.objects.filter(
+            user_id=user_id, event_type=AuthenticationEventType.MFA_RECOVERY_AUTHORIZED
+        )
+        .order_by("-id")
+        .values_list("id", "actor_id")
+        .first()
+    )
+    if authorized is None:
+        return None
+    event_id, authorizer_id = authorized
+    later = (
+        AuthenticationEvent.objects.filter(
+            user_id=user_id,
+            id__gt=event_id,
+            event_type__in=[
+                AuthenticationEventType.MFA_ENROLLMENT_STARTED,
+                AuthenticationEventType.MFA_ENROLLMENT_APPROVED,
+                AuthenticationEventType.MFA_ENROLLMENT_SUCCEEDED,
+            ],
+        )
+        .order_by("id")
+        .values_list("event_type", flat=True)
+    )
+    approved = False
+    for event_type in later:
+        if event_type == AuthenticationEventType.MFA_ENROLLMENT_STARTED:
+            approved = False
+        elif event_type == AuthenticationEventType.MFA_ENROLLMENT_APPROVED:
+            approved = True
+        elif approved:
+            return None
+    return authorizer_id
 
 
 def authentication_context(

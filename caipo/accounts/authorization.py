@@ -54,13 +54,12 @@ class Permission(StrEnum):
     """What the system can ask about an account.
 
     Kept as small as the system is. ROLES_MANAGE, the three ACCOUNTS
-    permissions, MFA_MANAGE_OWN, and MFA_ENROLLMENT_APPROVE are checked by
-    services and selectors today. The three research permissions exist so
-    that the four roles are distinguishable and views can declare the access
-    they require; no operation consumes them yet. They are deliberately coarse
-    and are to be split only when a feature needs a finer distinction.
-    MFA_RECOVERY_AUTHORIZE is decided by ADR-0017, and the operations that
-    check it are not built yet.
+    permissions, MFA_MANAGE_OWN, MFA_ENROLLMENT_APPROVE, and
+    MFA_RECOVERY_AUTHORIZE are checked by services and selectors today. The
+    three research permissions exist so that the four roles are
+    distinguishable and views can declare the access they require; no
+    operation consumes them yet. They are deliberately coarse and are to be
+    split only when a feature needs a finer distinction.
 
     Reading the public research site needs no permission: it is open to
     anonymous visitors, who hold none.

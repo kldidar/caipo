@@ -1,8 +1,9 @@
 """What binds a session to its account, with and without a session epoch (ADR-0017 point 46).
 
-Nothing raises an account's epoch yet. These tests fix what the value means:
-at 0, exactly what Django computes, so that no session established before the
-field existed is ended by it.
+Only the authorisation of a recovery raises an account's epoch, and that is
+tested with it. These tests fix what the value means: at 0, exactly what
+Django computes, so that no session established before the field existed is
+ended by it.
 """
 
 import pytest

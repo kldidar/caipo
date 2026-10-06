@@ -1,8 +1,9 @@
 """Sessions and the session epoch, over HTTP (ADR-0017 point 46).
 
-Nothing raises an account's epoch yet, so these tests raise it in the
-database. They show what the value does to a session, and above all that an
-account at epoch 0 keeps the sessions it had before the epoch existed.
+These tests raise the epoch in the database, so that they depend on no
+recovery; that an authorised recovery raises it is tested with the recovery.
+They show what the value does to a session, and above all that an account at
+epoch 0 keeps the sessions it had before the epoch existed.
 """
 
 from typing import Any

@@ -1,0 +1,29 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Recovery requests" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Recovery requests" %}</h1>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% endif %}
+  <p>{% translate "A person who can no longer use their authenticator application asks here for it to be revoked. Before you authorise a request, make sure by a means other than this site that the person is who they say, and ask them for the request number they were shown. Authorise only the request with that number: a request with another number was made by someone else who knows the password." %}</p>
+  <p>{% translate "Authorising revokes the account's two-step verification and ends its sessions. The person then sets up a new authenticator application, which a different Administrator must approve: you cannot approve it yourself." %}</p>
+  {% for item in requests %}
+    <h2>{% blocktranslate with number=item.number %}Request {{ number }}{% endblocktranslate %}</h2>
+    <p>{% blocktranslate with email=item.email requested_at=item.requested_at|date:"c" %}Account {{ email }}, requested at {{ requested_at }}.{% endblocktranslate %}</p>
+    <form method="post" action="{% url 'recovery-request-authorize' item.number %}" novalidate>
+      {% csrf_token %}
+      <p><label>{{ authorization_form.confirmed }} {{ authorization_form.confirmed.label }}</label></p>
+      <button type="submit">{% translate "Authorise" %}</button>
+    </form>
+    <form method="post" action="{% url 'recovery-request-reject' item.number %}">
+      {% csrf_token %}
+      <button type="submit">{% translate "Reject" %}</button>
+    </form>
+  {% empty %}
+    <p>{% translate "No request awaits a decision." %}</p>
+  {% endfor %}
+  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+{% endblock %}
