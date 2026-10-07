@@ -503,8 +503,10 @@ class TotpDevice(models.Model):
     row, and with it the secret; what happened is kept in AuthenticationEvent.
 
     A device is trusted when `approved_at` is set: an Administrator, named in
-    `approved_by`, approved the enrolment, or the first-Administrator
-    bootstrap established it, in which case nobody is named. Only a trusted
+    `approved_by`, approved the enrolment, or one of two things that name
+    nobody did: the first-Administrator bootstrap established it, or the
+    break-glass command approved the enrolment that followed the recovery of
+    an Administrator (ADR-0017 point 69). Only a trusted
     device counts towards MFA_VERIFIED. A device enrolled on a password alone
     is asked for at sign-in and proves nothing more than the password.
 

@@ -1,7 +1,8 @@
 """Write interface of the accounts app: signing in and out, the second factor
 and its approval, asking for a lost second factor to be recovered,
 authorising or rejecting that request, and recording that the recovery is
-complete, changing roles, creating, activating,
+complete, the two emergency actions of the break-glass command, changing
+roles, creating, activating,
 disabling, and enabling accounts, resetting a forgotten password, and creating
 the first Administrator.
 
@@ -15,6 +16,9 @@ and the address it came from, and answers with an outcome; establishing the
 session is the caller's business. An operation that needs a permission is
 given the authentication context of whoever is acting, never a bare account:
 without a context there is no assurance to decide on, and the answer is no.
+Two operations take no context because nobody who acts in them is an account:
+the bootstrap of the first Administrator and the break-glass actions. Each is
+called only by its own command at the server's terminal, and by no view.
 """
 
 import logging
@@ -52,6 +56,7 @@ from caipo.accounts.models import (
     AccountStatus,
     AuthenticationEvent,
     AuthenticationEventType,
+    BreakGlassAction,
     MfaChallenge,
     MfaRecoveryRequest,
     PasswordReset,
@@ -194,6 +199,39 @@ class RecoveryRefusalReason(StrEnum):
     COOLING_OFF = "cooling_off"
     NOT_ELIGIBLE = "not_eligible"
     NO_OTHER_ADMINISTRATOR = "no_other_administrator"
+
+
+class BreakGlassOutcome(StrEnum):
+    DONE = "done"
+    # Every reason for which an emergency action is not performed is one
+    # outcome on purpose, as for a decision on a recovery request.
+    UNAVAILABLE = "unavailable"
+
+
+@dataclass(frozen=True)
+class BreakGlassResult:
+    outcome: BreakGlassOutcome
+
+
+class BreakGlassRefusalReason(StrEnum):
+    """Why an emergency action was not performed, where no RecoveryRefusalReason says it.
+
+    Written to the log and nowhere else, like a RecoveryRefusalReason. A
+    fixed set of values and never free text.
+    """
+
+    # No account has the email address that was typed.
+    UNKNOWN_ACCOUNT = "unknown_account"
+    NOT_ADMINISTRATOR = "not_administrator"
+    # The Administrators who would authorise and approve, or approve, exist:
+    # the application's own path is to be used.
+    NORMAL_PATH_AVAILABLE = "normal_path_available"
+    # No such enrolment request of that account awaits approval: it never
+    # existed, belongs to another account, was replaced or decided, or lapsed.
+    UNKNOWN_ENROLLMENT = "unknown_enrollment"
+    NO_OPEN_RECOVERY = "no_open_recovery"
+    # The request that awaits approval was not made in the open recovery.
+    NOT_CURRENT_ENROLLMENT = "not_current_enrollment"
 
 
 @dataclass(frozen=True)
@@ -517,7 +555,8 @@ def authorize_mfa_recovery(
     still: the actor's roles and status, and the device the actor's context
     names. Last come the account's row lock and the request's.
 
-    Side effects when AUTHORIZED, all in that transaction: the account's
+    Side effects when AUTHORIZED, all in that transaction, and all but the
+    record made by `_finalize_recovery`: the account's
     device and its secret are deleted; its session epoch is raised by one, so
     that every session of the account stops being recognised on its next
     request; every pending second-factor challenge, any password-reset token,
@@ -545,15 +584,7 @@ def authorize_mfa_recovery(
         if refusal is not None:
             return _recovery_decision_unavailable(actor, refusal, authorize=True)
 
-        TotpDevice.objects.filter(user=user).delete()
-        # In the database, not from the object read above: the count goes up
-        # by one whatever value another transaction left there.
-        User.objects.filter(pk=user.pk).update(
-            session_epoch=F("session_epoch") + 1, updated_at=timezone.now()
-        )
-        MfaChallenge.objects.filter(user=user).delete()
-        PasswordReset.objects.filter(user=user).delete()
-        MfaRecoveryRequest.objects.filter(user=user).delete()
+        _finalize_recovery(user)
         _record(
             AuthenticationEventType.MFA_RECOVERY_AUTHORIZED,
             user,
@@ -670,8 +701,10 @@ def confirm_mfa_enrollment(*, actor: AuthenticationContext, code: str, source: s
     device enrolled without approval confers nothing that the password does
     not, whatever roles the account holds or is given later.
 
-    If the enrolment was approved and the account has an open recovery
-    (`selectors.open_recovery_authorizer_id`), that recovery is complete
+    If the enrolment was approved, by an Administrator or by the break-glass
+    command, and the account has an open recovery
+    (`selectors.has_open_recovery`), whether an Administrator's authorisation
+    or the break-glass command opened it, that recovery is complete
     (ADR-0017 point 49): `mfa_recovery_completed` is recorded for the account
     after `mfa_enrollment_succeeded`, in the same transaction and under the
     same lock, naming no actor. It is recorded once for a recovery, and it is
@@ -704,13 +737,12 @@ def confirm_mfa_enrollment(*, actor: AuthenticationContext, code: str, source: s
             return MfaResult(MfaOutcome.REFUSED)
         _record(AuthenticationEventType.MFA_ENROLLMENT_SUCCEEDED, user, *keys)
         # Read from the device that was just activated, under the lock every
-        # authorisation and approval of this account holds: an authorisation
-        # deletes the account's device, so an approved device that exists
-        # while a recovery is open was enrolled after that recovery began.
-        recovery_completed = (
-            device.approved_at is not None
-            and selectors.open_recovery_authorizer_id(user.pk) is not None
-        )
+        # authorisation, revocation, and approval of this account holds:
+        # whatever opens a recovery deletes the account's device, so an
+        # approved device that exists while a recovery is open was enrolled
+        # after that recovery began. Whether one is open, not who authorised
+        # it: a recovery that the break-glass command opened has nobody.
+        recovery_completed = device.approved_at is not None and selectors.has_open_recovery(user.pk)
         if recovery_completed:
             _record(AuthenticationEventType.MFA_RECOVERY_COMPLETED, user, *keys)
 
@@ -827,7 +859,8 @@ def approve_mfa_enrollment(
     is not the actor's own; and the actor did not authorise the account's
     open recovery (ADR-0017 point 37): the Administrator who revoked a lost
     device does not approve the device that follows, until that recovery is
-    complete. Side effects when ACCEPTED, in one
+    complete. A recovery that the break-glass command opened has no
+    authoriser and bars nobody. Side effects when ACCEPTED, in one
     transaction:
     the device awaits its first code and records the actor and the time of the
     approval, and `mfa_enrollment_approved` is recorded for the account,
@@ -856,6 +889,154 @@ def reject_mfa_enrollment(
     account, naming the actor. The account may make a new request.
     """
     return _decide_enrollment(actor, request_number, source, approve=False)
+
+
+def break_glass_revoke_device(*, email: str, request_number: int) -> BreakGlassResult:
+    """Revoke an Administrator's lost second factor from the server's terminal.
+
+    The first emergency action of ADR-0017 point 63, in place of an
+    authorisation that nobody exists to give. Called only by the
+    `recover_mfa_break_glass` command: it takes no authentication context,
+    because whoever runs the command is not an account, and no view calls it.
+    `email` names the account and `request_number` its current recovery
+    request; both are needed, and they must agree.
+
+    Preconditions for DONE, all decided inside the transaction and under its
+    locks: an account has that email address; the request is that account's
+    current one and younger than MFA_RECOVERY_REQUEST_LIFETIME; the account
+    holds the Administrator role; every condition of
+    `_recovery_finalization_refusal` holds, as for an authorisation,
+    including the cooling-off after a password reset (point 50); and fewer
+    than two Administrators who are able to act exist other than the account,
+    so that the application's own path, which needs one to authorise and
+    another to approve, is unavailable (point 66).
+
+    One transaction. It takes, in the order every other operation takes
+    them: the lock on the role event table, which holds every role and
+    status still; the lock on the account's email address that a sign-in
+    holds; the second-factor locks of the account and of every active
+    Administrator on record, in ascending order, so that which of them are
+    able to act cannot change before it commits; and the account's row and
+    the request's.
+
+    Side effects when DONE, in that transaction: every effect of
+    `_finalize_recovery`, exactly as an authorisation has them, and one
+    `mfa_recovery_break_glass` event for the account whose action is
+    `revoke_device`, naming no actor and holding no source. No
+    `mfa_recovery_authorized` event is written. That event opens the
+    account's recovery (`selectors.open_recovery_of`) with no authoriser.
+    Nothing else is touched: not the password, the status, the roles, the
+    email address, nor the counts that throttle sign-in and codes. Nobody is
+    signed in, no device is created, and no secret is read or returned.
+
+    Never raises for what was typed. Returns UNAVAILABLE if any precondition
+    does not hold, whichever it is: then nothing is changed, no event is
+    recorded, and only the log says which.
+    """
+    action = BreakGlassAction.REVOKE_DEVICE
+    with transaction.atomic():
+        user = _account_for_break_glass(email, sign_in_lock=True)
+        if user is None:
+            return _break_glass_unavailable(action, BreakGlassRefusalReason.UNKNOWN_ACCOUNT)
+        request = (
+            MfaRecoveryRequest.objects.select_for_update()
+            .filter(pk=request_number, user_id=user.pk)
+            .first()
+        )
+        refusal: RecoveryRefusalReason | BreakGlassRefusalReason | None
+        if request is None:
+            refusal = RecoveryRefusalReason.UNKNOWN_REQUEST
+        elif timezone.now() >= selectors.recovery_request_expires_at(request):
+            refusal = RecoveryRefusalReason.LAPSED
+        elif Role.ADMINISTRATOR not in selectors.roles_of(user):
+            refusal = BreakGlassRefusalReason.NOT_ADMINISTRATOR
+        else:
+            refusal = _recovery_finalization_refusal(user)
+        if refusal is None and len(selectors.administrators_able_to_act(besides=(user.pk,))) >= 2:
+            refusal = BreakGlassRefusalReason.NORMAL_PATH_AVAILABLE
+        if refusal is not None:
+            return _break_glass_unavailable(action, refusal)
+
+        _finalize_recovery(user)
+        _record(
+            AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS,
+            user,
+            _key("identifier", user.email),
+            "",
+            break_glass_action=action,
+        )
+
+    return _break_glass_done(action, user)
+
+
+def break_glass_approve_enrollment(*, email: str, request_number: int) -> BreakGlassResult:
+    """Approve an Administrator's enrolment request from the server's terminal.
+
+    The second emergency action of ADR-0017 point 63, in place of an
+    Administrator's approval that nobody exists to give. Called only by the
+    `recover_mfa_break_glass` command, like `break_glass_revoke_device`.
+    `email` names the account and `request_number` its enrolment request;
+    both are needed, and they must agree.
+
+    Preconditions for DONE, all decided inside the transaction and under its
+    locks: an account has that email address; the request is that account's,
+    awaits approval, and has not lapsed; the account is ACTIVE and holds the
+    Administrator role; the account has an open recovery, whichever way it
+    was opened; the request was made in that recovery
+    (`selectors.pending_enrollment_follows`); and no Administrator who may
+    approve it exists: none who is able to act other than the account and,
+    by point 37, the Administrator who authorised that recovery. The
+    cooling-off after a password reset is a condition of the revocation and
+    not of this approval.
+
+    One transaction. It takes the lock on the role event table, then the
+    second-factor locks of the account and of every active Administrator on
+    record, in ascending order, then the account's row, and then the
+    device's row.
+
+    Side effects when DONE, in that transaction: the device awaits its first
+    code and records the time of the approval and no approver, and one
+    `mfa_recovery_break_glass` event is recorded for the account whose action
+    is `approve_enrollment`, naming no actor and holding no source. No
+    `mfa_enrollment_approved` event is written. This is the third way a
+    device comes to be trusted (point 69). Nothing is enabled: the device is
+    not active, no code is examined here, nobody is signed in, and the
+    account holds no further permission until `confirm_mfa_enrollment`
+    accepts its first code, which also records that the recovery is complete.
+
+    Never raises for what was typed. Returns UNAVAILABLE if any precondition
+    does not hold, whichever it is: then nothing is changed, no event is
+    recorded, and only the log says which.
+    """
+    action = BreakGlassAction.APPROVE_ENROLLMENT
+    with transaction.atomic():
+        user = _account_for_break_glass(email, sign_in_lock=False)
+        if user is None:
+            return _break_glass_unavailable(action, BreakGlassRefusalReason.UNKNOWN_ACCOUNT)
+        device = (
+            TotpDevice.objects.select_for_update()
+            .filter(pk=request_number, user_id=user.pk, state=TotpDeviceState.PENDING_APPROVAL)
+            .first()
+        )
+        now = timezone.now()
+        if device is None or now >= selectors.enrollment_expires_at(device):
+            return _break_glass_unavailable(action, BreakGlassRefusalReason.UNKNOWN_ENROLLMENT)
+        refusal = _break_glass_approval_refusal(user)
+        if refusal is not None:
+            return _break_glass_unavailable(action, refusal)
+
+        device.state = TotpDeviceState.PENDING_VERIFICATION
+        device.approved_at = now
+        device.save(update_fields=["state", "approved_at"])
+        _record(
+            AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS,
+            user,
+            _key("identifier", user.email),
+            "",
+            break_glass_action=action,
+        )
+
+    return _break_glass_done(action, user)
 
 
 def record_sign_out(*, user: User, source: str) -> None:
@@ -908,8 +1089,8 @@ def create_first_administrator(
     """Create the first Administrator account with its second factor. Works once.
 
     This is the one role grant with no acting user, and the one second factor
-    that is trusted without an Administrator's approval: it is made by an
-    operator at the server before any account exists that could grant or
+    that is created trusted, with no approval of any enrolment: it is made by
+    an operator at the server before any account exists that could grant or
     approve. `operator` names that person's operating-system account and is
     written into the reason of the RoleEvent. `enrollment` is what
     `prepare_first_administrator` returned to the same command, and `code` is
@@ -2216,9 +2397,30 @@ def _recovery_authorization_refusal(
     """Return why the account's current recovery request may not be authorised now, or None.
 
     The conditions of ADR-0017 point 38 that `_recovery_request_for_decision`
-    has not already decided. Must be called with the locks that function
-    takes: the account's request, its request and password-reset events, its
-    status, roles, and device cannot change under them.
+    has not already decided: those of `_recovery_finalization_refusal`, and
+    then that an Administrator exists to approve the enrolment that follows.
+    Must be called with the locks that function takes.
+    """
+    refusal = _recovery_finalization_refusal(user)
+    if refusal is not None:
+        return refusal
+    if not selectors.an_administrator_is_able_to_act(besides=(actor.user.pk, user.pk)):
+        return RecoveryRefusalReason.NO_OTHER_ADMINISTRATOR
+    return None
+
+
+def _recovery_finalization_refusal(user: User) -> RecoveryRefusalReason | None:
+    """Return why the account's current recovery request may not be finalised now, or None.
+
+    The conditions of ADR-0017 point 38 that say nothing about who exists to
+    decide, and so bind an authorisation and the break-glass command alike
+    (points 50, 51, and 63): the request was made after the account's latest
+    password reset, the cooling-off after that reset has passed, and the
+    account is still eligible. Must be called holding the lock on the
+    account's email address, its second-factor lock, and its row lock, under
+    the lock on the role event table: the account's request, its request and
+    password-reset events, its status, roles, and device cannot change under
+    them.
     """
     events = AuthenticationEvent.objects.filter(user=user).order_by("-id")
     last_reset = (
@@ -2247,9 +2449,28 @@ def _recovery_authorization_refusal(
             return RecoveryRefusalReason.COOLING_OFF
     if not _eligible_for_recovery(user):
         return RecoveryRefusalReason.NOT_ELIGIBLE
-    if not selectors.an_administrator_is_able_to_act(besides=(actor.user.pk, user.pk)):
-        return RecoveryRefusalReason.NO_OTHER_ADMINISTRATOR
     return None
+
+
+def _finalize_recovery(user: User) -> None:
+    """Revoke the account's lost second factor and end what was obtained under it.
+
+    Every effect of ADR-0017 point 45 except the record of who or what
+    decided, which the caller writes in the same transaction: an
+    authorisation names its Administrator, and the break-glass command names
+    nobody. One function for both, so that the two cannot come to differ.
+    Must be called inside a transaction, holding the locks of
+    `_recovery_finalization_refusal`.
+    """
+    TotpDevice.objects.filter(user=user).delete()
+    # In the database, not from the object the caller read: the count goes up
+    # by one whatever value another transaction left there.
+    User.objects.filter(pk=user.pk).update(
+        session_epoch=F("session_epoch") + 1, updated_at=timezone.now()
+    )
+    MfaChallenge.objects.filter(user=user).delete()
+    PasswordReset.objects.filter(user=user).delete()
+    MfaRecoveryRequest.objects.filter(user=user).delete()
 
 
 def _recovery_decision_unavailable(
@@ -2271,6 +2492,101 @@ def _recovery_decision_unavailable(
         },
     )
     return RecoveryDecisionResult(RecoveryDecisionOutcome.UNAVAILABLE)
+
+
+def _account_for_break_glass(email: str, *, sign_in_lock: bool) -> User | None:
+    """Return the account a break-glass action names, with the action's locks held, or None.
+
+    Where both emergency actions start, so that both take the same locks in
+    the order every other operation takes them. Must be called inside a
+    transaction, which holds them until it ends:
+
+    1. The lock on the role event table. Every change to a role or to a
+       status holds it, so from here the roles and the status of the account
+       and of every Administrator stay as they are.
+    2. If `sign_in_lock`, the lock on the account's email address that a
+       sign-in holds, so that no sign-in for the account and no submission of
+       its reset token runs alongside. A revocation needs it and an approval
+       does not, as an Administrator's approval does not.
+    3. The second-factor locks of the account and of every active
+       Administrator on record, in ascending order. The account's is held by
+       whoever examines a code for it or decides on its enrolment. The
+       others keep every device that could make an Administrator able to act
+       as it is: whether the application's own path is available is then
+       true when the transaction commits and not only when it was read. One
+       change is outside these locks, the activation of an account that
+       awaits verification, and it makes nobody able to act: such an account
+       has no second factor, and is not among the Administrators locked here
+       until it is active.
+    4. The account's row, as disabling locks it.
+
+    Nobody else's row is locked, and nothing the actions write names another
+    account, so no lock on another account's row is taken by a foreign key.
+    """
+    _serialize_account_changes()
+    identifier = User.objects.normalize_email(email)
+    user_id = User.objects.filter(email=identifier).values_list("pk", flat=True).first()
+    if user_id is None:
+        return None
+    if sign_in_lock:
+        _lock_attempts(_IDENTIFIER_LOCK, _key("identifier", identifier))
+    _lock_second_factors(user_id, *selectors.administrators_on_record())
+    return User.objects.select_for_update().get(pk=user_id)
+
+
+def _break_glass_approval_refusal(
+    user: User,
+) -> BreakGlassRefusalReason | RecoveryRefusalReason | None:
+    """Return why the break-glass command may not approve the account's enrolment request, or None.
+
+    The caller has read, under the locks of `_account_for_break_glass`, a
+    request of the account that awaits approval and has not lapsed.
+    """
+    if user.status != AccountStatus.ACTIVE:
+        return RecoveryRefusalReason.NOT_ELIGIBLE
+    if Role.ADMINISTRATOR not in selectors.roles_of(user):
+        return BreakGlassRefusalReason.NOT_ADMINISTRATOR
+    recovery = selectors.open_recovery_of(user.pk)
+    if recovery is None:
+        return BreakGlassRefusalReason.NO_OPEN_RECOVERY
+    if not selectors.pending_enrollment_follows(user.pk, recovery):
+        return BreakGlassRefusalReason.NOT_CURRENT_ENROLLMENT
+    # Whoever authorised the recovery may not approve (point 37), so that
+    # Administrator does not make the application's own path available.
+    barred = [user.pk] if recovery.authorizer_id is None else [user.pk, recovery.authorizer_id]
+    if selectors.an_administrator_is_able_to_act(besides=barred):
+        return BreakGlassRefusalReason.NORMAL_PATH_AVAILABLE
+    return None
+
+
+def _break_glass_unavailable(
+    action: BreakGlassAction, reason: RecoveryRefusalReason | BreakGlassRefusalReason
+) -> BreakGlassResult:
+    """Log why an emergency action was not performed, and return the one answer for all.
+
+    Records no event: `mfa_recovery_break_glass` is the record of an action
+    that was performed, and a refusal here is not a refused submission
+    (ADR-0017 points 72 and 86). The log line names the action and the
+    reason, and not the account, the number, or anything that was typed.
+    """
+    logger.warning(
+        "Second-factor recovery by break-glass unavailable",
+        extra={
+            "event": "mfa_recovery.break_glass_unavailable",
+            "action": action.value,
+            "reason": reason.value,
+        },
+    )
+    return BreakGlassResult(BreakGlassOutcome.UNAVAILABLE)
+
+
+def _break_glass_done(action: BreakGlassAction, user: User) -> BreakGlassResult:
+    """Log an emergency action that was committed, and return its result."""
+    logger.info(
+        "Second-factor recovery by break-glass",
+        extra={"event": "mfa_recovery.break_glass", "action": action.value, "user_id": user.pk},
+    )
+    return BreakGlassResult(BreakGlassOutcome.DONE)
 
 
 def _lock_second_factor(user_id: int) -> None:
@@ -2400,6 +2716,7 @@ def _record(
     source_key: str,
     *,
     actor: User | None = None,
+    break_glass_action: BreakGlassAction | None = None,
 ) -> None:
     AuthenticationEvent.objects.create(
         event_type=event_type,
@@ -2408,6 +2725,8 @@ def _record(
         identifier_key=identifier_key,
         source_key=source_key,
         correlation_id=get_correlation_id() or "",
+        # Empty, never null, on every event but a break-glass one.
+        break_glass_action=break_glass_action or "",
     )
 
 

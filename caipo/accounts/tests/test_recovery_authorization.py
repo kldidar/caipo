@@ -309,7 +309,10 @@ def test_the_epoch_goes_up_by_one_from_wherever_it_stood(
 
 
 def test_the_epoch_is_raised_in_the_database_and_not_from_a_value_read_earlier() -> None:
-    source = inspect.getsource(services.authorize_mfa_recovery)
+    # The finalisation is one function, which the authorisation and the
+    # break-glass command share (ADR-0017 point 63).
+    assert "_finalize_recovery(user)" in inspect.getsource(services.authorize_mfa_recovery)
+    source = inspect.getsource(services._finalize_recovery)
 
     assert 'session_epoch=F("session_epoch") + 1' in source
 
@@ -856,7 +859,12 @@ def test_the_order_is_read_from_the_event_of_the_current_request_and_not_an_earl
 
 
 def test_the_order_of_a_request_and_a_reset_is_not_read_from_their_times() -> None:
-    source = inspect.getsource(services._recovery_authorization_refusal)
+    # These conditions are one function, which the authorisation and the
+    # break-glass command share (ADR-0017 points 50, 51, and 63).
+    assert "_recovery_finalization_refusal(user)" in inspect.getsource(
+        services._recovery_authorization_refusal
+    )
+    source = inspect.getsource(services._recovery_finalization_refusal)
 
     assert "requested_event_id < reset_event_id" in source
     assert "request.created_at" not in source

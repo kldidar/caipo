@@ -767,11 +767,14 @@ def test_a_fault_while_deciding_on_the_completion_leaves_the_enrolment_unconfirm
     secret = _approved_after_recovery(user, administrator, another)
     before = _state()
 
-    def fail(user_id: int) -> int | None:
+    def fail(user_id: int) -> bool:
         raise RuntimeError("TEST fault before the completion is recorded")
 
     with monkeypatch.context() as patched:
-        patched.setattr(selectors, "open_recovery_authorizer_id", fail)
+        # Whether a recovery is open, which is what the confirmation asks. It
+        # no longer asks who authorised: the break-glass command opens a
+        # recovery that nobody authorised.
+        patched.setattr(selectors, "has_open_recovery", fail)
         with pytest.raises(RuntimeError, match="TEST fault"):
             _confirm(user, secret)
 

@@ -44,8 +44,9 @@ class Assurance(StrEnum):
     # assurance level; it is not a credential.
     PASSWORD_AUTHENTICATED = "password_authenticated"  # noqa: S105
     # The password was checked, and so was a code from the account's active,
-    # trusted second factor: one an Administrator approved, or the one the
-    # first-Administrator bootstrap established. A code from a second factor
+    # trusted second factor: one an Administrator approved, the one the
+    # first-Administrator bootstrap established, or one whose enrolment the
+    # break-glass command approved (ADR-0017). A code from a second factor
     # that was enrolled on a password alone proves no more than that password.
     MFA_VERIFIED = "mfa_verified"
 

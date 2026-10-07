@@ -428,9 +428,11 @@ def test_only_the_bootstrap_operation_writes_an_event_without_an_actor() -> None
     assert "actor=None" in inspect.getsource(services.create_first_administrator)
 
 
-def test_only_the_bootstrap_operation_trusts_a_device_that_nobody_approved() -> None:
-    """A device is marked approved in two places: the approval, which names the
-    approving Administrator, and the bootstrap, which is the one that names nobody."""
+def test_only_the_bootstrap_and_the_break_glass_approval_trust_a_device_nobody_approved() -> None:
+    """A device is marked approved in three places: the approval, which names the
+    approving Administrator, and two that name nobody. One is the bootstrap. The
+    other is the approval of the break-glass command, the third source of trust
+    that ADR-0017 point 69 adds and states as such; it marks nothing active."""
     package_root = Path(inspect.getfile(caipo)).parent
     writers = sorted(
         str(path.relative_to(package_root))
@@ -444,9 +446,14 @@ def test_only_the_bootstrap_operation_trusts_a_device_that_nobody_approved() -> 
     assert writers == ["accounts/models.py", "accounts/services.py"]
     assert len(re.findall(r"approved_at\s*=[^=]", inspect.getsource(models))) == 1
     source = inspect.getsource(services)
-    assert len(re.findall(r"approved_at\s*=[^=]", source)) == 2
+    assert len(re.findall(r"approved_at\s*=[^=]", source)) == 3
     assert "approved_at=now" in inspect.getsource(services.create_first_administrator)
     assert "approved_by = actor.user" in inspect.getsource(services._decide_enrollment)
+    break_glass = inspect.getsource(services.break_glass_approve_enrollment)
+    assert "device.approved_at = now" in break_glass
+    assert "approved_by" not in break_glass
+    assert "TotpDeviceState.ACTIVE" not in break_glass
+    assert "TotpDevice.objects.create" not in break_glass
 
 
 def test_a_second_actor_less_event_is_refused_by_the_database_even_for_the_bootstrap_itself(
