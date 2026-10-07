@@ -5,6 +5,7 @@ another account's request. The sessions here are real ones: what a recovery
 does to them is read from the next request each of them makes.
 """
 
+import base64
 import re
 from collections.abc import Callable
 from datetime import timedelta
@@ -33,7 +34,7 @@ from caipo.accounts.tests.fixtures import (
     enrolled_device,
     supporting_account,
 )
-from caipo.web import recovery_requests
+from caipo.web import recovery_requests, sessions
 from caipo.web.access import declared_access
 from caipo.web.tests.helpers import signed_in, verified
 
@@ -52,6 +53,8 @@ RECOVER = "/login/verify/recover/"
 # A page that needs a permission every role holds.
 OWN_PAGE = "/account/second-factor/"
 ENROL = "/account/second-factor/enrol/"
+CONFIRM = "/account/second-factor/confirm/"
+REPLACE = "/account/second-factor/replace/"
 REQUESTS = "/administration/recovery-requests/"
 ENROLMENT_REQUESTS = "/administration/second-factor-requests/"
 
@@ -588,3 +591,80 @@ def test_the_authoriser_is_refused_the_approval_and_another_administrator_gives_
     device.refresh_from_db()
     assert device.state == TotpDeviceState.PENDING_VERIFICATION
     assert device.approved_by == another
+
+
+# --- The first code of the new device completes the recovery (point 49) -----------------
+
+
+def _enrolment_started(client: Client, user: User) -> tuple[bytes, str]:
+    """Sign in on the password, ask for an enrolment, and read the key and the number."""
+    client.post(LOGIN, {"email": user.email, "password": PASSWORD})
+    page = client.post(ENROL, {"password": PASSWORD}).content.decode()
+    (key,) = re.findall(r"<code>([A-Z2-7]{32})</code>", page)
+    (number,) = re.findall(r"request number is <strong>(\d+)</strong>", page)
+    return base64.b32decode(key), f"{ENROLMENT_REQUESTS}{number}/approve/"
+
+
+def test_a_recovery_from_the_request_to_the_first_code_of_the_new_device(
+    account: AccountFactory,
+    user_with_roles: UserFactory,
+    administrator: User,
+    decider: Client,
+    another: User,
+    clock: Clock,
+) -> None:
+    user = account(Role.REVIEWER)
+    approver = verified(Client(), another)
+    assert decider.post(_authorize_url(_asked(user)), CONFIRMED).status_code == 302
+    owner = Client()
+    secret, approve = _enrolment_started(owner, user)
+    assert decider.post(approve, CONFIRMED).status_code == 403
+    assert approver.post(approve, CONFIRMED).status_code == 302
+    assert not AuthenticationEvent.objects.filter(event_type="mfa_recovery_completed").exists()
+
+    code = code_at(secret=secret)
+    confirmed = owner.post(CONFIRM, {"code": code})
+
+    completed = AuthenticationEvent.objects.get(event_type="mfa_recovery_completed")
+    assert (completed.user, completed.actor, completed.break_glass_action) == (user, None, "")
+    assert (
+        completed.pk
+        > AuthenticationEvent.objects.get(event_type="mfa_enrollment_succeeded", user=user).pk
+        > AuthenticationEvent.objects.get(event_type="mfa_recovery_authorized", user=user).pk
+    )
+    device = TotpDevice.objects.get(user=user)
+    assert (device.state, device.approved_by) == (TotpDeviceState.ACTIVE, another)
+    # The session is what confirming any enrolment leaves, and nothing more.
+    assert owner.session[sessions.VERIFIED_DEVICE_KEY] == device.pk
+
+    # The same enrolment by an account that was never recovered answers the
+    # same in every observable respect.
+    plain = user_with_roles(Role.REVIEWER)
+    plain.set_password(PASSWORD)
+    plain.save()
+    other_owner = Client()
+    plain_secret, plain_approve = _enrolment_started(other_owner, plain)
+    assert approver.post(plain_approve, CONFIRMED).status_code == 302
+    unrecovered = other_owner.post(CONFIRM, {"code": code_at(secret=plain_secret)})
+    assert _answer(confirmed) == _answer(unrecovered)
+    assert (confirmed.status_code, confirmed["Location"]) == (302, OWN_PAGE)
+    assert AuthenticationEvent.objects.filter(event_type="mfa_recovery_completed").count() == 1
+
+    # Nothing of the secret, the code, the password, or an address is in the
+    # answer or in the record of the completion.
+    record = repr(AuthenticationEvent.objects.filter(pk=completed.pk).values().get())
+    answer = repr(_answer(confirmed))
+    for value in (base64.b32encode(secret).decode(), PASSWORD, user.email, administrator.email):
+        assert value not in record, value
+        assert value not in answer, value
+    assert code not in answer
+
+    # The recovery is over: the Administrator who authorised it approves the
+    # account's next enrolment, which follows no recovery.
+    clock(MINUTE * 2)
+    replaced = owner.post(
+        REPLACE, {"replace-password": PASSWORD, "replace-code": code_at(secret=secret)}
+    )
+    (number,) = re.findall(r"request number is <strong>(\d+)</strong>", replaced.content.decode())
+    assert decider.post(f"{ENROLMENT_REQUESTS}{number}/approve/", CONFIRMED).status_code == 302
+    assert TotpDevice.objects.get(user=user).approved_by == administrator
