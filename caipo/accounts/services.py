@@ -1,6 +1,7 @@
 """Write interface of the accounts app: signing in and out, the second factor
-and its approval, asking for a lost second factor to be recovered and
-authorising or rejecting that request, changing roles, creating, activating,
+and its approval, asking for a lost second factor to be recovered,
+authorising or rejecting that request, and recording that the recovery is
+complete, changing roles, creating, activating,
 disabling, and enabling accounts, resetting a forgotten password, and creating
 the first Administrator.
 
@@ -525,9 +526,10 @@ def authorize_mfa_recovery(
     Nothing else is touched: not the password, the status, the roles, the
     email address or its verification, nor the counts that throttle sign-in
     and second-factor codes. Nobody is signed in, no device is created, and
-    the result carries no authentication context. Until a trusted device of
-    the account has become active, the actor is refused the approval of its
-    enrolment (`approve_mfa_enrollment`).
+    the result carries no authentication context. Until the recovery is
+    complete, which `confirm_mfa_enrollment` records when an approved device
+    of the account accepts its first code, the actor is refused the approval
+    of its enrolment (`approve_mfa_enrollment`).
 
     Raises PermissionDenied if the actor may not authorise recoveries or the
     request is their own. Returns UNAVAILABLE if any other precondition does
@@ -668,6 +670,15 @@ def confirm_mfa_enrollment(*, actor: AuthenticationContext, code: str, source: s
     device enrolled without approval confers nothing that the password does
     not, whatever roles the account holds or is given later.
 
+    If the enrolment was approved and the account has an open recovery
+    (`selectors.open_recovery_authorizer_id`), that recovery is complete
+    (ADR-0017 point 49): `mfa_recovery_completed` is recorded for the account
+    after `mfa_enrollment_succeeded`, in the same transaction and under the
+    same lock, naming no actor. It is recorded once for a recovery, and it is
+    what closes it. Nothing else follows from it: the result, the device, the
+    account, and its sessions are what any confirmed enrolment leaves. A
+    device enrolled without approval completes nothing.
+
     Raises PermissionDenied if the actor may not manage their second factor.
     Returns UNAVAILABLE if nothing awaits a code or it has lapsed; REFUSED for a
     wrong code, which records `mfa_verification_failed` and leaves the
@@ -692,10 +703,25 @@ def confirm_mfa_enrollment(*, actor: AuthenticationContext, code: str, source: s
             )
             return MfaResult(MfaOutcome.REFUSED)
         _record(AuthenticationEventType.MFA_ENROLLMENT_SUCCEEDED, user, *keys)
+        # Read from the device that was just activated, under the lock every
+        # authorisation and approval of this account holds: an authorisation
+        # deletes the account's device, so an approved device that exists
+        # while a recovery is open was enrolled after that recovery began.
+        recovery_completed = (
+            device.approved_at is not None
+            and selectors.open_recovery_authorizer_id(user.pk) is not None
+        )
+        if recovery_completed:
+            _record(AuthenticationEventType.MFA_RECOVERY_COMPLETED, user, *keys)
 
     logger.info(
         "Second factor enrolled", extra={"event": "mfa.enrollment_succeeded", "user_id": user.pk}
     )
+    if recovery_completed:
+        logger.info(
+            "Second-factor recovery completed",
+            extra={"event": "mfa_recovery.completed", "user_id": user.pk},
+        )
     return MfaResult(
         MfaOutcome.ACCEPTED, AuthenticationContext(user, Assurance.MFA_VERIFIED, device.pk)
     )
@@ -800,8 +826,8 @@ def approve_mfa_enrollment(
     factor; the request exists, still awaits approval, and has not lapsed; it
     is not the actor's own; and the actor did not authorise the account's
     open recovery (ADR-0017 point 37): the Administrator who revoked a lost
-    device does not approve the device that follows, until a trusted device
-    of the account has become active. Side effects when ACCEPTED, in one
+    device does not approve the device that follows, until that recovery is
+    complete. Side effects when ACCEPTED, in one
     transaction:
     the device awaits its first code and records the actor and the time of the
     approval, and `mfa_enrollment_approved` is recorded for the account,

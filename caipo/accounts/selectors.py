@@ -269,24 +269,23 @@ def open_recovery_authorizer_id(user_id: int) -> int | None:
 
     This is the one place that says whether an account has an open recovery
     (ADR-0017 point 37). A recovery is opened by the account's most recent
-    `mfa_recovery_authorized` event, and it stays open until a trusted device
-    of the account has become active after that event. Until it has, the
-    Administrator named here does not approve the account's enrolment.
+    `mfa_recovery_authorized` event, and it is closed by an
+    `mfa_recovery_completed` event recorded after that one, and by nothing
+    else (ADR-0017 point 49). Until it is closed, the Administrator named
+    here does not approve the account's enrolment.
 
-    No event says by itself that a trusted device became active, so this
-    reads it from the enrolment events recorded after the authorisation: an
-    `mfa_enrollment_succeeded` closes the recovery if the enrolment it
-    completes was approved, which is an `mfa_enrollment_approved` with no
-    `mfa_enrollment_started` after it. An enrolment that was confirmed
-    without approval made an untrusted device and closes nothing. Events are
-    ordered by identifier, which the database issues in sequence.
+    `services.confirm_mfa_enrollment` records the completion when an approved
+    device of the account accepts its first code. The two events decide and
+    the state of the device does not: a recovery that was completed stays
+    closed if that device is later disabled or replaced, and nothing is
+    inferred here from the enrolment events in between. Which authorisation
+    is the most recent, and whether a completion is after it, is read from
+    the identifiers of the events, which the database issues in sequence, and
+    never from their times.
 
-    To be extended, not replaced: when `mfa_recovery_completed` is recorded
-    (ADR-0017 point 49), it is recorded at exactly the moment this function
-    finds, and is then read here as what closes a recovery. When the
-    break-glass command can revoke a device, its event opens a recovery here
-    too, with nobody to return. No second record of recovery state is to be
-    kept anywhere else.
+    To be extended, not replaced: when the break-glass command can revoke a
+    device, its event opens a recovery here too, with nobody to return. No
+    second record of recovery state is to be kept anywhere else.
     """
     authorized = (
         AuthenticationEvent.objects.filter(
@@ -299,28 +298,12 @@ def open_recovery_authorizer_id(user_id: int) -> int | None:
     if authorized is None:
         return None
     event_id, authorizer_id = authorized
-    later = (
-        AuthenticationEvent.objects.filter(
-            user_id=user_id,
-            id__gt=event_id,
-            event_type__in=[
-                AuthenticationEventType.MFA_ENROLLMENT_STARTED,
-                AuthenticationEventType.MFA_ENROLLMENT_APPROVED,
-                AuthenticationEventType.MFA_ENROLLMENT_SUCCEEDED,
-            ],
-        )
-        .order_by("id")
-        .values_list("event_type", flat=True)
-    )
-    approved = False
-    for event_type in later:
-        if event_type == AuthenticationEventType.MFA_ENROLLMENT_STARTED:
-            approved = False
-        elif event_type == AuthenticationEventType.MFA_ENROLLMENT_APPROVED:
-            approved = True
-        elif approved:
-            return None
-    return authorizer_id
+    completed = AuthenticationEvent.objects.filter(
+        user_id=user_id,
+        id__gt=event_id,
+        event_type=AuthenticationEventType.MFA_RECOVERY_COMPLETED,
+    ).exists()
+    return None if completed else authorizer_id
 
 
 def authentication_context(
