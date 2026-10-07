@@ -20,6 +20,7 @@ from enum import StrEnum
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.utils import timezone
 
 from caipo.accounts.authentication import AuthenticationContext
@@ -29,6 +30,7 @@ from caipo.accounts.models import (
     AccountStatus,
     AuthenticationEvent,
     AuthenticationEventType,
+    BreakGlassAction,
     MfaRecoveryRequest,
     RoleEvent,
     RoleEventType,
@@ -44,18 +46,24 @@ __all__ = [
     "AuthenticationContext",
     "EnrollmentRequest",
     "MfaState",
+    "OpenRecovery",
     "Permission",
     "RecoveryRequest",
     "Role",
     "accounts_awaiting_verification",
+    "administrators_able_to_act",
+    "administrators_on_record",
     "an_administrator_is_able_to_act",
     "an_administrator_was_ever_created",
     "authentication_context",
     "can",
     "enrollment_request_number_of",
     "enrollment_requests_awaiting_approval",
+    "has_open_recovery",
     "mfa_state_of",
     "open_recovery_authorizer_id",
+    "open_recovery_of",
+    "pending_enrollment_follows",
     "permissions_of",
     "recovery_request_expires_at",
     "recovery_requests_awaiting_decision",
@@ -241,13 +249,11 @@ def recovery_requests_awaiting_decision(
     ]
 
 
-def an_administrator_is_able_to_act(*, besides: Collection[int]) -> bool:
-    """Return whether an Administrator who is able to act exists, other than these accounts.
+def administrators_on_record(*, besides: Collection[int] = ()) -> list[int]:
+    """Return the active accounts that hold the Administrator role on record, in ascending order.
 
-    Able to act (ADR-0017 point 39): the account is active, holds the
-    Administrator role on record, and has an active, trusted second factor.
-    This is narrower than the count behind the last-Administrator rule, which
-    asks for no second factor. `besides` holds account identifiers.
+    The count behind the last-Administrator rule: it asks for no second
+    factor. `besides` holds account identifiers that are left out.
     """
     latest = (
         RoleEvent.objects.filter(role=Role.ADMINISTRATOR, user__status=AccountStatus.ACTIVE)
@@ -256,54 +262,157 @@ def an_administrator_is_able_to_act(*, besides: Collection[int]) -> bool:
         .distinct("user_id")
         .values_list("user_id", "event_type")
     )
-    administrators = [
-        user_id for user_id, event_type in latest if event_type == RoleEventType.GRANTED
-    ]
-    return TotpDevice.objects.filter(
-        user_id__in=administrators, state=TotpDeviceState.ACTIVE, approved_at__isnull=False
-    ).exists()
+    return [user_id for user_id, event_type in latest if event_type == RoleEventType.GRANTED]
 
 
-def open_recovery_authorizer_id(user_id: int) -> int | None:
-    """Return who authorised the account's open recovery, or None if it has no open recovery.
+def administrators_able_to_act(*, besides: Collection[int]) -> frozenset[int]:
+    """Return the Administrators who are able to act, other than these accounts.
 
-    This is the one place that says whether an account has an open recovery
-    (ADR-0017 point 37). A recovery is opened by the account's most recent
-    `mfa_recovery_authorized` event, and it is closed by an
-    `mfa_recovery_completed` event recorded after that one, and by nothing
-    else (ADR-0017 point 49). Until it is closed, the Administrator named
-    here does not approve the account's enrolment.
+    Able to act (ADR-0017 point 39): the account is active, holds the
+    Administrator role on record, and has an active, trusted second factor.
+    This is narrower than `administrators_on_record`. `besides` holds account
+    identifiers.
+    """
+    return frozenset(
+        TotpDevice.objects.filter(
+            user_id__in=administrators_on_record(besides=besides),
+            state=TotpDeviceState.ACTIVE,
+            approved_at__isnull=False,
+        ).values_list("user_id", flat=True)
+    )
+
+
+def an_administrator_is_able_to_act(*, besides: Collection[int]) -> bool:
+    """Return whether an Administrator who is able to act exists, other than these accounts.
+
+    See `administrators_able_to_act`. `besides` holds account identifiers.
+    """
+    return bool(administrators_able_to_act(besides=besides))
+
+
+@dataclass(frozen=True)
+class OpenRecovery:
+    """A recovery of an account that was opened and is not complete.
+
+    `opener_event_id` is the identifier of the event that opened it.
+    `authorizer_id` is the Administrator who authorised it, and None if the
+    break-glass command revoked the device: then nobody authorised, and the
+    recovery is open all the same.
+    """
+
+    opener_event_id: int
+    authorizer_id: int | None
+
+
+def open_recovery_of(user_id: int) -> OpenRecovery | None:
+    """Return the account's open recovery, or None if it has none.
+
+    This is the one place that says whether an account has an open recovery.
+    A recovery is opened by the most recent of two kinds of event of the
+    account: an `mfa_recovery_authorized` event, which names the
+    Administrator who authorised, or an `mfa_recovery_break_glass` event
+    whose action is `revoke_device`, which names nobody (ADR-0017 points 45
+    and 63). It is closed by an `mfa_recovery_completed` event recorded after
+    that one, and by nothing else (point 49). A break-glass event whose
+    action is `approve_enrollment` opens nothing and closes nothing.
 
     `services.confirm_mfa_enrollment` records the completion when an approved
-    device of the account accepts its first code. The two events decide and
-    the state of the device does not: a recovery that was completed stays
-    closed if that device is later disabled or replaced, and nothing is
-    inferred here from the enrolment events in between. Which authorisation
-    is the most recent, and whether a completion is after it, is read from
-    the identifiers of the events, which the database issues in sequence, and
+    device of the account accepts its first code. The events decide and the
+    state of the device does not: a recovery that was completed stays closed
+    if that device is later disabled or replaced, and nothing is inferred
+    here from the enrolment events in between. Which opening is the most
+    recent, and whether a completion is after it, is read from the
+    identifiers of the events, which the database issues in sequence, and
     never from their times.
 
-    To be extended, not replaced: when the break-glass command can revoke a
-    device, its event opens a recovery here too, with nobody to return. No
-    second record of recovery state is to be kept anywhere else.
+    No second record of recovery state is kept anywhere else.
+    `has_open_recovery` and `open_recovery_authorizer_id` are two questions
+    asked of this one answer, and they are different questions: a recovery
+    that the break-glass command opened is open and has no authoriser.
     """
-    authorized = (
-        AuthenticationEvent.objects.filter(
-            user_id=user_id, event_type=AuthenticationEventType.MFA_RECOVERY_AUTHORIZED
+    opener = (
+        AuthenticationEvent.objects.filter(user_id=user_id)
+        .filter(
+            Q(event_type=AuthenticationEventType.MFA_RECOVERY_AUTHORIZED)
+            | Q(
+                event_type=AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS,
+                break_glass_action=BreakGlassAction.REVOKE_DEVICE,
+            )
         )
         .order_by("-id")
         .values_list("id", "actor_id")
         .first()
     )
-    if authorized is None:
+    if opener is None:
         return None
-    event_id, authorizer_id = authorized
+    event_id, authorizer_id = opener
     completed = AuthenticationEvent.objects.filter(
         user_id=user_id,
         id__gt=event_id,
         event_type=AuthenticationEventType.MFA_RECOVERY_COMPLETED,
     ).exists()
-    return None if completed else authorizer_id
+    return None if completed else OpenRecovery(event_id, authorizer_id)
+
+
+def has_open_recovery(user_id: int) -> bool:
+    """Return whether the account has an open recovery, whoever or whatever opened it.
+
+    What decides that a first code completes a recovery (ADR-0017 point 49).
+    See `open_recovery_of`.
+    """
+    return open_recovery_of(user_id) is not None
+
+
+def open_recovery_authorizer_id(user_id: int) -> int | None:
+    """Return the Administrator who authorised the account's open recovery, or None.
+
+    What decides who does not approve the account's enrolment (ADR-0017
+    point 37). None does not mean that no recovery is open: it is also the
+    answer for a recovery that the break-glass command opened, which nobody
+    authorised and which therefore bars nobody. Whether a recovery is open is
+    `has_open_recovery`. See `open_recovery_of`.
+    """
+    recovery = open_recovery_of(user_id)
+    return None if recovery is None else recovery.authorizer_id
+
+
+# The events that begin, decide, end, or give up an enrolment. A break-glass
+# event is among them for its `approve_enrollment` action; its `revoke_device`
+# action opens the recovery and so is never after it.
+_ENROLLMENT_EVENT_TYPES = (
+    AuthenticationEventType.MFA_ENROLLMENT_STARTED,
+    AuthenticationEventType.MFA_ENROLLMENT_APPROVED,
+    AuthenticationEventType.MFA_ENROLLMENT_REJECTED,
+    AuthenticationEventType.MFA_ENROLLMENT_SUCCEEDED,
+    AuthenticationEventType.MFA_DEVICE_REPLACED,
+    AuthenticationEventType.MFA_DISABLED,
+    AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS,
+)
+
+
+def pending_enrollment_follows(user_id: int, recovery: OpenRecovery) -> bool:
+    """Return whether the account's current enrolment request was made in this open recovery.
+
+    It was if the account's latest enrolment event is an
+    `mfa_enrollment_started` event recorded after the event that opened the
+    recovery: the request that event records is then the one that stands, and
+    nothing has decided, completed, or given it up since. An enrolment that
+    succeeded earlier in the same recovery and was replaced afterwards does
+    not count against the request that replaced it. Read from the identifiers
+    of the events, never from their times. The caller holds the account's
+    second-factor lock and has read the pending device under it.
+    """
+    latest = (
+        AuthenticationEvent.objects.filter(
+            user_id=user_id,
+            id__gt=recovery.opener_event_id,
+            event_type__in=_ENROLLMENT_EVENT_TYPES,
+        )
+        .order_by("-id")
+        .values_list("event_type", flat=True)
+        .first()
+    )
+    return latest == AuthenticationEventType.MFA_ENROLLMENT_STARTED
 
 
 def authentication_context(
