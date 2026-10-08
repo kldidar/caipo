@@ -7,6 +7,9 @@
   {% if user.is_authenticated %}
     <h1>{% translate "Signed in" %}</h1>
     <p>{% blocktranslate with email=user.email %}You are signed in as {{ email }}.{% endblocktranslate %}</p>
+    {% if last_recovery %}
+      <p role="status">{% blocktranslate with recovered_at=last_recovery|date:"c" %}The two-step verification of your account was revoked through recovery at {{ recovered_at }}. If you did not ask for that, tell an Administrator yourself, and not through this site.{% endblocktranslate %} <a href="{% url 'second-factor-history' %}">{% translate "Recovery history" %}</a></p>
+    {% endif %}
     {% if can_manage_second_factor %}
       <p><a href="{% url 'second-factor' %}">{% translate "Two-step verification" %}</a></p>
     {% endif %}
@@ -15,6 +18,9 @@
     {% endif %}
     {% if can_approve_enrollments %}
       <p><a href="{% url 'second-factor-requests' %}">{% translate "Two-step verification requests" %}</a></p>
+    {% endif %}
+    {% if can_see_recoveries %}
+      <p><a href="{% url 'recoveries' %}">{% translate "Recoveries" %}</a></p>
     {% endif %}
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}

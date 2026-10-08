@@ -112,13 +112,22 @@ def sign_in(request: HttpRequest) -> HttpResponse:
         form = SignInForm()
 
     actor = sessions.authentication_context(request)
+    can_manage_second_factor = selectors.can(actor, Permission.MFA_MANAGE_OWN)
     context = {
         "form": form,
         "error": error,
         "next_field": NEXT_FIELD,
         "next": local_destination,
-        "can_manage_second_factor": selectors.can(actor, Permission.MFA_MANAGE_OWN),
+        "can_manage_second_factor": can_manage_second_factor,
+        # Shown to the account whenever it is signed in, and to no other: when
+        # its second factor was last revoked by a recovery (ADR-0017 point 78).
+        "last_recovery": (
+            selectors.last_recovery_of(actor)
+            if actor is not None and can_manage_second_factor
+            else None
+        ),
         "can_approve_enrollments": selectors.can(actor, Permission.MFA_ENROLLMENT_APPROVE),
+        "can_see_recoveries": selectors.can(actor, Permission.MFA_RECOVERY_AUTHORIZE),
         "can_create_accounts": selectors.can(actor, Permission.ACCOUNTS_CREATE),
         "activated": "activated" in request.GET,
         "password_reset": "reset" in request.GET,

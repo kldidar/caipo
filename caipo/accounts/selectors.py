@@ -20,8 +20,10 @@ from enum import StrEnum
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.core.paginator import Paginator
+from django.db.models import OuterRef, Q, QuerySet, Subquery
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from caipo.accounts.authentication import AuthenticationContext
 from caipo.accounts.authorization import Assurance, Permission, Role, permissions_for
@@ -48,6 +50,8 @@ __all__ = [
     "MfaState",
     "OpenRecovery",
     "Permission",
+    "RecoveryHistoryEntry",
+    "RecoveryHistoryPage",
     "RecoveryRequest",
     "Role",
     "accounts_awaiting_verification",
@@ -60,11 +64,14 @@ __all__ = [
     "enrollment_request_number_of",
     "enrollment_requests_awaiting_approval",
     "has_open_recovery",
+    "last_recovery_of",
     "mfa_state_of",
     "open_recovery_authorizer_id",
     "open_recovery_of",
     "pending_enrollment_follows",
     "permissions_of",
+    "recoveries_on_record",
+    "recovery_history_of",
     "recovery_request_expires_at",
     "recovery_requests_awaiting_decision",
     "require_permission",
@@ -290,6 +297,15 @@ def an_administrator_is_able_to_act(*, besides: Collection[int]) -> bool:
     return bool(administrators_able_to_act(besides=besides))
 
 
+# What opens a recovery: an Administrator's authorisation, or the revocation
+# by the break-glass command. The one statement of it, for whether a recovery
+# is open and for what the history of recoveries shows.
+_RECOVERY_OPENER = Q(event_type=AuthenticationEventType.MFA_RECOVERY_AUTHORIZED) | Q(
+    event_type=AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS,
+    break_glass_action=BreakGlassAction.REVOKE_DEVICE,
+)
+
+
 @dataclass(frozen=True)
 class OpenRecovery:
     """A recovery of an account that was opened and is not complete.
@@ -332,13 +348,7 @@ def open_recovery_of(user_id: int) -> OpenRecovery | None:
     """
     opener = (
         AuthenticationEvent.objects.filter(user_id=user_id)
-        .filter(
-            Q(event_type=AuthenticationEventType.MFA_RECOVERY_AUTHORIZED)
-            | Q(
-                event_type=AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS,
-                break_glass_action=BreakGlassAction.REVOKE_DEVICE,
-            )
-        )
+        .filter(_RECOVERY_OPENER)
         .order_by("-id")
         .values_list("id", "actor_id")
         .first()
@@ -413,6 +423,216 @@ def pending_enrollment_follows(user_id: int, recovery: OpenRecovery) -> bool:
         .first()
     )
     return latest == AuthenticationEventType.MFA_ENROLLMENT_STARTED
+
+
+# How many steps one page of a history of recoveries shows. The record has no
+# end: whoever knows an eligible account's password can add five requests to
+# it every hour.
+RECOVERY_HISTORY_PAGE_SIZE = 50
+
+# The steps of a recovery that are shown whenever they were recorded. The
+# approval of an enrolment is shown too, but only inside a recovery: see
+# `_recovery_history`. A refused submission (`mfa_recovery_failed`) is not a
+# step of any recovery and is never shown.
+_RECOVERY_HISTORY_EVENT_TYPES = (
+    AuthenticationEventType.MFA_RECOVERY_REQUESTED,
+    AuthenticationEventType.MFA_RECOVERY_REJECTED,
+    AuthenticationEventType.MFA_RECOVERY_AUTHORIZED,
+    AuthenticationEventType.MFA_RECOVERY_COMPLETED,
+    AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS,
+)
+
+# What a person reads for each step. The names of the event types are for the
+# record and are never shown.
+_RECOVERY_HISTORY_LABELS = {
+    AuthenticationEventType.MFA_RECOVERY_REQUESTED: _("Recovery requested"),
+    AuthenticationEventType.MFA_RECOVERY_REJECTED: _(
+        "Recovery request rejected by an Administrator"
+    ),
+    AuthenticationEventType.MFA_RECOVERY_AUTHORIZED: _(
+        "Recovery authorised by an Administrator: the second factor was revoked"
+    ),
+    AuthenticationEventType.MFA_ENROLLMENT_APPROVED: _(
+        "Enrolment of the new second factor approved by an Administrator"
+    ),
+    AuthenticationEventType.MFA_RECOVERY_COMPLETED: _(
+        "Recovery completed: the new second factor accepted its first code"
+    ),
+}
+_RECOVERY_HISTORY_SERVER_LABELS = {
+    BreakGlassAction.REVOKE_DEVICE: _("Second factor revoked by the emergency procedure"),
+    BreakGlassAction.APPROVE_ENROLLMENT: _(
+        "Enrolment of the new second factor approved by the emergency procedure"
+    ),
+}
+
+
+@dataclass(frozen=True)
+class RecoveryHistoryEntry:
+    """One step of a recovery, as a person is shown it (ADR-0017 point 78).
+
+    Everything a page may show of the event, and nothing else of it: not its
+    identifier, its type, its correlation ID, or either keyed hash. `label`
+    says what happened, in words. `actor_email` is the Administrator who
+    decided, and None where no account of the application did.
+    `performed_at_server` says that the break-glass command performed the
+    step: then nobody is named, because whoever ran the command is not an
+    account, and the application does not know who it was.
+    """
+
+    occurred_at: datetime
+    label: str
+    account_email: str
+    actor_email: str | None
+    performed_at_server: bool
+
+
+@dataclass(frozen=True)
+class RecoveryHistoryPage:
+    """One page of a history of recoveries, latest step first."""
+
+    entries: tuple[RecoveryHistoryEntry, ...]
+    number: int
+    has_previous: bool
+    has_next: bool
+
+
+def _recovery_history() -> QuerySet[AuthenticationEvent]:
+    """Return the events that a history of recoveries shows, latest first.
+
+    The six steps of ADR-0017 point 78 and security property 6: a request, a
+    rejection, an authorisation, a completion, each action of the break-glass
+    command, and the approval of an enrolment inside a recovery. An approval
+    is inside a recovery if, of the account's events that open or complete
+    one, the latest before it is an opening (`_RECOVERY_OPENER`): the
+    derivation of `open_recovery_of`, asked of the moment of the approval. The
+    approval of an enrolment that follows no recovery is not shown.
+
+    Every such event names its account. Ordered by the identifiers of the
+    events, which the database issues in sequence, and never by their times;
+    what is inside a recovery is read from the identifiers too.
+    """
+    boundary = (
+        AuthenticationEvent.objects.filter(user_id=OuterRef("user_id"), id__lt=OuterRef("id"))
+        .filter(_RECOVERY_OPENER | Q(event_type=AuthenticationEventType.MFA_RECOVERY_COMPLETED))
+        .order_by("-id")
+        .values("event_type")[:1]
+    )
+    return (
+        AuthenticationEvent.objects.annotate(previous_boundary=Subquery(boundary))
+        .filter(
+            Q(event_type__in=_RECOVERY_HISTORY_EVENT_TYPES)
+            | Q(
+                event_type=AuthenticationEventType.MFA_ENROLLMENT_APPROVED,
+                previous_boundary__in=(
+                    AuthenticationEventType.MFA_RECOVERY_AUTHORIZED,
+                    AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS,
+                ),
+            )
+        )
+        .order_by("-id")
+    )
+
+
+def _recovery_history_page(events: QuerySet[AuthenticationEvent], page: int) -> RecoveryHistoryPage:
+    """Return one page of the events as what a person is shown of them.
+
+    An event's type and its break-glass action are read as stored, to map
+    them to the fixed labels a person reads, and the two values as stored do
+    not leave this module. No identifier of an event is exposed, and never
+    its correlation ID or either keyed hash. A page number that is not a page
+    gets the nearest one: the first for anything below it, the last for
+    anything above.
+    """
+    rows = events.values_list(
+        "created_at", "event_type", "break_glass_action", "user__email", "actor__email"
+    )
+    shown = Paginator(rows, RECOVERY_HISTORY_PAGE_SIZE).get_page(page)
+    return RecoveryHistoryPage(
+        entries=tuple(
+            _recovery_history_entry(occurred_at, event_type, action, account_email, actor_email)
+            for occurred_at, event_type, action, account_email, actor_email in shown.object_list
+        ),
+        number=shown.number,
+        has_previous=shown.has_previous(),
+        has_next=shown.has_next(),
+    )
+
+
+def _recovery_history_entry(
+    occurred_at: datetime,
+    event_type: str,
+    action: str,
+    account_email: str,
+    actor_email: str | None,
+) -> RecoveryHistoryEntry:
+    at_server = event_type == AuthenticationEventType.MFA_RECOVERY_BREAK_GLASS
+    label = (
+        _RECOVERY_HISTORY_SERVER_LABELS[BreakGlassAction(action)]
+        if at_server
+        else _RECOVERY_HISTORY_LABELS[AuthenticationEventType(event_type)]
+    )
+    return RecoveryHistoryEntry(
+        occurred_at=occurred_at,
+        label=str(label),
+        account_email=account_email,
+        actor_email=actor_email,
+        performed_at_server=at_server,
+    )
+
+
+def recovery_history_of(context: AuthenticationContext, *, page: int = 1) -> RecoveryHistoryPage:
+    """Return the history of the recoveries of the context's own account, latest step first.
+
+    There is no parameter that could name another account: the account is the
+    one the context acts as. It needs only the permission every role holds on
+    its password, because an account whose second factor was just revoked has
+    no second factor to verify (ADR-0017 point 78). What is shown is said by
+    `_recovery_history` and `RecoveryHistoryEntry`.
+
+    Reads only. Raises PermissionDenied if the context may not manage its own
+    second factor.
+    """
+    require_permission(context, Permission.MFA_MANAGE_OWN)
+    return _recovery_history_page(_recovery_history().filter(user_id=context.user.pk), page)
+
+
+def recoveries_on_record(context: AuthenticationContext, *, page: int = 1) -> RecoveryHistoryPage:
+    """Return the history of the recoveries of every account, latest step first.
+
+    What the Administrators see (ADR-0017 point 78): every request,
+    rejection, authorisation, and use of the break-glass command, with the
+    approvals and completions that follow, of every account including the
+    context's own. What is shown of each is said by `_recovery_history` and
+    `RecoveryHistoryEntry`.
+
+    Reads only. Raises PermissionDenied if the context may not authorise
+    recoveries, a permission that exists only for an Administrator verified
+    against a trusted second factor.
+    """
+    require_permission(context, Permission.MFA_RECOVERY_AUTHORIZE)
+    return _recovery_history_page(_recovery_history(), page)
+
+
+def last_recovery_of(context: AuthenticationContext) -> datetime | None:
+    """Return when the second factor of the context's own account was last revoked by a recovery.
+
+    None if it never was. The time is that of the account's most recent
+    opening event (`_RECOVERY_OPENER`), which is the most recent by its
+    identifier. Nothing records whether the account has seen it: the answer
+    is the same every time it is asked.
+
+    Raises PermissionDenied if the context may not manage its own second
+    factor.
+    """
+    require_permission(context, Permission.MFA_MANAGE_OWN)
+    return (
+        AuthenticationEvent.objects.filter(user_id=context.user.pk)
+        .filter(_RECOVERY_OPENER)
+        .order_by("-id")
+        .values_list("created_at", flat=True)
+        .first()
+    )
 
 
 def authentication_context(
