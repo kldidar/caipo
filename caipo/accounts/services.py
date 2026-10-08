@@ -1,7 +1,8 @@
 """Write interface of the accounts app: signing in and out, the second factor
 and its approval, asking for a lost second factor to be recovered,
 authorising or rejecting that request, and recording that the recovery is
-complete, the two emergency actions of the break-glass command, changing
+complete, the two emergency actions of the break-glass command, telling the
+people concerned that a recovery was asked for or finalised, changing
 roles, creating, activating,
 disabling, and enabling accounts, resetting a forgotten password, and creating
 the first Administrator.
@@ -23,7 +24,7 @@ called only by its own command at the server's terminal, and by no view.
 
 import logging
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -232,6 +233,26 @@ class BreakGlassRefusalReason(StrEnum):
     NO_OPEN_RECOVERY = "no_open_recovery"
     # The request that awaits approval was not made in the open recovery.
     NOT_CURRENT_ENROLLMENT = "not_current_enrollment"
+
+
+class RecoveryNotice(StrEnum):
+    """Which of the three fixed messages about a recovery is sent (ADR-0017 point 79)."""
+
+    # The owner of an account asked for its lost second factor to be revoked.
+    REQUESTED = "requested"
+    # A lost second factor was revoked, by an authorisation or at the server.
+    FINALIZED = "finalized"
+    # The command at the server's terminal performed one of its two actions.
+    EMERGENCY = "emergency"
+
+
+@dataclass(frozen=True)
+class _Recipient:
+    """An account that is told about a recovery, read while the transaction held it still."""
+
+    user_id: int
+    # Never in a log line: logs name accounts by identifier.
+    email: str = field(repr=False)
 
 
 @dataclass(frozen=True)
@@ -468,6 +489,13 @@ def request_mfa_recovery(*, challenge: str, source: str) -> RecoveryRequestResul
     which has another number, and `mfa_recovery_requested` is recorded. The
     result carries the number.
 
+    Then, after that transaction and holding none of its locks, the account
+    is sent the fixed message that a request was made, if its email address
+    was verified, and nobody else is sent anything (point 79). A message
+    that cannot be sent is logged and changes nothing: the request stands and
+    the result is the same. A submission that is refused or throttled sends
+    nothing.
+
     Nothing else is touched. The request authorises nothing: the second
     factor stays active, and so do the account's sessions, password, status,
     and roles, and the counts that throttle sign-in and second-factor codes.
@@ -516,11 +544,13 @@ def request_mfa_recovery(*, challenge: str, source: str) -> RecoveryRequestResul
         MfaRecoveryRequest.objects.filter(user=user).delete()
         request = MfaRecoveryRequest.objects.create(user=user, created_at=timezone.now())
         _record(AuthenticationEventType.MFA_RECOVERY_REQUESTED, user, identifier_key, source_key)
+        owner = _owner_to_notify(user)
 
     logger.info(
         "Second-factor recovery requested",
         extra={"event": "mfa_recovery.requested", "user_id": user.pk},
     )
+    _notify_of_recovery(RecoveryNotice.REQUESTED, owner)
     return RecoveryRequestResult(RecoveryRequestOutcome.REQUESTED, number=request.pk)
 
 
@@ -570,10 +600,20 @@ def authorize_mfa_recovery(
     of the account accepts its first code, the actor is refused the approval
     of its enrolment (`approve_mfa_enrollment`).
 
+    Then, after that transaction and holding none of its locks, the fixed
+    message that a recovery was finalised is sent to the account and to every
+    other Administrator (point 79): the active accounts that hold the role on
+    record, other than the actor and the account. Each is sent it only if
+    its email address was verified. Who they are is read inside the
+    transaction, while the lock on the role event table holds the roles
+    still. A message that cannot be sent is logged, does not stop the others,
+    and changes nothing: the recovery is finalised and the result is the
+    same.
+
     Raises PermissionDenied if the actor may not authorise recoveries or the
     request is their own. Returns UNAVAILABLE if any other precondition does
     not hold, whichever it is: then nothing is changed, no event is recorded,
-    and only the log says which, as a RecoveryRefusalReason.
+    nothing is sent, and only the log says which, as a RecoveryRefusalReason.
     """
     with transaction.atomic():
         held = _recovery_request_for_decision(actor, request_number)
@@ -592,6 +632,9 @@ def authorize_mfa_recovery(
             _key("source", source),
             actor=actor.user,
         )
+        recipients = _owner_to_notify(user) + _administrators_to_notify(
+            besides=(actor.user.pk, user.pk)
+        )
 
     logger.info(
         "Second-factor recovery authorised",
@@ -601,6 +644,7 @@ def authorize_mfa_recovery(
             "actor_id": actor.user.pk,
         },
     )
+    _notify_of_recovery(RecoveryNotice.FINALIZED, recipients)
     return RecoveryDecisionResult(RecoveryDecisionOutcome.AUTHORIZED)
 
 
@@ -619,7 +663,7 @@ def reject_mfa_recovery(
     and `mfa_recovery_rejected` is recorded for the account, naming the
     actor. Nothing else is touched: the account's second factor, sessions,
     password, reset token, and pending challenge are as they were, and the
-    account may ask again.
+    account may ask again. No message is sent to anybody.
 
     Raises PermissionDenied if the actor may not authorise recoveries or the
     request is their own. Returns UNAVAILABLE if there is no such request or
@@ -929,9 +973,19 @@ def break_glass_revoke_device(*, email: str, request_number: int) -> BreakGlassR
     email address, nor the counts that throttle sign-in and codes. Nobody is
     signed in, no device is created, and no secret is read or returned.
 
+    Then, after that transaction and holding none of its locks, two fixed
+    messages are sent (point 79): to the account, that a recovery was
+    finalised, and to every other Administrator, that an emergency action
+    was performed. The other Administrators are the active accounts that
+    hold the role on record, other than the account; nobody acted who could
+    be left out. They are sent that one message and not also the one about
+    the finalisation. Each recipient is sent a message only if its email
+    address was verified. A message that cannot be sent is logged, does not
+    stop the others, and changes nothing.
+
     Never raises for what was typed. Returns UNAVAILABLE if any precondition
     does not hold, whichever it is: then nothing is changed, no event is
-    recorded, and only the log says which.
+    recorded, nothing is sent, and only the log says which.
     """
     action = BreakGlassAction.REVOKE_DEVICE
     with transaction.atomic():
@@ -965,7 +1019,11 @@ def break_glass_revoke_device(*, email: str, request_number: int) -> BreakGlassR
             "",
             break_glass_action=action,
         )
+        owner = _owner_to_notify(user)
+        administrators = _administrators_to_notify(besides=(user.pk,))
 
+    _notify_of_recovery(RecoveryNotice.FINALIZED, owner)
+    _notify_of_recovery(RecoveryNotice.EMERGENCY, administrators)
     return _break_glass_done(action, user)
 
 
@@ -1004,9 +1062,16 @@ def break_glass_approve_enrollment(*, email: str, request_number: int) -> BreakG
     account holds no further permission until `confirm_mfa_enrollment`
     accepts its first code, which also records that the recovery is complete.
 
+    Then, after that transaction and holding none of its locks, the fixed
+    message that an emergency action was performed is sent to every other
+    Administrator, as by `break_glass_revoke_device` (point 79). The account
+    itself is sent nothing: nothing was finalised by an approval. A message
+    that cannot be sent is logged, does not stop the others, and changes
+    nothing.
+
     Never raises for what was typed. Returns UNAVAILABLE if any precondition
     does not hold, whichever it is: then nothing is changed, no event is
-    recorded, and only the log says which.
+    recorded, nothing is sent, and only the log says which.
     """
     action = BreakGlassAction.APPROVE_ENROLLMENT
     with transaction.atomic():
@@ -1035,7 +1100,9 @@ def break_glass_approve_enrollment(*, email: str, request_number: int) -> BreakG
             "",
             break_glass_action=action,
         )
+        administrators = _administrators_to_notify(besides=(user.pk,))
 
+    _notify_of_recovery(RecoveryNotice.EMERGENCY, administrators)
     return _break_glass_done(action, user)
 
 
@@ -2123,6 +2190,103 @@ def password_reset_body(*, url: str, lifetime_hours: int) -> str:
         "If you were not expecting this message, ignore it. Nothing happens unless the"
         " link is used.\n"
     ) % {"url": url, "lapses": lapses}
+
+
+def recovery_notice_subject() -> str:
+    """Return the subject of every message about a recovery. The same for all three."""
+    return _("CAIPO security notice")
+
+
+def recovery_notice_body(notice: RecoveryNotice) -> str:
+    """Return the whole text of one of the three messages about a recovery.
+
+    Fixed, and the same for every recipient (ADR-0017 point 80): it names no
+    person, no email address, and no role, and holds no request number, no
+    token, no link, and nothing else that differs from one recovery to the
+    next. It says that something happened; what, to which account, and who
+    did it are read in the application by whoever may see them.
+    """
+    if notice is RecoveryNotice.REQUESTED:
+        return _("A second-factor recovery request was made.")
+    if notice is RecoveryNotice.FINALIZED:
+        return _("A second-factor recovery was finalized.")
+    return _("An emergency second-factor recovery action was performed.")
+
+
+def _owner_to_notify(user: User) -> tuple[_Recipient, ...]:
+    """Return the account itself as whom to tell about its recovery, or nobody.
+
+    Nobody if its email address was never verified: such an address is not
+    known to be its owner's (ADR-0017 points 31 and 79). `user` is the row
+    the caller read under the account's row lock.
+    """
+    if user.email_verified_at is None:
+        return ()
+    return (_Recipient(user.pk, user.email),)
+
+
+def _administrators_to_notify(*, besides: Collection[int]) -> tuple[_Recipient, ...]:
+    """Return the other Administrators to tell about a recovery, in ascending order.
+
+    The active accounts that hold the Administrator role on record and whose
+    email address was verified, other than the accounts in `besides`. Whether
+    one of them has a second factor is not asked: an Administrator who lost a
+    device is told all the same. Must be called inside the transaction that
+    made the change, holding the lock on the role event table, so that the
+    answer is the one that was true when the change was committed.
+    """
+    return tuple(
+        _Recipient(user_id, email)
+        for user_id, email in User.objects.filter(
+            pk__in=selectors.administrators_on_record(besides=besides),
+            email_verified_at__isnull=False,
+        )
+        .order_by("pk")
+        .values_list("pk", "email")
+    )
+
+
+def _notify_of_recovery(notice: RecoveryNotice, recipients: Collection[_Recipient]) -> None:
+    """Send each recipient one of the fixed messages about a recovery.
+
+    Must be called after the transaction that made the change has ended, and
+    never inside it: a mail service that does not answer must not hold the
+    locks of a recovery. The recipients were read inside that transaction.
+
+    Best effort, once, and nothing depends on it (ADR-0017 points 14, 79, and
+    81). A message that could not be sent is logged as an error, without its
+    recipient's address, and changes nothing: the next recipient is still
+    sent theirs, nothing is tried again, and nothing is recorded. What
+    happened is in the authentication events whether or not anybody was told.
+    """
+    for recipient in recipients:
+        try:
+            mail.deliver(
+                to=recipient.email,
+                subject=recovery_notice_subject(),
+                body=recovery_notice_body(notice),
+            )
+        except mail.DeliveryError as error:
+            # No traceback: what a mail service says when it refuses a message
+            # can repeat the recipient's address.
+            logger.error(  # noqa: TRY400 - deliberately without the traceback, see above
+                "A message about a second-factor recovery could not be sent",
+                extra={
+                    "event": "mfa_recovery.notice_not_sent",
+                    "notice": notice.value,
+                    "user_id": recipient.user_id,
+                    "cause": type(error.__cause__).__name__,
+                },
+            )
+            continue
+        logger.info(
+            "Message about a second-factor recovery sent",
+            extra={
+                "event": "mfa_recovery.notice_sent",
+                "notice": notice.value,
+                "user_id": recipient.user_id,
+            },
+        )
 
 
 def _key(purpose: str, value: str) -> str:

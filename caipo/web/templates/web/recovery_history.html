@@ -1,0 +1,34 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% if every_account %}{% translate "Recoveries" %}{% else %}{% translate "Recovery history" %}{% endif %}{% endblock %}
+
+{% block content %}
+  {% if every_account %}
+    <h1>{% translate "Recoveries" %}</h1>
+    <p>{% translate "Every request to recover a lost authenticator application, every decision on one, and every recovery performed at the server, for every account. The latest is first. This page changes nothing." %}</p>
+  {% else %}
+    <h1>{% translate "Recovery history" %}</h1>
+    <p>{% translate "What happened to the two-step verification of your account through recovery. The latest is first. If something here was not asked for by you, tell an Administrator yourself, and not through this site." %}</p>
+  {% endif %}
+  <ul>
+    {% for entry in history.entries %}
+      <li>
+        <time datetime="{{ entry.occurred_at|date:"c" }}">{{ entry.occurred_at|date:"c" }}</time>:
+        {{ entry.label }}.
+        {% if every_account %}{% blocktranslate with email=entry.account_email %}Account {{ email }}.{% endblocktranslate %}{% endif %}
+        {% if entry.actor_email %}{% blocktranslate with email=entry.actor_email %}Decided by {{ email }}.{% endblocktranslate %}{% endif %}
+        {% if entry.performed_at_server %}{% translate "Performed at the server's terminal. No account of this site acted, and this site does not record who did." %}{% endif %}
+      </li>
+    {% empty %}
+      <li>{% translate "Nothing is on record." %}</li>
+    {% endfor %}
+  </ul>
+  {% if history.has_previous %}
+    <p><a href="?{{ page_parameter }}={{ history.number|add:"-1" }}" rel="prev">{% translate "Later" %}</a></p>
+  {% endif %}
+  {% if history.has_next %}
+    <p><a href="?{{ page_parameter }}={{ history.number|add:"1" }}" rel="next">{% translate "Earlier" %}</a></p>
+  {% endif %}
+  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+{% endblock %}

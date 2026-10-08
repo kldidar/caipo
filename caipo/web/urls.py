@@ -7,6 +7,7 @@ from caipo.web import (
     health,
     password_reset,
     recovery,
+    recovery_history,
     recovery_requests,
     second_factor,
     second_factor_requests,
@@ -34,6 +35,7 @@ urlpatterns = [
     path("account/second-factor/confirm/", second_factor.confirm, name="second-factor-confirm"),
     path("account/second-factor/disable/", second_factor.disable, name="second-factor-disable"),
     path("account/second-factor/replace/", second_factor.replace, name="second-factor-replace"),
+    path("account/second-factor/history/", recovery_history.own, name="second-factor-history"),
     path(
         "administration/second-factor-requests/",
         second_factor_requests.overview,
@@ -64,4 +66,5 @@ urlpatterns = [
         recovery_requests.reject,
         name="recovery-request-reject",
     ),
+    path("administration/recoveries/", recovery_history.every_account, name="recoveries"),
 ]

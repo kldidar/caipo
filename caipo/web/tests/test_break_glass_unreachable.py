@@ -59,8 +59,10 @@ def _break_glass_events() -> int:
 def test_no_route_is_a_break_glass_route() -> None:
     routes = list(_patterns(get_resolver()))
 
-    # As many as before the command existed: it added none.
-    assert len(routes) == 23
+    # The command added none. Two were added since, and both only read: the
+    # history of an account's own recoveries and that of every account
+    # (ADR-0017 point 78). Neither performs or starts anything.
+    assert len(routes) == 25
     for route in routes:
         described = f"{route.name} {route.pattern} {route.callback.__module__}"
         assert "break" not in described.lower()
