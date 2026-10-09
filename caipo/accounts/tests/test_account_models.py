@@ -13,9 +13,9 @@ from caipo.accounts.models import (
     AccountEvent,
     AccountEventType,
     AccountStatus,
-    AppendOnlyError,
     User,
 )
+from caipo.core.append_only import AppendOnlyError
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
 
