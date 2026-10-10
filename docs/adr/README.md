@@ -25,7 +25,7 @@ Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-001
 | [0015](0015-account-lifecycle-and-email-verification.md) | Account lifecycle, provisioning by an Administrator, and email verification | Accepted | — (the email delivery service in production waits for ADR-0008) |
 | [0016](0016-password-reset.md) | Password reset by email | Accepted | — (accepted before its implementation, which followed; the email delivery service in production waits for ADR-0008) |
 | [0017](0017-account-recovery.md) | Account recovery after loss of the second factor | Accepted | — (accepted before its implementation; it changes points of ADR-0014, which it names; the operational audit trail and instructions for its break-glass command, and email delivery in production, wait for ADR-0008) |
-| [0018](0018-registry-and-general-audit-record.md) | Registry and the general audit record | Accepted | — (accepted on 2026-10-09 before its implementation, which has not started) |
+| [0018](0018-registry-and-general-audit-record.md) | Registry and the general audit record | Accepted | — (accepted on 2026-10-09 before its implementation, which is in increments: the audit foundation is built, the registry is not) |
 
 ## Statuses
 

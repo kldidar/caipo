@@ -6,12 +6,12 @@ from django.db import IntegrityError, connection, models, transaction
 from caipo.accounts.models import (
     DECISION_EVENT_TYPES,
     USERLESS_EVENT_TYPES,
-    AppendOnlyError,
     AuthenticationEvent,
     AuthenticationEventType,
     BreakGlassAction,
     User,
 )
+from caipo.core.append_only import AppendOnlyError
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
 

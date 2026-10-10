@@ -4,8 +4,9 @@ authorising or rejecting that request, and recording that the recovery is
 complete, the two emergency actions of the break-glass command, telling the
 people concerned that a recovery was asked for or finalised, changing
 roles, creating, activating,
-disabling, and enabling accounts, resetting a forgotten password, and creating
-the first Administrator.
+disabling, and enabling accounts, resetting a forgotten password, creating
+the first Administrator, and writing the general audit record for the apps
+above this one.
 
 Every account change here runs as one transaction and holds a lock that lets
 only one of them proceed at a time, so each decides on what the previous one
@@ -24,9 +25,10 @@ called only by its own command at the server's terminal, and by no view.
 
 import logging
 import secrets
-from collections.abc import Callable, Collection
+import uuid
+from collections.abc import Callable, Collection, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 
 from django.conf import settings
@@ -51,10 +53,17 @@ from caipo.accounts.authorization import (
     enrollment_requires_approval,
 )
 from caipo.accounts.models import (
+    AUDIT_ACTION_TARGET_TYPES,
+    AUDIT_VALUE_MAX_LENGTH,
     AccountActivation,
     AccountEvent,
     AccountEventType,
     AccountStatus,
+    AuditAction,
+    AuditEvent,
+    AuditEventChange,
+    AuditField,
+    AuditTargetType,
     AuthenticationEvent,
     AuthenticationEventType,
     BreakGlassAction,
@@ -112,6 +121,24 @@ class FirstAdministratorExistsError(AccountChangeError):
 
 class SecondFactorCodeError(AccountChangeError):
     """The code given for the first Administrator's second factor is not right for it."""
+
+
+class AuditRecordError(Exception):
+    """An audit event was refused: it was not well formed, or no transaction was open."""
+
+
+# What an attribute of a record can be: text, a calendar date, a reference to
+# another record by its public identifier, or nothing.
+type AuditValue = str | date | uuid.UUID | None
+
+
+@dataclass(frozen=True)
+class AuditChange:
+    """One attribute that a change replaced: which, what it was, and what it became."""
+
+    field: AuditField
+    old: AuditValue
+    new: AuditValue
 
 
 class ActivationOutcome(StrEnum):
@@ -1743,6 +1770,116 @@ def _change_role(
         },
     )
     return event
+
+
+def record_audit_event(
+    *,
+    actor: AuthenticationContext,
+    action: AuditAction,
+    target_type: AuditTargetType,
+    target_public_id: uuid.UUID,
+    changes: Sequence[AuditChange],
+) -> None:
+    """Record that an account changed a record, as part of the change itself (ADR-0018).
+
+    The only code that creates an AuditEvent or an AuditEventChange. The
+    service that makes the change calls it last, in the transaction of the
+    change, and lets whatever it raises end that transaction: the change and
+    its record are committed together or not at all.
+
+    It must be called inside a transaction, and opens none of its own. An
+    event written by itself could outlive a change that then failed.
+
+    It checks that what it is given is well formed, and decides nothing. It
+    does not check a permission, the state of the account, or that the record
+    exists: the caller has done that. An `updated` event has at least one
+    change and no other event has any. A value is rendered as text: text as
+    it is, a date in ISO 8601, a reference as the canonical form of its
+    identifier, and nothing as the empty string. A rendered value is never
+    shortened.
+
+    Writes one AuditEvent and one AuditEventChange for each change, with the
+    correlation ID of the current unit of work. Logs nothing.
+
+    Raises AuditRecordError, having written nothing, if no transaction is
+    open; if the actor is not the context of a saved account; if the action,
+    the target type, or a field is not one of those listed, or the action
+    does not apply to the target type; if the identifier is not a UUID; if
+    the changes do not fit the action; if a field occurs twice; if a value is
+    of no permitted kind or its rendering is longer than
+    AUDIT_VALUE_MAX_LENGTH; or if a change replaces a value by itself. A
+    failure while writing is raised as it is, and the transaction it happened
+    in can then only be rolled back, whatever the caller does with the error.
+    """
+    if not transaction.get_connection().in_atomic_block:
+        raise AuditRecordError("An audit event is written inside the transaction of its change.")
+    if (
+        not isinstance(actor, AuthenticationContext)
+        or not isinstance(actor.user, User)
+        or actor.user.pk is None
+    ):
+        raise AuditRecordError("An audit event names the saved account that acted.")
+    if action not in AuditAction.values:
+        raise AuditRecordError("The action is not one an audit event records.")
+    if target_type not in AuditTargetType.values:
+        raise AuditRecordError("The target type is not one an audit event names.")
+    action = AuditAction(action)
+    target_type = AuditTargetType(target_type)
+    if target_type not in AUDIT_ACTION_TARGET_TYPES[action]:
+        raise AuditRecordError("The action does not apply to the target type.")
+    if not isinstance(target_public_id, uuid.UUID):
+        raise AuditRecordError("A target is named by a UUID.")
+    if (action is AuditAction.UPDATED) != bool(changes):
+        raise AuditRecordError("An update records what changed, and nothing else does.")
+
+    rendered: dict[AuditField, tuple[str, str]] = {}
+    for change in changes:
+        if not isinstance(change, AuditChange) or change.field not in AuditField.values:
+            raise AuditRecordError("The field is not one an audit event records.")
+        changed = AuditField(change.field)
+        if changed in rendered:
+            raise AuditRecordError("A field occurs once in an audit event.")
+        old, new = _audit_value(change.old), _audit_value(change.new)
+        if old == new:
+            raise AuditRecordError("A change replaces a value by a different one.")
+        rendered[changed] = (old, new)
+
+    # No savepoint around these: a failure must leave the caller's transaction
+    # fit only to be rolled back, so that a caller that caught the error could
+    # not commit its change with no event, or an event without its changes.
+    event = AuditEvent.objects.create(
+        action=action,
+        target_type=target_type,
+        target_public_id=target_public_id,
+        actor=actor.user,
+        correlation_id=get_correlation_id() or "",
+    )
+    AuditEventChange.objects.bulk_create(
+        AuditEventChange(event=event, field=changed, old_value=old, new_value=new)
+        for changed, (old, new) in rendered.items()
+    )
+
+
+def _audit_value(value: AuditValue) -> str:
+    """Return the one rendering of a value that a change record holds.
+
+    Raises AuditRecordError if the value is of no permitted kind or its
+    rendering is too long. A date and time is refused: its rendering would
+    not be that of a date.
+    """
+    if value is None:
+        text = ""
+    elif isinstance(value, str):
+        text = value
+    elif isinstance(value, uuid.UUID):
+        text = str(value)
+    elif isinstance(value, date) and not isinstance(value, datetime):
+        text = value.isoformat()
+    else:
+        raise AuditRecordError("A value is text, a date, a UUID, or nothing.")
+    if len(text) > AUDIT_VALUE_MAX_LENGTH:
+        raise AuditRecordError("A value is too long for an audit event.")
+    return text
 
 
 def _serialize_account_changes() -> None:

@@ -1,12 +1,16 @@
 """Users and their lifecycle, the record of their roles, the record of sign-ins,
 second factors, account activation, password reset, and requests to recover a
-lost second factor (ADR-0007, ADR-0014, ADR-0015, ADR-0016, ADR-0017).
+lost second factor (ADR-0007, ADR-0014, ADR-0015, ADR-0016, ADR-0017), and
+the general audit record (ADR-0018).
 
-The general audit record and redaction records are not here yet.
+Redaction records are not here yet.
 """
 
+import functools
+import operator
 import unicodedata
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
+from types import MappingProxyType
 from typing import Any, ClassVar, NoReturn
 
 from django.conf import settings
@@ -18,6 +22,7 @@ from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext_lazy as _
 
 from caipo.accounts.authorization import Role
+from caipo.core.append_only import AppendOnlyModel, AppendOnlyQuerySet
 
 
 class AccountStatus(models.TextChoices):
@@ -180,47 +185,9 @@ class User(AbstractBaseUser):
         ).hexdigest()
 
 
-class AppendOnlyError(Exception):
-    """An attempt was made to change or delete a record that is append-only."""
-
-
 class RoleEventType(models.TextChoices):
     GRANTED = "granted", _("Granted")
     REVOKED = "revoked", _("Revoked")
-
-
-class AppendOnlyQuerySet[M: models.Model](models.QuerySet[M]):
-    """Refuses the bulk operations that would rewrite history."""
-
-    def update(self, **kwargs: Any) -> NoReturn:
-        raise AppendOnlyError("Append-only records are never updated.")
-
-    def bulk_update(self, *args: Any, **kwargs: Any) -> NoReturn:
-        raise AppendOnlyError("Append-only records are never updated.")
-
-    def delete(self) -> NoReturn:
-        raise AppendOnlyError("Append-only records are never deleted.")
-
-
-class AppendOnlyModel(models.Model):
-    """A record that is written once and never changed or removed.
-
-    Two layers keep it so. The guards here and in AppendOnlyQuerySet stop
-    application code from rewriting a record and say why. A PostgreSQL trigger,
-    created by the migration that creates each table, refuses UPDATE and
-    DELETE whatever sent them; it is the boundary that counts (ADR-0012).
-    """
-
-    class Meta:
-        abstract = True
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        if not self._state.adding:
-            raise AppendOnlyError("Append-only records are never updated.")
-        super().save(*args, **kwargs)
-
-    def delete(self, *args: Any, **kwargs: Any) -> NoReturn:
-        raise AppendOnlyError("Append-only records are never deleted.")
 
 
 class RoleEvent(AppendOnlyModel):
@@ -834,3 +801,163 @@ class AccountEvent(AppendOnlyModel):
 
     def __str__(self) -> str:
         return self.event_type
+
+
+class AuditAction(models.TextChoices):
+    """What an audit event says was done (ADR-0018 point 31). There are no others."""
+
+    CREATED = "created", _("Created")
+    UPDATED = "updated", _("Updated")
+    DEACTIVATED = "deactivated", _("Deactivated")
+    REACTIVATED = "reactivated", _("Reactivated")
+    MARKED_ENTERED_IN_ERROR = "marked_entered_in_error", _("Marked as entered in error")
+
+
+class AuditTargetType(models.TextChoices):
+    """The kinds of record an audit event can name (ADR-0018 point 31).
+
+    Known here as text: the records live in a higher layer, and nothing is
+    imported for them. A later domain adds its kinds here, with a migration
+    that widens the check.
+    """
+
+    COUNTRY = "registry.country", _("Country")
+    LANGUAGE = "registry.language", _("Language")
+    INSTITUTION = "registry.institution", _("Institution")
+    INSTITUTION_NAME = "registry.institution_name", _("Institution name")
+
+
+class AuditField(models.TextChoices):
+    """The attributes whose change an audit event can record (ADR-0018 point 35).
+
+    An attribute is on this list only if it can hold no secret and no personal
+    data.
+    """
+
+    NAME_EN = "name_en", _("English name")
+    KIND = "kind", _("Kind")
+    COUNTRY = "country", _("Country")
+    PARENT = "parent", _("Parent")
+    SUCCESSOR = "successor", _("Successor")
+    VALID_FROM = "valid_from", _("Valid from")
+    VALID_TO = "valid_to", _("Valid to")
+
+
+# The kinds of record each action applies to. Only a country or a language is
+# deactivated and reactivated, and only an institution name is marked as
+# entered in error. The database check and the writer both read this.
+AUDIT_ACTION_TARGET_TYPES: Mapping[AuditAction, tuple[AuditTargetType, ...]] = MappingProxyType(
+    {
+        AuditAction.CREATED: tuple(AuditTargetType),
+        AuditAction.UPDATED: tuple(AuditTargetType),
+        AuditAction.DEACTIVATED: (AuditTargetType.COUNTRY, AuditTargetType.LANGUAGE),
+        AuditAction.REACTIVATED: (AuditTargetType.COUNTRY, AuditTargetType.LANGUAGE),
+        AuditAction.MARKED_ENTERED_IN_ERROR: (AuditTargetType.INSTITUTION_NAME,),
+    }
+)
+
+# The longest rendered value a change record holds (owner decision of
+# 2026-10-09 on ADR-0018 point 35). No attribute on the AuditField list may be
+# given a longer limit than this without a review of this schema.
+AUDIT_VALUE_MAX_LENGTH = 200
+
+
+class AuditEvent(AppendOnlyModel):
+    """One successful change that a signed-in account made to a registry record (ADR-0018).
+
+    Append-only. It names what was done, to which record, by whom, when, and
+    under which request. The record is named by its type and public
+    identifier and never by a foreign key, so this app depends on nothing
+    above it. The values a change replaced are in AuditEventChange.
+
+    Every event has an actor, and the actor is an account: there is no
+    anonymous, system, or bootstrap event. It holds no free text, and no
+    password, secret, token, session identifier, source address, or personal
+    data beyond the reference to the actor.
+
+    It is not RoleEvent, AuthenticationEvent, or AccountEvent, and nothing is
+    recorded both here and there. Only `caipo.accounts.services.record_audit_event`
+    creates one.
+    """
+
+    action = models.CharField(_("action"), max_length=32, choices=AuditAction)
+    target_type = models.CharField(_("target type"), max_length=32, choices=AuditTargetType)
+    target_public_id = models.UUIDField(_("target public identifier"))
+    # PROTECT: an event must never disappear because an account did.
+    actor = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="+", verbose_name=_("actor")
+    )
+    correlation_id = models.CharField(_("correlation ID"), max_length=32, blank=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    objects = AppendOnlyQuerySet["AuditEvent"].as_manager()
+
+    class Meta:
+        verbose_name = _("audit event")
+        verbose_name_plural = _("audit events")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(action__in=AuditAction.values),
+                name="accounts_auditevent_action_known",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(target_type__in=AuditTargetType.values),
+                name="accounts_auditevent_target_type_known",
+            ),
+            models.CheckConstraint(
+                condition=functools.reduce(
+                    operator.or_,
+                    (
+                        models.Q(action=action, target_type__in=target_types)
+                        for action, target_types in AUDIT_ACTION_TARGET_TYPES.items()
+                    ),
+                ),
+                name="accounts_auditevent_action_fits_target_type",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.target_type} {self.action}"
+
+
+class AuditEventChange(AppendOnlyModel):
+    """One attribute that an `updated` audit event changed: what it was, and what it became.
+
+    Append-only. A registry record is overwritten in place, so without this
+    the earlier value would be gone. A value is the attribute's own value in
+    one fixed rendering: text as stored, a date in ISO 8601, a reference as
+    the public identifier of the record referred to, and nothing as the empty
+    string.
+
+    The database cannot tell that the event of a change is an `updated` one;
+    the service that writes both keeps that rule.
+    """
+
+    event = models.ForeignKey(
+        AuditEvent, on_delete=models.PROTECT, related_name="changes", verbose_name=_("event")
+    )
+    field = models.CharField(_("field"), max_length=32, choices=AuditField)
+    old_value = models.CharField(_("old value"), max_length=AUDIT_VALUE_MAX_LENGTH, blank=True)
+    new_value = models.CharField(_("new value"), max_length=AUDIT_VALUE_MAX_LENGTH, blank=True)
+
+    objects = AppendOnlyQuerySet["AuditEventChange"].as_manager()
+
+    class Meta:
+        verbose_name = _("audit event change")
+        verbose_name_plural = _("audit event changes")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(field__in=AuditField.values),
+                name="accounts_auditeventchange_field_known",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(old_value=models.F("new_value")),
+                name="accounts_auditeventchange_values_differ",
+            ),
+            models.UniqueConstraint(
+                fields=["event", "field"], name="accounts_auditeventchange_field_once_per_event"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.field

@@ -6,9 +6,10 @@ import pytest
 from django.db import IntegrityError, connection, models, transaction
 from django.db.models import ProtectedError
 
-from caipo.accounts.models import AppendOnlyError, RoleEvent, RoleEventType, User
+from caipo.accounts.models import RoleEvent, RoleEventType, User
 from caipo.accounts.selectors import Role
 from caipo.accounts.tests.fixtures import UserFactory
+from caipo.core.append_only import AppendOnlyError
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
 
