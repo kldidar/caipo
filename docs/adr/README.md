@@ -4,7 +4,7 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, and ADR-0018 on 2026-10-09. Five remain Proposed; the last column says what stands between each of those and acceptance.
+Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, and ADR-0019 on 2026-10-11. Five remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
@@ -25,7 +25,8 @@ Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-001
 | [0015](0015-account-lifecycle-and-email-verification.md) | Account lifecycle, provisioning by an Administrator, and email verification | Accepted | — (the email delivery service in production waits for ADR-0008) |
 | [0016](0016-password-reset.md) | Password reset by email | Accepted | — (accepted before its implementation, which followed; the email delivery service in production waits for ADR-0008) |
 | [0017](0017-account-recovery.md) | Account recovery after loss of the second factor | Accepted | — (accepted before its implementation; it changes points of ADR-0014, which it names; the operational audit trail and instructions for its break-glass command, and email delivery in production, wait for ADR-0008) |
-| [0018](0018-registry-and-general-audit-record.md) | Registry and the general audit record | Accepted | — (accepted on 2026-10-09 before its implementation, which is in increments: the audit foundation is built, the registry is not) |
+| [0018](0018-registry-and-general-audit-record.md) | Registry and the general audit record | Accepted | — (accepted on 2026-10-09 before its implementation, which is in increments: the audit foundation is built, the registry is not; [ADR-0019](0019-phased-registry-implementation.md), accepted on 2026-10-11, builds the rest of the registry in two increments, supersedes one statement of this ADR, records one test-only exception to its point 2, and states the code forms its point 7 leaves unspecified) |
+| [0019](0019-phased-registry-implementation.md) | Phased registry implementation | Accepted | — (accepted on 2026-10-11 before its implementation, which has not started and which the project owner starts increment by increment. It sets the order in which the registry of [ADR-0018](0018-registry-and-general-audit-record.md) is built, Country and Language before Institution and InstitutionName; supersedes one statement of ADR-0018, that the first registry migration creates all four tables; records one test-only exception to its point 2; states the forms of the language code and the script code, which its point 7 requires to be checked and does not specify; and adds the rules for delivering and testing each increment) |
 
 ## Statuses
 
