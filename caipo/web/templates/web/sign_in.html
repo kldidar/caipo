@@ -22,6 +22,12 @@
     {% if can_see_recoveries %}
       <p><a href="{% url 'recoveries' %}">{% translate "Recoveries" %}</a></p>
     {% endif %}
+    {% if can_read_registry %}
+      <p><a href="{% url 'registry' %}">{% translate "Registry" %}</a></p>
+    {% endif %}
+    {% if can_enter_registry %}
+      <p><a href="{% url 'registry-entry' %}">{% translate "Registry entry" %}</a></p>
+    {% endif %}
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}
       <button type="submit">{% translate "Sign out" %}</button>

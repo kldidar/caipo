@@ -1494,7 +1494,7 @@ def test_a_break_glass_service_takes_no_actor_no_source_and_no_secret(name: str)
 
 def test_no_permission_and_no_role_reaches_break_glass() -> None:
     assert not [permission for permission in Permission if "break" in permission.value]
-    assert len(Permission) == 10
+    assert len(Permission) == 13
     # The policy's code, without its comments, which do name the command.
     policy = "\n".join(line.split("#")[0] for line in inspect.getsource(authorization).splitlines())
     assert "break" not in policy.lower()

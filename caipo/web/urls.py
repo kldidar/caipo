@@ -9,6 +9,7 @@ from caipo.web import (
     recovery,
     recovery_history,
     recovery_requests,
+    registry,
     second_factor,
     second_factor_requests,
 )
@@ -67,4 +68,44 @@ urlpatterns = [
         name="recovery-request-reject",
     ),
     path("administration/recoveries/", recovery_history.every_account, name="recoveries"),
+    path("registry/", registry.browse, name="registry"),
+    path("registry/entry/", registry.entry, name="registry-entry"),
+    path(
+        "registry/entry/countries/create/", registry.create_country, name="registry-country-create"
+    ),
+    path(
+        "registry/entry/countries/<uuid:public_id>/rename/",
+        registry.rename_country,
+        name="registry-country-rename",
+    ),
+    path(
+        "registry/entry/countries/<uuid:public_id>/deactivate/",
+        registry.deactivate_country,
+        name="registry-country-deactivate",
+    ),
+    path(
+        "registry/entry/countries/<uuid:public_id>/reactivate/",
+        registry.reactivate_country,
+        name="registry-country-reactivate",
+    ),
+    path(
+        "registry/entry/languages/create/",
+        registry.create_language,
+        name="registry-language-create",
+    ),
+    path(
+        "registry/entry/languages/<uuid:public_id>/rename/",
+        registry.rename_language,
+        name="registry-language-rename",
+    ),
+    path(
+        "registry/entry/languages/<uuid:public_id>/deactivate/",
+        registry.deactivate_language,
+        name="registry-language-deactivate",
+    ),
+    path(
+        "registry/entry/languages/<uuid:public_id>/reactivate/",
+        registry.reactivate_language,
+        name="registry-language-reactivate",
+    ),
 ]

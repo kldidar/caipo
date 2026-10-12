@@ -182,3 +182,50 @@ class PasswordResetForm(_NewPasswordForm):
         form = cls(initial={"token": token})
         form.fields["token"].widget = forms.HiddenInput()
         return form
+
+
+def _registry_code_field() -> forms.CharField:
+    return forms.CharField(
+        # Far longer than any code, and bounded. Nothing is trimmed: a code is
+        # accepted exactly as typed or not at all, and the service decides.
+        max_length=16,
+        strip=False,
+        widget=forms.TextInput(attrs={"autocomplete": "off", "spellcheck": "false"}),
+    )
+
+
+def _registry_name_field() -> forms.CharField:
+    return forms.CharField(
+        label=_("English name"),
+        # Longer than a name may be, and bounded. The service removes
+        # surrounding whitespace and decides what is too long.
+        max_length=1024,
+        strip=False,
+        widget=forms.TextInput(attrs={"autocomplete": "off"}),
+    )
+
+
+class CountryCreationForm(forms.Form):
+    """The two codes and the English name of a new country. Shape only; it validates no code."""
+
+    alpha2 = _registry_code_field()
+    alpha2.label = _("Alpha-2 code")
+    alpha3 = _registry_code_field()
+    alpha3.label = _("Alpha-3 code")
+    name_en = _registry_name_field()
+
+
+class LanguageCreationForm(forms.Form):
+    """The two codes and the English name of a new language. Shape only; it validates no code."""
+
+    code = _registry_code_field()
+    code.label = _("Language code")
+    script_code = _registry_code_field()
+    script_code.label = _("Script code")
+    name_en = _registry_name_field()
+
+
+class RegistryNameForm(forms.Form):
+    """A new English name for a country or a language. Shape only."""
+
+    name_en = _registry_name_field()

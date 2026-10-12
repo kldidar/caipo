@@ -74,6 +74,14 @@ ADMINISTRATIVE = {
     Permission.MFA_RECOVERY_AUTHORIZE,
 }
 OWN_MFA = Permission.MFA_MANAGE_OWN
+# The registry permissions of an Administrator (ADR-0018 point 11). They are
+# registry maintenance and are kept apart from the administrative permissions
+# above, which are about accounts.
+ADMINISTRATOR_REGISTRY = {
+    Permission.REGISTRY_READ,
+    Permission.REGISTRY_REFERENCE_MANAGE,
+    Permission.REGISTRY_INSTITUTIONS_MANAGE,
+}
 
 PACKAGE_ROOT = Path(inspect.getfile(caipo)).parent
 
@@ -417,7 +425,9 @@ def test_the_right_code_activates_and_raises_the_assurance(account: AccountFacto
     assert device.confirmed_at is not None
     assert device.last_used_step is not None
     assert selectors.mfa_state_of(user) == MfaState.ACTIVE
-    assert selectors.permissions_of(result.context) == ADMINISTRATIVE | {OWN_MFA}
+    assert selectors.permissions_of(result.context) == ADMINISTRATIVE | ADMINISTRATOR_REGISTRY | {
+        OWN_MFA
+    }
     assert _events() == [
         "mfa_enrollment_started",
         "mfa_enrollment_approved",
@@ -442,7 +452,11 @@ def test_an_enrolment_not_confirmed_in_time_is_void(
     assert result.outcome == UNAVAILABLE
     assert result.context is None
     assert TotpDevice.objects.get(user=user).state == TotpDeviceState.PENDING_VERIFICATION
-    assert selectors.permissions_of(signed_in(user)) == {OWN_MFA, Permission.WORKSPACE_READ}
+    assert selectors.permissions_of(signed_in(user)) == {
+        OWN_MFA,
+        Permission.WORKSPACE_READ,
+        Permission.REGISTRY_READ,
+    }
     assert _events() == ["mfa_enrollment_started"]
 
 
@@ -549,7 +563,9 @@ def test_the_right_code_completes_the_sign_in_at_the_higher_assurance(
 
     assert result.outcome == ACCEPTED
     assert result.context == AuthenticationContext(user, Assurance.MFA_VERIFIED, device.pk)
-    assert selectors.permissions_of(result.context) == ADMINISTRATIVE | {OWN_MFA}
+    assert selectors.permissions_of(result.context) == ADMINISTRATIVE | ADMINISTRATOR_REGISTRY | {
+        OWN_MFA
+    }
     assert not MfaChallenge.objects.exists()
     assert _events() == ["mfa_challenge_issued", "mfa_verification_succeeded", "login_success"]
 
@@ -1010,9 +1026,15 @@ def test_wrong_passwords_at_sign_in_and_when_asked_again_count_together(
     [
         (
             Role.REVIEWER,
-            {Permission.WORKSPACE_READ, Permission.RESEARCH_CONTRIBUTE, Permission.RESEARCH_REVIEW},
+            {
+                Permission.WORKSPACE_READ,
+                Permission.RESEARCH_CONTRIBUTE,
+                Permission.RESEARCH_REVIEW,
+                Permission.REGISTRY_READ,
+                Permission.REGISTRY_INSTITUTIONS_MANAGE,
+            },
         ),
-        (Role.ADMINISTRATOR, ADMINISTRATIVE),
+        (Role.ADMINISTRATOR, ADMINISTRATIVE | ADMINISTRATOR_REGISTRY),
     ],
 )
 def test_privileged_permissions_need_a_verified_second_factor(
@@ -1139,7 +1161,7 @@ def test_a_verified_context_built_from_the_right_device_is_believed(
     actor = selectors.authentication_context(user, verified_device_id=device.pk)
 
     assert actor == verified(user)
-    assert selectors.permissions_of(actor) == ADMINISTRATIVE | {OWN_MFA}
+    assert selectors.permissions_of(actor) == ADMINISTRATIVE | ADMINISTRATOR_REGISTRY | {OWN_MFA}
 
 
 # --- Disabling ------------------------------------------------------------------
@@ -1204,7 +1226,7 @@ def test_a_context_verified_against_a_removed_device_does_not_revive_with_a_new_
     new, _ = _enrol(user)
 
     assert new.mfa_device_id != old.mfa_device_id
-    assert selectors.permissions_of(new) == ADMINISTRATIVE | {OWN_MFA}
+    assert selectors.permissions_of(new) == ADMINISTRATIVE | ADMINISTRATOR_REGISTRY | {OWN_MFA}
     assert selectors.permissions_of(old) == {OWN_MFA}
 
 

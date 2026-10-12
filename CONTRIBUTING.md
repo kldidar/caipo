@@ -18,7 +18,7 @@ The toolchain is deliberately small. Versions are pinned in `pyproject.toml` and
 | Lint and format | `ruff` | Includes the security (`S`) rule set |
 | Type checking | `mypy` with `django-stubs` | Strict mode |
 | Tests | `pytest`, `pytest-django` | Coverage reported; no numeric target is a substitute for testing failure paths |
-| Module boundaries | `import-linter` | Enforces the app layering |
+| Module boundaries | `import-linter` | Enforces the app layering, and that `registry` uses `accounts` only through its services and selectors |
 | Dependency vulnerabilities | `pip-audit` | Run in CI through `uvx`, at a pinned version, against the lockfile |
 | Secret scanning | `gitleaks` | Run in CI from its container image, pinned by digest. Not yet a pre-commit hook. |
 | Container image scanning | `trivy` | CI, on built images |

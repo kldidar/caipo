@@ -695,7 +695,11 @@ def test_a_device_enrolled_before_the_role_was_granted_is_not_trusted(
     )
     assert result.outcome == ACCEPTED
     assert _privileges(result.context) == set()
-    assert selectors.permissions_of(result.context) == {OWN_MFA, Permission.WORKSPACE_READ}
+    assert selectors.permissions_of(result.context) == {
+        OWN_MFA,
+        Permission.WORKSPACE_READ,
+        Permission.REGISTRY_READ,
+    }
 
 
 def test_an_enrolment_started_before_the_role_was_granted_is_not_trusted(

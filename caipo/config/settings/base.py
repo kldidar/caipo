@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "caipo.accounts",
+    "caipo.registry",
     "caipo.web",
 ]
 

@@ -1,0 +1,102 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Registry entry" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Registry entry" %}</h1>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% elif saved %}
+    <p role="status">{% translate "The change was saved and recorded." %}</p>
+  {% endif %}
+
+  {% if not may_manage_reference %}
+    <p>{% translate "Countries and languages are maintained by an Administrator. This page offers your account nothing to do." %}</p>
+  {% else %}
+    <p>{% translate "A code cannot be changed once it is saved, and nothing here can be deleted. A record that should no longer be referred to is deactivated. Every change is recorded with the account that made it." %}</p>
+
+    <h2>{% translate "Add a country" %}</h2>
+    <p>{% translate "The alpha-2 code is two capital letters and the alpha-3 code is three. Only their form is checked." %}</p>
+    <form method="post" action="{% url 'registry-country-create' %}" novalidate>
+      {% csrf_token %}
+      {% for field in country_form %}
+        <p>
+          {{ field.label_tag }}
+          {{ field }}
+          {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+        </p>
+      {% endfor %}
+      <button type="submit">{% translate "Add the country" %}</button>
+    </form>
+
+    <h2>{% translate "Countries" %}</h2>
+    {% for country in countries %}
+      <h3>{{ country.alpha2 }} · {{ country.alpha3 }} · {{ country.name_en }}{% if not country.is_active %} · {% translate "Deactivated" %}{% endif %}</h3>
+      <form method="post" action="{% url 'registry-country-rename' country.public_id %}" novalidate>
+        {% csrf_token %}
+        <p>
+          <label for="country-name-{{ country.public_id }}">{{ name_form.name_en.label }}</label>
+          <input type="text" name="{{ name_form.name_en.html_name }}" id="country-name-{{ country.public_id }}" value="{{ country.name_en }}" autocomplete="off" required>
+        </p>
+        <button type="submit">{% translate "Change the name" %}</button>
+      </form>
+      {% if country.is_active %}
+        <form method="post" action="{% url 'registry-country-deactivate' country.public_id %}">
+          {% csrf_token %}
+          <button type="submit">{% translate "Deactivate" %}</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'registry-country-reactivate' country.public_id %}">
+          {% csrf_token %}
+          <button type="submit">{% translate "Reactivate" %}</button>
+        </form>
+      {% endif %}
+    {% empty %}
+      <p>{% translate "No country has been entered." %}</p>
+    {% endfor %}
+
+    <h2>{% translate "Add a language" %}</h2>
+    <p>{% translate "A language is entered once for each script it is written in. The language code is three lower-case letters. The script code is one capital letter followed by three lower-case letters. Only their form is checked." %}</p>
+    <form method="post" action="{% url 'registry-language-create' %}" novalidate>
+      {% csrf_token %}
+      {% for field in language_form %}
+        <p>
+          {{ field.label_tag }}
+          {{ field }}
+          {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+        </p>
+      {% endfor %}
+      <button type="submit">{% translate "Add the language" %}</button>
+    </form>
+
+    <h2>{% translate "Languages" %}</h2>
+    {% for language in languages %}
+      <h3>{{ language.code }} · {{ language.script_code }} · {{ language.name_en }}{% if not language.is_active %} · {% translate "Deactivated" %}{% endif %}</h3>
+      <form method="post" action="{% url 'registry-language-rename' language.public_id %}" novalidate>
+        {% csrf_token %}
+        <p>
+          <label for="language-name-{{ language.public_id }}">{{ name_form.name_en.label }}</label>
+          <input type="text" name="{{ name_form.name_en.html_name }}" id="language-name-{{ language.public_id }}" value="{{ language.name_en }}" autocomplete="off" required>
+        </p>
+        <button type="submit">{% translate "Change the name" %}</button>
+      </form>
+      {% if language.is_active %}
+        <form method="post" action="{% url 'registry-language-deactivate' language.public_id %}">
+          {% csrf_token %}
+          <button type="submit">{% translate "Deactivate" %}</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'registry-language-reactivate' language.public_id %}">
+          {% csrf_token %}
+          <button type="submit">{% translate "Reactivate" %}</button>
+        </form>
+      {% endif %}
+    {% empty %}
+      <p>{% translate "No language has been entered." %}</p>
+    {% endfor %}
+  {% endif %}
+
+  <p><a href="{% url 'registry' %}">{% translate "Registry" %}</a></p>
+  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+{% endblock %}

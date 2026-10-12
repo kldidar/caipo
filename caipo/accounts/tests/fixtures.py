@@ -26,6 +26,7 @@ from caipo.accounts.models import (
 from caipo.accounts.selectors import AuthenticationContext
 
 type UserFactory = Callable[..., User]
+type ActingAs = Callable[..., AuthenticationContext]
 type Clock = Callable[[timedelta], None]
 
 # Visibly synthetic: the secret of every second factor these helpers create.
@@ -185,5 +186,33 @@ def user_with_roles(db: None) -> UserFactory:
             User.objects.filter(pk=user.pk).update(status=AccountStatus.DISABLED)
             user.refresh_from_db()
         return user
+
+    return make
+
+
+@pytest.fixture
+def acting_as(user_with_roles: UserFactory) -> ActingAs:
+    """Return a factory for the context a new synthetic account acts in.
+
+    For the tests of an app above this one, which take it by injection and
+    import nothing from here. One call covers a cell of a permission matrix:
+    the roles, whether the account is active, and how it signed in.
+
+    `second_factor` says whether a code was verified. If it was, the account
+    gets a real, active second factor and the context names it, as `verified`
+    does; `trusted` says whether that second factor is one an Administrator
+    approved. Nothing in the authorization decision is replaced or set here:
+    it reads the account, its role events, and this device from the database
+    like any other.
+    """
+
+    def make(
+        *roles: Role, second_factor: bool = False, trusted: bool = True, is_active: bool = True
+    ) -> AuthenticationContext:
+        user = user_with_roles(*roles, is_active=is_active)
+        if not second_factor:
+            return signed_in(user)
+        device = enrolled_device(user, trusted=trusted)
+        return AuthenticationContext(user, Assurance.MFA_VERIFIED, device.pk)
 
     return make
