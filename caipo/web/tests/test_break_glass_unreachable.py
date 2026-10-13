@@ -61,8 +61,10 @@ def test_no_route_is_a_break_glass_route() -> None:
 
     # The command added none. Two were added since, and both only read: the
     # history of an account's own recoveries and that of every account
-    # (ADR-0017 point 78). Neither performs or starts anything.
-    assert len(routes) == 25
+    # (ADR-0017 point 78). Neither performs or starts anything. Ten more are
+    # the registry's two pages and its eight changes (ADR-0019 Increment 2),
+    # which have nothing to do with a second factor.
+    assert len(routes) == 35
     for route in routes:
         described = f"{route.name} {route.pattern} {route.callback.__module__}"
         assert "break" not in described.lower()

@@ -43,6 +43,16 @@ def _migrate(target: tuple[str, str]) -> Apps:
     return MigrationExecutor(connection).loader.project_state([target]).apps
 
 
+def _restore() -> None:
+    """Return the schema to the latest migration of every app.
+
+    Not to migration 0008: later migrations exist, and a schema left without
+    them fails every test that runs after these and needs their tables.
+    """
+    executor = MigrationExecutor(connection)
+    executor.migrate(executor.loader.graph.leaf_nodes())
+
+
 def _applied() -> set[tuple[str, str]]:
     return set(MigrationExecutor(connection).loader.applied_migrations)
 
@@ -96,7 +106,7 @@ def earlier() -> Iterator[Apps]:
     try:
         yield _migrate(BEFORE)
     finally:
-        _migrate(AFTER)
+        _restore()
 
 
 def _earlier_account(earlier: Apps, email: str = EMAIL) -> Any:
@@ -246,4 +256,4 @@ def test_it_cannot_be_reversed_once_a_recovery_event_exists(
         stored = AuthenticationEvent.objects.get()
         assert (stored.event_type, stored.break_glass_action) == (event_type, action)
     finally:
-        _migrate(AFTER)
+        _restore()

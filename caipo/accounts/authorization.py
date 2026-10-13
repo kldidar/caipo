@@ -56,11 +56,17 @@ class Permission(StrEnum):
 
     Kept as small as the system is. ROLES_MANAGE, the three ACCOUNTS
     permissions, MFA_MANAGE_OWN, MFA_ENROLLMENT_APPROVE, and
-    MFA_RECOVERY_AUTHORIZE are checked by services and selectors today. The
+    MFA_RECOVERY_AUTHORIZE are checked by services and selectors today, and so
+    are REGISTRY_READ and REGISTRY_REFERENCE_MANAGE. The
     three research permissions exist so that the four roles are
     distinguishable and views can declare the access they require; no
     operation consumes them yet. They are deliberately coarse and are to be
     split only when a feature needs a finer distinction.
+
+    The three registry permissions are registry maintenance, not research
+    (ADR-0018 point 11): holding one confers nothing of the research
+    permissions. REGISTRY_INSTITUTIONS_MANAGE admits an account to the entry
+    page and allows no operation until institutions exist (ADR-0019 point 6).
 
     Reading the public research site needs no permission: it is open to
     anonymous visitors, who hold none.
@@ -89,21 +95,36 @@ class Permission(StrEnum):
     # Authorise or reject another account's request to recover a lost second
     # factor.
     MFA_RECOVERY_AUTHORIZE = "accounts.mfa.authorize_recovery"
+    # Read the registry: countries and languages.
+    REGISTRY_READ = "registry.read"
+    # Maintain the lists of countries and languages.
+    REGISTRY_REFERENCE_MANAGE = "registry.reference.manage"
+    # Maintain institutions and their names.
+    REGISTRY_INSTITUTIONS_MANAGE = "registry.institutions.manage"
 
 
 # Each role's permissions, written out in full (PROJECT_SPECIFICATION.md §3).
 # A role absent from this table, or a permission absent from a role's set,
 # means no. Administrator is not a superset of the research roles: operating
 # the system gives no say over the evidence base. A person who needs both is
-# granted both roles.
+# granted both roles. The registry permissions are written into each role
+# that holds them and are inherited by none (ADR-0018 points 11 and 14).
 ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
     {
-        Role.READER: frozenset({Permission.WORKSPACE_READ, Permission.MFA_MANAGE_OWN}),
+        Role.READER: frozenset(
+            {
+                Permission.WORKSPACE_READ,
+                Permission.MFA_MANAGE_OWN,
+                Permission.REGISTRY_READ,
+            }
+        ),
         Role.RESEARCHER: frozenset(
             {
                 Permission.WORKSPACE_READ,
                 Permission.RESEARCH_CONTRIBUTE,
                 Permission.MFA_MANAGE_OWN,
+                Permission.REGISTRY_READ,
+                Permission.REGISTRY_INSTITUTIONS_MANAGE,
             }
         ),
         Role.REVIEWER: frozenset(
@@ -112,6 +133,8 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.RESEARCH_CONTRIBUTE,
                 Permission.RESEARCH_REVIEW,
                 Permission.MFA_MANAGE_OWN,
+                Permission.REGISTRY_READ,
+                Permission.REGISTRY_INSTITUTIONS_MANAGE,
             }
         ),
         Role.ADMINISTRATOR: frozenset(
@@ -123,6 +146,9 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.MFA_MANAGE_OWN,
                 Permission.MFA_ENROLLMENT_APPROVE,
                 Permission.MFA_RECOVERY_AUTHORIZE,
+                Permission.REGISTRY_READ,
+                Permission.REGISTRY_REFERENCE_MANAGE,
+                Permission.REGISTRY_INSTITUTIONS_MANAGE,
             }
         ),
     }

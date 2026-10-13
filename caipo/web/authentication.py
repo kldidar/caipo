@@ -129,6 +129,8 @@ def sign_in(request: HttpRequest) -> HttpResponse:
         "can_approve_enrollments": selectors.can(actor, Permission.MFA_ENROLLMENT_APPROVE),
         "can_see_recoveries": selectors.can(actor, Permission.MFA_RECOVERY_AUTHORIZE),
         "can_create_accounts": selectors.can(actor, Permission.ACCOUNTS_CREATE),
+        "can_read_registry": selectors.can(actor, Permission.REGISTRY_READ),
+        "can_enter_registry": selectors.can(actor, Permission.REGISTRY_INSTITUTIONS_MANAGE),
         "activated": "activated" in request.GET,
         "password_reset": "reset" in request.GET,
     }

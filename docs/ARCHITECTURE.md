@@ -55,18 +55,22 @@ An app may import only from apps in lower layers. Apps in the same layer do not 
 |---|---|---|
 | 0 | `core` | Shared base classes, identifiers, correlation IDs, the email boundary. No domain knowledge and no reference to users. |
 | 1 | `accounts` | Users and their lifecycle, roles, permissions, second factors, authentication events, account events, audit events, redaction records |
-| 1 | `registry` | Countries, institutions, languages |
-| 2 | `sources` | Sources, documents, versions, artifacts, acquisition records, reviews, rights, extractions, segments, passages |
-| 3 | `ingestion` | Ingestion requests and their lifecycle; orchestration of guarded fetch, upload intake, and parsing; validation of output from the isolated workers. The untrusted-input boundary. Writes through `sources` services. |
-| 4 | `indicators` | Indicators, series, dataset releases, observations. Obtains dataset files through `ingestion`. |
-| 4 | `policies` | Policies, objectives, instruments, sectors, formal policy events, relations |
-| 5 | `research` | Claims, evidence, reviews, analysis runs, search runs |
-| 6 | `retrieval` | Retrieval chunks, embeddings, lexical and vector search over eligible segments |
-| 7 | `assistant` | Question answering pipeline, provider interface, interaction log |
-| 8 | `evaluation` | Evaluation datasets, runs, results |
-| 8 | `web` | Pages, forms, and any HTTP API. Contains no business logic. |
+| 2 | `registry` | Countries, institutions, languages |
+| 3 | `sources` | Sources, documents, versions, artifacts, acquisition records, reviews, rights, extractions, segments, passages |
+| 4 | `ingestion` | Ingestion requests and their lifecycle; orchestration of guarded fetch, upload intake, and parsing; validation of output from the isolated workers. The untrusted-input boundary. Writes through `sources` services. |
+| 5 | `indicators` | Indicators, series, dataset releases, observations. Obtains dataset files through `ingestion`. |
+| 5 | `policies` | Policies, objectives, instruments, sectors, formal policy events, relations |
+| 6 | `research` | Claims, evidence, reviews, analysis runs, search runs |
+| 7 | `retrieval` | Retrieval chunks, embeddings, lexical and vector search over eligible segments |
+| 8 | `assistant` | Question answering pipeline, provider interface, interaction log |
+| 9 | `evaluation` | Evaluation datasets, runs, results |
+| 9 | `web` | Pages, forms, and any HTTP API. Contains no business logic. |
 
 Audit events and redaction records refer to their targets by type and public identifier, not by foreign key, so that `accounts` does not depend on higher layers.
+
+`registry` is in a layer of its own, directly above `accounts` ([ADR-0018](adr/0018-registry-and-general-audit-record.md) point 1; until that decision the two shared a layer). A registry service asks `accounts` whether its actor holds a permission and hands `accounts` the audit event to write, and neither is possible from the same layer. `accounts` imports nothing from `registry`, and neither app's migrations depend on the other's. Of the registry, countries and languages are built ([ADR-0019](adr/0019-phased-registry-implementation.md), Increment 2); institutions and their names are not.
+
+Two import contracts are checked in CI. The first is the layering above: `config`, `web`, `registry`, `accounts`, `core`, the five packages that exist. The second is the boundary between `registry` and `accounts` ([ADR-0018](adr/0018-registry-and-general-audit-record.md) point 2, [ADR-0019](adr/0019-phased-registry-implementation.md) points 25 to 28): a module of `caipo.registry` imports from `caipo.accounts` only its `services` and `selectors`, and every other module of `accounts` is named as forbidden, so one added later is closed until someone decides otherwise. The one exception is for tests: a module under `caipo.registry.tests` may import `caipo.accounts.models`, to read AuditEvent and AuditEventChange and nothing else. The tool tells modules apart and not names, so that last limit is kept by a test of the registry and by review.
 
 Twelve apps is the upper bound of what is justified. If two apps turn out to change together every time, they are merged.
 

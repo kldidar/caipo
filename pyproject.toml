@@ -88,6 +88,35 @@ exhaustive = true
 layers = [
     "config",
     "web",
+    "registry",
     "accounts",
     "core",
+]
+
+[[tool.importlinter.contracts]]
+name = "Registry boundary (ADR-0018 point 2, ADR-0019 points 25 to 28): registry uses accounts only through its services and selectors"
+type = "forbidden"
+source_modules = ["caipo.registry"]
+# Every module of accounts but `services` and `selectors`. A registry test
+# checks that this list is complete, so a module added to accounts later is
+# closed to the registry until someone decides otherwise.
+forbidden_modules = [
+    "caipo.accounts.apps",
+    "caipo.accounts.authentication",
+    "caipo.accounts.authorization",
+    "caipo.accounts.management",
+    "caipo.accounts.migrations",
+    "caipo.accounts.models",
+    "caipo.accounts.tests",
+    "caipo.accounts.totp",
+]
+# The services and selectors themselves import these modules. Only what
+# registry imports directly is the registry's doing.
+allow_indirect_imports = true
+# The one exception (ADR-0019 point 26), for tests only: a registry test
+# module reads AuditEvent and AuditEventChange to inspect what a registry
+# service recorded. import-linter tells modules apart and not names, so that
+# a test imports those two models and no other is kept by review.
+ignore_imports = [
+    "caipo.registry.tests.** -> caipo.accounts.models",
 ]

@@ -1,0 +1,66 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Registry" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Registry" %}</h1>
+  <p>{% translate "The countries and languages the system knows. A deactivated record stays here and can no longer be newly referred to." %}</p>
+
+  <h2>{% translate "Countries" %}</h2>
+  {% if countries %}
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">{% translate "Alpha-2 code" %}</th>
+          <th scope="col">{% translate "Alpha-3 code" %}</th>
+          <th scope="col">{% translate "English name" %}</th>
+          <th scope="col">{% translate "State" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for country in countries %}
+          <tr>
+            <td>{{ country.alpha2 }}</td>
+            <td>{{ country.alpha3 }}</td>
+            <td>{{ country.name_en }}</td>
+            <td>{% if country.is_active %}{% translate "Active" %}{% else %}{% translate "Deactivated" %}{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>{% translate "No country has been entered." %}</p>
+  {% endif %}
+
+  <h2>{% translate "Languages" %}</h2>
+  {% if languages %}
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">{% translate "Language code" %}</th>
+          <th scope="col">{% translate "Script code" %}</th>
+          <th scope="col">{% translate "English name" %}</th>
+          <th scope="col">{% translate "State" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for language in languages %}
+          <tr>
+            <td>{{ language.code }}</td>
+            <td>{{ language.script_code }}</td>
+            <td>{{ language.name_en }}</td>
+            <td>{% if language.is_active %}{% translate "Active" %}{% else %}{% translate "Deactivated" %}{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>{% translate "No language has been entered." %}</p>
+  {% endif %}
+
+  {% if may_enter %}
+    <p><a href="{% url 'registry-entry' %}">{% translate "Registry entry" %}</a></p>
+  {% endif %}
+  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+{% endblock %}

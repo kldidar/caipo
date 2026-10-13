@@ -25,6 +25,9 @@ APPROVE = Permission.MFA_ENROLLMENT_APPROVE
 AUTHORIZE_RECOVERY = Permission.MFA_RECOVERY_AUTHORIZE
 CREATE = Permission.ACCOUNTS_CREATE
 ENABLE = Permission.ACCOUNTS_ENABLE
+REGISTRY_READ = Permission.REGISTRY_READ
+REGISTRY_REFERENCE = Permission.REGISTRY_REFERENCE_MANAGE
+REGISTRY_INSTITUTIONS = Permission.REGISTRY_INSTITUTIONS_MANAGE
 
 PASSWORD = Assurance.PASSWORD_AUTHENTICATED
 MFA = Assurance.MFA_VERIFIED
@@ -46,6 +49,9 @@ def test_the_permission_vocabulary_is_exactly_this() -> None:
         "accounts.mfa.manage_own",
         "accounts.mfa.approve_enrollment",
         "accounts.mfa.authorize_recovery",
+        "registry.read",
+        "registry.reference.manage",
+        "registry.institutions.manage",
     }
 
 
@@ -67,12 +73,26 @@ def test_every_role_has_an_explicit_entry_in_the_policy() -> None:
 @pytest.mark.parametrize(
     ("role", "expected"),
     [
-        (Role.READER, {READ, OWN_MFA}),
-        (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA}),
-        (Role.REVIEWER, {READ, CONTRIBUTE, REVIEW, OWN_MFA}),
+        (Role.READER, {READ, OWN_MFA, REGISTRY_READ}),
+        (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS}),
+        (
+            Role.REVIEWER,
+            {READ, CONTRIBUTE, REVIEW, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS},
+        ),
         (
             Role.ADMINISTRATOR,
-            {MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, OWN_MFA, APPROVE, AUTHORIZE_RECOVERY},
+            {
+                MANAGE_ROLES,
+                CREATE,
+                DEACTIVATE,
+                ENABLE,
+                OWN_MFA,
+                APPROVE,
+                AUTHORIZE_RECOVERY,
+                REGISTRY_READ,
+                REGISTRY_REFERENCE,
+                REGISTRY_INSTITUTIONS,
+            },
         ),
     ],
 )
@@ -85,8 +105,8 @@ def test_each_role_confers_exactly_its_permissions_with_a_verified_second_factor
 @pytest.mark.parametrize(
     ("role", "expected"),
     [
-        (Role.READER, {READ, OWN_MFA}),
-        (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA}),
+        (Role.READER, {READ, OWN_MFA, REGISTRY_READ}),
+        (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS}),
         (Role.REVIEWER, {OWN_MFA}),
         (Role.ADMINISTRATOR, {OWN_MFA}),
     ],
@@ -220,13 +240,16 @@ def test_several_roles_confer_the_union_of_their_permissions() -> None:
         OWN_MFA,
         APPROVE,
         AUTHORIZE_RECOVERY,
+        REGISTRY_READ,
+        REGISTRY_REFERENCE,
+        REGISTRY_INSTITUTIONS,
     }
 
 
 def test_on_a_password_an_account_keeps_the_roles_that_need_no_second_factor() -> None:
     held = permissions_for([Role.READER, Role.REVIEWER, Role.ADMINISTRATOR], assurance=PASSWORD)
 
-    assert held == {READ, OWN_MFA}
+    assert held == {READ, OWN_MFA, REGISTRY_READ}
 
 
 def test_no_combination_of_roles_confers_more_than_the_roles_do_separately() -> None:
@@ -253,3 +276,56 @@ def test_the_decision_is_deterministic() -> None:
     roles = [Role.REVIEWER, Role.READER]
 
     assert permissions_for(roles, assurance=MFA) == permissions_for(reversed(roles), assurance=MFA)
+
+
+# --- The registry permissions (ADR-0018 points 11 to 14) ----------------------
+
+
+@pytest.mark.parametrize(
+    ("permission", "holders"),
+    [
+        (REGISTRY_READ, {Role.READER, Role.RESEARCHER, Role.REVIEWER, Role.ADMINISTRATOR}),
+        (REGISTRY_REFERENCE, {Role.ADMINISTRATOR}),
+        (REGISTRY_INSTITUTIONS, {Role.RESEARCHER, Role.REVIEWER, Role.ADMINISTRATOR}),
+    ],
+)
+def test_each_registry_permission_is_held_by_exactly_these_roles(
+    permission: Permission, holders: set[Role]
+) -> None:
+    assert {role for role in Role if permission in ROLE_PERMISSIONS[role]} == holders
+
+
+def test_a_reviewer_holds_the_registry_permissions_a_researcher_holds_and_no_other() -> None:
+    registry = {REGISTRY_READ, REGISTRY_REFERENCE, REGISTRY_INSTITUTIONS}
+
+    assert (
+        ROLE_PERMISSIONS[Role.REVIEWER] & registry == ROLE_PERMISSIONS[Role.RESEARCHER] & registry
+    )
+    assert REGISTRY_REFERENCE not in ROLE_PERMISSIONS[Role.REVIEWER]
+
+
+@pytest.mark.parametrize("role", [Role.REVIEWER, Role.ADMINISTRATOR])
+def test_a_role_requiring_a_second_factor_confers_no_registry_permission_on_a_password(
+    role: Role,
+) -> None:
+    held = permissions_for([role], assurance=PASSWORD)
+
+    assert held.isdisjoint({REGISTRY_READ, REGISTRY_REFERENCE, REGISTRY_INSTITUTIONS})
+
+
+def test_no_registry_permission_is_available_before_a_second_factor() -> None:
+    assert PERMISSIONS_BEFORE_MFA.isdisjoint(
+        {REGISTRY_READ, REGISTRY_REFERENCE, REGISTRY_INSTITUTIONS}
+    )
+
+
+def test_the_registry_permissions_gave_no_role_a_research_permission_it_did_not_have() -> None:
+    """Written out, as it was before the registry: ADR-0018 adds no role to an existing one."""
+    research = {READ, CONTRIBUTE, REVIEW}
+
+    assert {role: ROLE_PERMISSIONS[role] & research for role in Role} == {
+        Role.READER: {READ},
+        Role.RESEARCHER: {READ, CONTRIBUTE},
+        Role.REVIEWER: {READ, CONTRIBUTE, REVIEW},
+        Role.ADMINISTRATOR: set(),
+    }

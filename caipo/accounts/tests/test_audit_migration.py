@@ -69,10 +69,12 @@ def _functions() -> set[str]:
 
 
 def _triggers() -> set[tuple[str, str, str]]:
+    """Return the triggers on the tables of this app. Other apps have triggers of their own."""
     with connection.cursor() as cursor:
         cursor.execute(
             "SELECT tgrelid::regclass::text, tgname, tgenabled FROM pg_trigger"
-            " WHERE NOT tgisinternal"
+            " WHERE NOT tgisinternal AND tgrelid::regclass::text LIKE %s",
+            ["accounts\\_%"],
         )
         return {(str(table), str(name), str(enabled)) for table, name, enabled in cursor.fetchall()}
 
