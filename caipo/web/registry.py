@@ -1,8 +1,10 @@
 """The two pages of the registry (ADR-0018 points 59 to 61, ADR-0019 points 11 to 16).
 
-A browse page that lists countries and languages, and an entry page on which
-an Administrator maintains them. There is no third page: every change is a
-POST that answers with the entry page or a redirect to it.
+A browse page that lists countries, languages, and institutions with their
+names, and an entry page. On the entry page every account that reaches it
+maintains institutions and their names, and an Administrator also maintains
+countries and languages. There is no third page: every change is a POST that
+answers with the entry page or a redirect to it.
 
 These views handle the request and nothing else. Who may read, who may
 change what, what a valid code or name is, and what is recorded are decided
@@ -15,10 +17,11 @@ again for itself.
 
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 from django.core.exceptions import PermissionDenied
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, QueryDict
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.functional import Promise
@@ -30,15 +33,30 @@ from django.views.decorators.http import require_GET, require_POST
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts.selectors import AuthenticationContext, Permission
 from caipo.registry import selectors, services
+from caipo.registry.selectors import InstitutionEntry, InstitutionNameEntry
 from caipo.registry.services import (
+    CycleError,
+    DeactivatedReferenceError,
     DuplicateCodeError,
     InvalidEntryError,
+    LastNameError,
+    NewName,
     NoChangeError,
     RecordNotFoundError,
+    RegistryError,
+    SuccessionError,
 )
 from caipo.web import sessions
 from caipo.web.access import requires
-from caipo.web.forms import CountryCreationForm, LanguageCreationForm, RegistryNameForm
+from caipo.web.forms import (
+    CountryCreationForm,
+    InstitutionForm,
+    InstitutionNameDatesForm,
+    InstitutionNameForm,
+    LanguageCreationForm,
+    Options,
+    RegistryNameForm,
+)
 
 INVALID_COUNTRY_MESSAGE = _(
     "Nothing was saved. A country needs an alpha-2 code of two capital letters, an alpha-3"
@@ -56,7 +74,59 @@ DUPLICATE_LANGUAGE_MESSAGE = _(
 )
 NO_CHANGE_MESSAGE = _("Nothing was changed: the record is already as you asked.")
 NOT_FOUND_MESSAGE = _("Nothing was changed: there is no such record.")
+INVALID_INSTITUTION_MESSAGE = _(
+    "Nothing was saved. Choose a kind from the list, give each date as a full calendar date or"
+    " leave it empty, with valid-from before valid-to, and give a name of at most 500"
+    " characters with its language and kind."
+)
+DEACTIVATED_REFERENCE_MESSAGE = _(
+    "Nothing was saved. A deactivated country or language cannot be newly referred to."
+)
+CYCLE_MESSAGE = _(
+    "Nothing was saved. An institution cannot be its own parent or its own successor, directly"
+    " or through other institutions."
+)
+SUCCESSION_MESSAGE = _(
+    "Nothing was saved. An institution that names a successor has a valid-to date, and a"
+    " successor did not end before the institution it succeeded."
+)
+LAST_NAME_MESSAGE = _(
+    "Nothing was changed. This is the institution's only name that is not marked as entered in"
+    " error. Add the right name first."
+)
 SAVED_QUERY = "saved"
+INSTITUTION_PREFIX = "institution"
+FIRST_NAME_PREFIX = "first-name"
+
+# What each refusal of an institution or name operation is answered with. Only
+# these are answered: any other error is raised as it is.
+INSTITUTION_REFUSALS: dict[type[RegistryError], tuple[Promise, int]] = {
+    InvalidEntryError: (INVALID_INSTITUTION_MESSAGE, 400),
+    RecordNotFoundError: (NOT_FOUND_MESSAGE, 404),
+    NoChangeError: (NO_CHANGE_MESSAGE, 409),
+    DeactivatedReferenceError: (DEACTIVATED_REFERENCE_MESSAGE, 409),
+    CycleError: (CYCLE_MESSAGE, 409),
+    SuccessionError: (SUCCESSION_MESSAGE, 409),
+    LastNameError: (LAST_NAME_MESSAGE, 409),
+}
+
+
+@dataclass(frozen=True)
+class _NameSection:
+    """A name of an institution on the entry page, with the form that changes its dates."""
+
+    name: InstitutionNameEntry
+    dates_form: InstitutionNameDatesForm
+
+
+@dataclass(frozen=True)
+class _InstitutionSection:
+    """An institution on the entry page, with the forms that change it and add a name to it."""
+
+    institution: InstitutionEntry
+    change_form: InstitutionForm
+    name_form: InstitutionNameForm
+    names: list[_NameSection]
 
 
 def _actor(request: HttpRequest) -> AuthenticationContext:
@@ -66,20 +136,102 @@ def _actor(request: HttpRequest) -> AuthenticationContext:
     return context
 
 
+def _country_options(actor: AuthenticationContext) -> Options:
+    deactivated = _("Deactivated")
+    return [
+        (
+            str(country.public_id),
+            f"{country.alpha2} · {country.name_en}"
+            + ("" if country.is_active else f" · {deactivated}"),
+        )
+        for country in selectors.countries(actor)
+    ]
+
+
+def _language_options(actor: AuthenticationContext) -> Options:
+    deactivated = _("Deactivated")
+    return [
+        (
+            str(language.public_id),
+            f"{language.code}-{language.script_code} · {language.name_en}"
+            + ("" if language.is_active else f" · {deactivated}"),
+        )
+        for language in selectors.languages(actor)
+    ]
+
+
+def _institution_sections(
+    institutions: list[InstitutionEntry], countries: Options, languages: Options
+) -> list[_InstitutionSection]:
+    """Return each institution with its forms, filled in with what is stored."""
+    everyone = [(str(entry.public_id), entry.label) for entry in institutions]
+    sections = []
+    for entry in institutions:
+        public_id = str(entry.public_id)
+        sections.append(
+            _InstitutionSection(
+                institution=entry,
+                change_form=InstitutionForm(
+                    initial={
+                        "kind": entry.kind,
+                        "country": entry.country,
+                        "parent": entry.parent and entry.parent.public_id,
+                        "successor": entry.successor and entry.successor.public_id,
+                        "valid_from": entry.valid_from,
+                        "valid_to": entry.valid_to,
+                    },
+                    auto_id=f"institution-{public_id}-%s",
+                    countries=countries,
+                    # It is not offered itself: the service would refuse it.
+                    institutions=[option for option in everyone if option[0] != public_id],
+                ),
+                name_form=InstitutionNameForm(auto_id=f"name-{public_id}-%s", languages=languages),
+                names=[
+                    _NameSection(
+                        name,
+                        InstitutionNameDatesForm(
+                            initial={"valid_from": name.valid_from, "valid_to": name.valid_to},
+                            auto_id=f"dates-{name.public_id}-%s",
+                        ),
+                    )
+                    for name in entry.names
+                ],
+            )
+        )
+    return sections
+
+
 def _entry_page(
     request: HttpRequest,
     actor: AuthenticationContext,
     *,
     country_form: CountryCreationForm | None = None,
     language_form: LanguageCreationForm | None = None,
+    institution_data: QueryDict | None = None,
     error: Promise | None = None,
     status: int = 200,
 ) -> HttpResponse:
+    """Render the entry page.
+
+    `institution_data` is what was sent with a creation of an institution
+    that was refused, so that it is shown again as it was typed.
+    """
     may_manage_reference = accounts_selectors.can(actor, Permission.REGISTRY_REFERENCE_MANAGE)
+    institutions = selectors.institutions(actor)
+    countries = _country_options(actor)
+    languages = _language_options(actor)
+    everyone = [(str(entry.public_id), entry.label) for entry in institutions]
     context: dict[str, Any] = {
         "may_manage_reference": may_manage_reference,
         "error": error,
         "saved": SAVED_QUERY in request.GET,
+        "institution_form": InstitutionForm(
+            institution_data, prefix=INSTITUTION_PREFIX, countries=countries, institutions=everyone
+        ),
+        "first_name_form": InstitutionNameForm(
+            institution_data, prefix=FIRST_NAME_PREFIX, languages=languages
+        ),
+        "institutions": _institution_sections(institutions, countries, languages),
     }
     if may_manage_reference:
         context |= {
@@ -111,15 +263,28 @@ def _change(
     return _saved()
 
 
+def _institution_change(
+    request: HttpRequest, actor: AuthenticationContext, change: Callable[[], object]
+) -> HttpResponse:
+    """Make one change to an institution or a name, and answer for it."""
+    try:
+        change()
+    except tuple(INSTITUTION_REFUSALS) as error:
+        message, status = INSTITUTION_REFUSALS[type(error)]
+        return _entry_page(request, actor, error=message, status=status)
+    return _saved()
+
+
 @requires(Permission.REGISTRY_READ)
 @never_cache
 @require_GET
 def browse(request: HttpRequest) -> HttpResponse:
-    """List the countries and languages of the registry, deactivated ones included."""
+    """List the countries, languages, and institutions of the registry, with every name."""
     actor = _actor(request)
     context = {
         "countries": selectors.countries(actor),
         "languages": selectors.languages(actor),
+        "institutions": selectors.institutions(actor),
         "may_enter": accounts_selectors.can(actor, Permission.REGISTRY_INSTITUTIONS_MANAGE),
     }
     return render(request, "web/registry.html", context)
@@ -129,7 +294,7 @@ def browse(request: HttpRequest) -> HttpResponse:
 @never_cache
 @require_GET
 def entry(request: HttpRequest) -> HttpResponse:
-    """Show the entry page: the country and language forms, or why there are none."""
+    """Show the entry page: the institution forms, and the reference forms to an Administrator."""
     return _entry_page(request, _actor(request))
 
 
@@ -276,4 +441,136 @@ def reactivate_language(request: HttpRequest, public_id: uuid.UUID) -> HttpRespo
     actor = _actor(request)
     return _change(
         request, actor, lambda: services.reactivate_language(actor=actor, public_id=public_id)
+    )
+
+
+@requires(Permission.REGISTRY_INSTITUTIONS_MANAGE)
+@never_cache
+@csrf_protect
+@require_POST
+def create_institution(request: HttpRequest) -> HttpResponse:
+    """Create an institution with its first name."""
+    actor = _actor(request)
+    institution = InstitutionForm(request.POST, prefix=INSTITUTION_PREFIX)
+    first_name = InstitutionNameForm(request.POST, prefix=FIRST_NAME_PREFIX)
+    # Both are validated, so that every field in error is shown.
+    if not all([institution.is_valid(), first_name.is_valid()]):
+        return _entry_page(
+            request,
+            actor,
+            institution_data=request.POST,
+            error=INVALID_INSTITUTION_MESSAGE,
+            status=400,
+        )
+    attributes, name = institution.cleaned_data, first_name.cleaned_data
+    try:
+        services.create_institution(
+            actor=actor,
+            kind=attributes["kind"],
+            country=attributes["country"],
+            parent=attributes["parent"],
+            successor=attributes["successor"],
+            valid_from=attributes["valid_from"],
+            valid_to=attributes["valid_to"],
+            first_name=_new_name(name),
+        )
+    except tuple(INSTITUTION_REFUSALS) as error:
+        message, status = INSTITUTION_REFUSALS[type(error)]
+        return _entry_page(
+            request, actor, institution_data=request.POST, error=message, status=status
+        )
+    return _saved()
+
+
+@requires(Permission.REGISTRY_INSTITUTIONS_MANAGE)
+@never_cache
+@csrf_protect
+@require_POST
+def change_institution(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
+    """Change the kind, country, parent, successor, and validity dates of an institution."""
+    actor = _actor(request)
+    form = InstitutionForm(request.POST)
+    if not form.is_valid():
+        return _entry_page(request, actor, error=INVALID_INSTITUTION_MESSAGE, status=400)
+    attributes = form.cleaned_data
+    return _institution_change(
+        request,
+        actor,
+        lambda: services.change_institution(
+            actor=actor,
+            public_id=public_id,
+            kind=attributes["kind"],
+            country=attributes["country"],
+            parent=attributes["parent"],
+            successor=attributes["successor"],
+            valid_from=attributes["valid_from"],
+            valid_to=attributes["valid_to"],
+        ),
+    )
+
+
+@requires(Permission.REGISTRY_INSTITUTIONS_MANAGE)
+@never_cache
+@csrf_protect
+@require_POST
+def add_institution_name(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
+    """Add a name to an institution."""
+    actor = _actor(request)
+    form = InstitutionNameForm(request.POST)
+    if not form.is_valid():
+        return _entry_page(request, actor, error=INVALID_INSTITUTION_MESSAGE, status=400)
+    name = _new_name(form.cleaned_data)
+    return _institution_change(
+        request,
+        actor,
+        lambda: services.add_institution_name(actor=actor, institution=public_id, name=name),
+    )
+
+
+@requires(Permission.REGISTRY_INSTITUTIONS_MANAGE)
+@never_cache
+@csrf_protect
+@require_POST
+def change_institution_name_dates(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
+    """Change the validity dates of a name of an institution."""
+    actor = _actor(request)
+    form = InstitutionNameDatesForm(request.POST)
+    if not form.is_valid():
+        return _entry_page(request, actor, error=INVALID_INSTITUTION_MESSAGE, status=400)
+    dates = form.cleaned_data
+    return _institution_change(
+        request,
+        actor,
+        lambda: services.change_institution_name_dates(
+            actor=actor,
+            public_id=public_id,
+            valid_from=dates["valid_from"],
+            valid_to=dates["valid_to"],
+        ),
+    )
+
+
+@requires(Permission.REGISTRY_INSTITUTIONS_MANAGE)
+@never_cache
+@csrf_protect
+@require_POST
+def mark_institution_name_entered_in_error(
+    request: HttpRequest, public_id: uuid.UUID
+) -> HttpResponse:
+    """Mark a name of an institution as entered in error."""
+    actor = _actor(request)
+    return _institution_change(
+        request,
+        actor,
+        lambda: services.mark_institution_name_entered_in_error(actor=actor, public_id=public_id),
+    )
+
+
+def _new_name(cleaned: dict[str, Any]) -> NewName:
+    return NewName(
+        text=cleaned["text"],
+        language=cleaned["language"],
+        kind=cleaned["kind"],
+        valid_from=cleaned["valid_from"],
+        valid_to=cleaned["valid_to"],
     )

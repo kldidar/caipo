@@ -11,10 +11,10 @@
     <p role="status">{% translate "The change was saved and recorded." %}</p>
   {% endif %}
 
-  {% if not may_manage_reference %}
-    <p>{% translate "Countries and languages are maintained by an Administrator. This page offers your account nothing to do." %}</p>
-  {% else %}
-    <p>{% translate "A code cannot be changed once it is saved, and nothing here can be deleted. A record that should no longer be referred to is deactivated. Every change is recorded with the account that made it." %}</p>
+  <p>{% translate "Nothing here can be deleted, and every change is recorded with the account that made it." %}</p>
+
+  {% if may_manage_reference %}
+    <p>{% translate "A code cannot be changed once it is saved. A country or a language that should no longer be referred to is deactivated." %}</p>
 
     <h2>{% translate "Add a country" %}</h2>
     <p>{% translate "The alpha-2 code is two capital letters and the alpha-3 code is three. Only their form is checked." %}</p>
@@ -96,6 +96,79 @@
       <p>{% translate "No language has been entered." %}</p>
     {% endfor %}
   {% endif %}
+
+  <h2>{% translate "Add an institution" %}</h2>
+  <p>{% translate "An institution is added together with its first name. A body that is renamed stays the same institution and is given another name. A successor is a different institution that took over when this one ended." %}</p>
+  <p>{% translate "A date is a full calendar date. Valid-from is the first day, and valid-to the first day that is no longer covered. A date that is not known to the day is left empty: do not enter the first of January or the first of a month to stand for a year or a month." %}</p>
+  <form method="post" action="{% url 'registry-institution-create' %}" novalidate>
+    {% csrf_token %}
+    {% for field in institution_form %}
+      <p>
+        {{ field.label_tag }}
+        {{ field }}
+        {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+      </p>
+    {% endfor %}
+    <h3>{% translate "First name" %}</h3>
+    {% for field in first_name_form %}
+      <p>
+        {{ field.label_tag }}
+        {{ field }}
+        {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+      </p>
+    {% endfor %}
+    <button type="submit">{% translate "Add the institution" %}</button>
+  </form>
+
+  <h2>{% translate "Institutions" %}</h2>
+  <p>{% translate "A name cannot be changed once it is saved, except for its dates. A name entered by mistake is marked as entered in error, which cannot be undone; the right name is added first." %}</p>
+  {% for section in institutions %}
+    <h3>{{ section.institution.label }}</h3>
+    <form method="post" action="{% url 'registry-institution-change' section.institution.public_id %}" novalidate>
+      {% csrf_token %}
+      {% for field in section.change_form %}
+        <p>{{ field.label_tag }} {{ field }}</p>
+      {% endfor %}
+      <button type="submit">{% translate "Change the institution" %}</button>
+    </form>
+
+    <h4>{% translate "Names" %}</h4>
+    {% for entry in section.names %}
+      <p>{{ entry.name.text }} · {{ entry.name.language_code }}-{{ entry.name.script_code }} · {{ entry.name.kind_label }}</p>
+      <form method="post" action="{% url 'registry-institution-name-dates' entry.name.public_id %}" novalidate>
+        {% csrf_token %}
+        {% for field in entry.dates_form %}
+          <p>{{ field.label_tag }} {{ field }}</p>
+        {% endfor %}
+        <button type="submit">{% translate "Change the dates" %}</button>
+      </form>
+      {% if section.names|length > 1 %}
+        <form method="post" action="{% url 'registry-institution-name-mark' entry.name.public_id %}">
+          {% csrf_token %}
+          <button type="submit">{% translate "Mark as entered in error" %}</button>
+        </form>
+      {% endif %}
+    {% endfor %}
+    {% if section.institution.names_entered_in_error %}
+      <h4>{% translate "Marked as entered in error" %}</h4>
+      <ul>
+        {% for name in section.institution.names_entered_in_error %}
+          <li>{{ name.text }} · {{ name.language_code }}-{{ name.script_code }} · {{ name.kind_label }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <h4>{% translate "Add a name" %}</h4>
+    <form method="post" action="{% url 'registry-institution-name-add' section.institution.public_id %}" novalidate>
+      {% csrf_token %}
+      {% for field in section.name_form %}
+        <p>{{ field.label_tag }} {{ field }}</p>
+      {% endfor %}
+      <button type="submit">{% translate "Add the name" %}</button>
+    </form>
+  {% empty %}
+    <p>{% translate "No institution has been entered." %}</p>
+  {% endfor %}
 
   <p><a href="{% url 'registry' %}">{% translate "Registry" %}</a></p>
   <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>

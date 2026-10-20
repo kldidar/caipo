@@ -35,14 +35,22 @@ AUDIT_PROTECTIONS = {
 REGISTRY_PROTECTIONS = {
     ("registry_country", "registry_country_protect", "registry_country_refuse_change", "O"),
     ("registry_language", "registry_language_protect", "registry_language_refuse_change", "O"),
+    (
+        "registry_institution",
+        "registry_institution_protect",
+        "registry_institution_refuse_change",
+        "O",
+    ),
+    (
+        "registry_institutionname",
+        "registry_institutionname_protect",
+        "registry_institutionname_refuse_change",
+        "O",
+    ),
 }
 EXPECTED = AUDIT_PROTECTIONS | REGISTRY_PROTECTIONS
-# Institution and InstitutionName are Increment 3's (ADR-0019 point 3). Until
-# then neither table exists, and so neither has a protection. Increment 3
-# moves them from here into the inventory above.
-DEFERRED_TABLES = {"registry_institution", "registry_institutionname"}
 
-GOVERNED_TABLES = {table for table, _, _, _ in EXPECTED} | DEFERRED_TABLES
+GOVERNED_TABLES = {table for table, _, _, _ in EXPECTED}
 TRIGGERS = {trigger for _, trigger, _, _ in EXPECTED}
 FUNCTIONS = {function for _, _, function, _ in EXPECTED}
 
@@ -85,5 +93,5 @@ def test_the_protections_of_adr_0018_are_exactly_these_on_exactly_these_tables()
     }
 
     assert found == EXPECTED
-    # What is deferred is absent, and not merely unprotected.
-    assert DEFERRED_TABLES.isdisjoint(connection.introspection.table_names())
+    # Each of the six tables exists: none is protected by being absent.
+    assert GOVERNED_TABLES <= set(connection.introspection.table_names())

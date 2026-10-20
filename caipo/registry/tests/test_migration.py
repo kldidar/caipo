@@ -1,8 +1,10 @@
 """The first registry migration, applied, reversed, and applied again
 (ADR-0018 point 46; ADR-0019 points 7 to 10 and the supplementary test of Increment 2).
 
-Each test that reverses it always returns the schema to the latest
-migration, whatever happens in between.
+What it made is looked at as it stands once it alone is applied: the second
+registry migration, which Increment 3 adds, is tested in
+test_institution_migration.py. Each test that reverses a migration always
+returns the schema to the latest migration, whatever happens in between.
 """
 
 from collections.abc import Iterator
@@ -19,6 +21,7 @@ from caipo.registry.models import Country, Language
 pytestmark = [pytest.mark.services, pytest.mark.django_db(transaction=True)]
 
 MIGRATION = ("registry", "0001_initial")
+SECOND = ("registry", "0002_institutions")
 BEFORE = ("registry", None)
 
 TABLES = {"registry_country", "registry_language"}
@@ -112,6 +115,16 @@ def _constraints() -> set[str]:
 
 
 @pytest.fixture
+def only_it_applied() -> Iterator[None]:
+    """Take the schema back to just after this migration, and always forward again."""
+    try:
+        _migrate(MIGRATION)
+        yield
+    finally:
+        _restore()
+
+
+@pytest.fixture
 def reversed_migration() -> Iterator[None]:
     """Take the schema back to before the registry existed, and always forward again."""
     try:
@@ -121,12 +134,12 @@ def reversed_migration() -> Iterator[None]:
         _restore()
 
 
-def test_it_is_the_only_registry_migration_and_depends_on_no_other() -> None:
+def test_it_is_the_first_registry_migration_and_depends_on_no_other() -> None:
     """In particular on no migration of accounts (ADR-0018 point 1, ADR-0019 point 9)."""
     loader = MigrationExecutor(connection).loader
     migration = loader.get_migration(*MIGRATION)
 
-    assert loader.graph.leaf_nodes("registry") == [MIGRATION]
+    assert loader.graph.leaf_nodes("registry") == [SECOND]
     assert loader.graph.root_nodes("registry") == [MIGRATION]
     assert migration.dependencies == []
     assert migration.run_before == []
@@ -163,14 +176,18 @@ def test_it_writes_no_row() -> None:
     assert not Language.objects.exists()
 
 
-def test_applied_it_has_made_the_two_tables_their_constraints_and_their_triggers() -> None:
+def test_applied_it_has_made_the_two_tables_their_constraints_and_their_triggers(
+    only_it_applied: None,
+) -> None:
     assert _tables() == TABLES
     assert _functions() == FUNCTIONS
     assert _triggers() == TRIGGERS
     assert _constraints() == CONSTRAINTS
 
 
-def test_each_trigger_fires_before_every_update_and_delete_of_a_row_and_on_no_insert() -> None:
+def test_each_trigger_fires_before_every_update_and_delete_of_a_row_and_on_no_insert(
+    only_it_applied: None,
+) -> None:
     assert _trigger_events() == {
         "registry_country_protect": (
             "registry_country_refuse_change",

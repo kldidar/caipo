@@ -108,4 +108,29 @@ urlpatterns = [
         registry.reactivate_language,
         name="registry-language-reactivate",
     ),
+    path(
+        "registry/entry/institutions/create/",
+        registry.create_institution,
+        name="registry-institution-create",
+    ),
+    path(
+        "registry/entry/institutions/<uuid:public_id>/change/",
+        registry.change_institution,
+        name="registry-institution-change",
+    ),
+    path(
+        "registry/entry/institutions/<uuid:public_id>/names/add/",
+        registry.add_institution_name,
+        name="registry-institution-name-add",
+    ),
+    path(
+        "registry/entry/institution-names/<uuid:public_id>/dates/",
+        registry.change_institution_name_dates,
+        name="registry-institution-name-dates",
+    ),
+    path(
+        "registry/entry/institution-names/<uuid:public_id>/mark-entered-in-error/",
+        registry.mark_institution_name_entered_in_error,
+        name="registry-institution-name-mark",
+    ),
 ]

@@ -13,7 +13,9 @@ from typing import Any
 
 from caipo.accounts.models import AuditEvent, AuditEventChange
 from caipo.accounts.selectors import AuthenticationContext
-from caipo.registry.models import Country, Language
+from caipo.registry import services
+from caipo.registry.models import Country, Institution, InstitutionName, Language
+from caipo.registry.services import NewName
 
 type ActingAs = Callable[..., AuthenticationContext]
 
@@ -59,4 +61,50 @@ def changes() -> list[tuple[int, str, str, str]]:
         AuditEventChange.objects.order_by("id").values_list(
             "event_id", "field", "old_value", "new_value"
         )
+    )
+
+
+def stored_with_institutions() -> dict[str, list[Any]]:
+    """Return what `stored` returns, and every institution and name as well."""
+    return {
+        **stored(),
+        "institutions": list(Institution.objects.order_by("id").values()),
+        "names": list(InstitutionName.objects.order_by("id").values()),
+    }
+
+
+def reference_records(actor: AuthenticationContext) -> tuple[list[uuid.UUID], list[uuid.UUID]]:
+    """Create the three synthetic countries and languages, and return their identifiers."""
+    countries = [
+        services.create_country(actor=actor, alpha2=alpha2, alpha3=alpha3, name_en=name_en)
+        for alpha2, alpha3, name_en in COUNTRIES
+    ]
+    languages = [
+        services.create_language(actor=actor, code=code, script_code=script, name_en=name_en)
+        for code, script, name_en in LANGUAGES
+    ]
+    return countries, languages
+
+
+def institution(
+    actor: AuthenticationContext,
+    language: uuid.UUID,
+    text: str = "TEST Institution",
+    **attributes: Any,
+) -> uuid.UUID:
+    """Create an institution with one official name and return its identifier: a ministry unless
+    told otherwise."""
+    return services.create_institution(
+        actor=actor,
+        **{"kind": "ministry", **attributes},
+        first_name=NewName(text=text, language=language, kind="official"),
+    )
+
+
+def names_of(public_id: uuid.UUID) -> list[uuid.UUID]:
+    """Return the identifiers of an institution's names, in the order they were entered."""
+    return list(
+        InstitutionName.objects.filter(institution__public_id=public_id)
+        .order_by("id")
+        .values_list("public_id", flat=True)
     )

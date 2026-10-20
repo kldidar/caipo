@@ -5,7 +5,7 @@
 
 {% block content %}
   <h1>{% translate "Registry" %}</h1>
-  <p>{% translate "The countries and languages the system knows. A deactivated record stays here and can no longer be newly referred to." %}</p>
+  <p>{% translate "The countries, languages, and institutions the system knows. A deactivated country or language stays here and can no longer be newly referred to." %}</p>
 
   <h2>{% translate "Countries" %}</h2>
   {% if countries %}
@@ -58,6 +58,73 @@
   {% else %}
     <p>{% translate "No language has been entered." %}</p>
   {% endif %}
+
+  <h2>{% translate "Institutions" %}</h2>
+  {% translate "Not recorded" as not_recorded %}
+  {% translate "None" as none %}
+  {% for institution in institutions %}
+    <h3>{{ institution.label }}</h3>
+    <dl>
+      <dt>{% translate "Kind" %}</dt>
+      <dd>{{ institution.kind_label }}</dd>
+      <dt>{% translate "Country" %}</dt>
+      <dd>{{ institution.country_alpha2|default:none }}</dd>
+      <dt>{% translate "Parent institution" %}</dt>
+      <dd>{% if institution.parent %}{{ institution.parent.label }}{% else %}{{ none }}{% endif %}</dd>
+      <dt>{% translate "Valid from" %}</dt>
+      <dd>{{ institution.valid_from|date:"Y-m-d"|default:not_recorded }}</dd>
+      <dt>{% translate "Valid to" %}</dt>
+      <dd>{{ institution.valid_to|date:"Y-m-d"|default:not_recorded }}</dd>
+      <dt>{% translate "Successor" %}</dt>
+      <dd>{% if institution.successor %}{{ institution.successor.label }}{% else %}{{ none }}{% endif %}</dd>
+    </dl>
+    <table>
+      <caption>{% translate "Names" %}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{% translate "Name" %}</th>
+          <th scope="col">{% translate "Language" %}</th>
+          <th scope="col">{% translate "Kind of name" %}</th>
+          <th scope="col">{% translate "Valid from" %}</th>
+          <th scope="col">{% translate "Valid to" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name in institution.names %}
+          <tr>
+            <td>{{ name.text }}</td>
+            <td>{{ name.language_code }}-{{ name.script_code }}</td>
+            <td>{{ name.kind_label }}</td>
+            <td>{{ name.valid_from|date:"Y-m-d"|default:not_recorded }}</td>
+            <td>{{ name.valid_to|date:"Y-m-d"|default:not_recorded }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if institution.names_entered_in_error %}
+      <table>
+        <caption>{% translate "Marked as entered in error, and not names of this institution" %}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{% translate "Name" %}</th>
+            <th scope="col">{% translate "Language" %}</th>
+            <th scope="col">{% translate "Kind of name" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for name in institution.names_entered_in_error %}
+            <tr>
+              <td>{{ name.text }}</td>
+              <td>{{ name.language_code }}-{{ name.script_code }}</td>
+              <td>{{ name.kind_label }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  {% empty %}
+    <p>{% translate "No institution has been entered." %}</p>
+  {% endfor %}
 
   {% if may_enter %}
     <p><a href="{% url 'registry-entry' %}">{% translate "Registry entry" %}</a></p>

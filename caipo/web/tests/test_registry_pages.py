@@ -3,10 +3,14 @@ requirement 11; ADR-0019 points 11 to 16).
 
 A browse page that every role reads, and an entry page on which an
 Administrator verified with a trusted second factor maintains countries and
-languages. Two kinds of test here assert what is true only until
-Increment 3 and are replaced then (ADR-0019 point 22): those of the message
-that the entry page shows an account with nothing to do, and those that the
-pages hold no institution content. Each says so.
+languages. The institution content of both pages is tested in
+test_registry_institution_pages.py.
+
+Two kinds of Increment 2 test asserted what was true only until Increment 3,
+and were replaced in it (ADR-0019 point 22): those of the message that the
+entry page showed an account with nothing to do, and those that the pages
+held no institution content. Their replacements are in the two sections
+below that say so.
 """
 
 import re
@@ -202,6 +206,11 @@ def test_the_registry_has_these_routes_and_no_others() -> None:
         "registry-language-rename": Permission.REGISTRY_REFERENCE_MANAGE,
         "registry-language-deactivate": Permission.REGISTRY_REFERENCE_MANAGE,
         "registry-language-reactivate": Permission.REGISTRY_REFERENCE_MANAGE,
+        "registry-institution-create": Permission.REGISTRY_INSTITUTIONS_MANAGE,
+        "registry-institution-change": Permission.REGISTRY_INSTITUTIONS_MANAGE,
+        "registry-institution-name-add": Permission.REGISTRY_INSTITUTIONS_MANAGE,
+        "registry-institution-name-dates": Permission.REGISTRY_INSTITUTIONS_MANAGE,
+        "registry-institution-name-mark": Permission.REGISTRY_INSTITUTIONS_MANAGE,
     }
 
 
@@ -378,13 +387,19 @@ def test_no_internal_key_and_no_account_is_shown(
         assert "@caipo.test" not in page
 
 
-# --- The entry page for an account with nothing to do ---------------------------
-# These tests are replaced in Increment 3 (ADR-0019 points 15 and 22): the
-# account then has the institution forms, and the message is no longer true.
+# --- The entry page for an account without the reference permission -----------
+# These replace the Increment 2 tests of the message that the page showed such
+# an account (ADR-0019 points 15 and 22): it has the institution forms now,
+# and the message is gone.
+#   test_an_account_that_may_not_maintain_the_reference_lists_is_told_so_plainly
+#     -> test_an_account_without_the_reference_permission_is_given_the_institution_forms_only
+#   test_the_message_promises_nothing -> test_the_entry_page_promises_nothing
+#   test_a_researcher_who_signs_in_with_a_password_reads_and_cannot_change
+#     -> test_a_researcher_who_signs_in_with_a_password_cannot_change_a_country
 
 
 @pytest.mark.parametrize("account", ["researcher", "reviewer-verified"])
-def test_an_account_that_may_not_maintain_the_reference_lists_is_told_so_plainly(
+def test_an_account_without_the_reference_permission_is_given_the_institution_forms_only(
     user_with_roles: UserFactory,
     administrator: User,
     country: uuid.UUID,
@@ -393,11 +408,13 @@ def test_an_account_that_may_not_maintain_the_reference_lists_is_told_so_plainly
 ) -> None:
     page = _text(_client(user_with_roles, account).get(ENTRY))
 
-    assert NOTHING_TO_DO in page
-    assert "<form" not in page and "<input" not in page and "<button" not in page
-    # It is told why, and is shown nothing it could mistake for something to do.
+    assert NOTHING_TO_DO not in page
+    assert "Add an institution" in page
+    assert f'action="{reverse("registry-institution-create")}"' in page
+    # No country or language form, and no way to change either record.
     assert "Add a country" not in page and "Add a language" not in page
-    assert "TEST Country A" not in page and "TEST Language A" not in page
+    assert CREATE_COUNTRY not in page and CREATE_LANGUAGE not in page
+    assert "/registry/entry/countries/" not in page and "/registry/entry/languages/" not in page
 
 
 def test_an_administrator_is_not_shown_the_message(client_of_administrator: Client) -> None:
@@ -407,32 +424,46 @@ def test_an_administrator_is_not_shown_the_message(client_of_administrator: Clie
     assert "Add a country" in page and "Add a language" in page
 
 
-def test_the_message_promises_nothing(user_with_roles: UserFactory) -> None:
+def test_the_entry_page_promises_nothing(user_with_roles: UserFactory) -> None:
     page = _text(signed_in(Client(), user_with_roles(Role.RESEARCHER)).get(ENTRY)).lower()
 
     for promise in ("soon", "later", "will be", "coming", "not yet", "future", "planned"):
         assert promise not in page, promise
 
 
-# --- No institution content ------------------------------------------------------
-# These tests are replaced in Increment 3 (ADR-0019 points 5 and 22).
+# --- Institution content ----------------------------------------------------------
+# These replace the Increment 2 tests that the pages held no institution
+# content (ADR-0019 points 5 and 22).
+#   test_neither_page_says_anything_of_institutions
+#     -> test_both_pages_hold_the_institutions_for_every_account_that_reaches_them
+#   test_no_registry_route_is_about_institutions
+#     -> test_every_institution_route_declares_the_institutions_permission
 
 
 @pytest.mark.parametrize("account", ["researcher", "reviewer-verified", "administrator-verified"])
 @pytest.mark.parametrize("url", [BROWSE, ENTRY])
-def test_neither_page_says_anything_of_institutions(
+def test_both_pages_hold_the_institutions_for_every_account_that_reaches_them(
     user_with_roles: UserFactory, account: str, url: str
 ) -> None:
-    page = _text(_client(user_with_roles, account).get(url)).lower()
+    page = _text(_client(user_with_roles, account).get(url))
 
-    assert "institution" not in page
+    assert "<h2>Institutions</h2>" in page
+    assert "No institution has been entered." in page
 
 
-def test_no_registry_route_is_about_institutions() -> None:
-    routes = _registry_routes()
+def test_every_institution_route_declares_the_institutions_permission() -> None:
+    routes = {name: entry for name, entry in _registry_routes().items() if "institution" in name}
 
-    assert not [name for name in routes if "institution" in name]
-    assert not [name for name, entry in routes.items() if "institution" in str(entry.pattern)]
+    assert sorted(routes) == [
+        "registry-institution-change",
+        "registry-institution-create",
+        "registry-institution-name-add",
+        "registry-institution-name-dates",
+        "registry-institution-name-mark",
+    ]
+    for entry in routes.values():
+        assert declared_access(entry.callback) == Permission.REGISTRY_INSTITUTIONS_MANAGE
+        assert "institution" in str(entry.pattern)
 
 
 # --- Changes: refused without the permission -------------------------------------
@@ -909,7 +940,7 @@ def test_an_administrator_who_signs_in_with_password_and_code_changes_the_regist
     assert list(AuditEvent.objects.values_list("action", "actor_id")) == [("created", user.pk)]
 
 
-def test_a_researcher_who_signs_in_with_a_password_reads_and_cannot_change(
+def test_a_researcher_who_signs_in_with_a_password_cannot_change_a_country(
     user_with_roles: UserFactory,
 ) -> None:
     user = user_with_roles(Role.RESEARCHER)
@@ -920,7 +951,8 @@ def test_a_researcher_who_signs_in_with_a_password_reads_and_cannot_change(
     assert client.post(LOGIN, {"email": user.email, "password": PASSWORD}).status_code == 302
 
     assert client.get(BROWSE).status_code == 200
-    assert NOTHING_TO_DO in _text(client.get(ENTRY))
+    page = _text(client.get(ENTRY))
+    assert "Add an institution" in page and "Add a country" not in page
     assert client.post(CREATE_COUNTRY, COUNTRY).status_code == 403
     assert not Country.objects.exists() and not AuditEvent.objects.exists()
 
