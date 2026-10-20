@@ -1,6 +1,6 @@
 # Development environment
 
-How to set up and run CAIPO locally. The environment provides a pinned Python environment and two backing services, PostgreSQL and Redis. The application is a Django skeleton: settings, the User foundation, sign-in with TOTP multi-factor authentication, health endpoints, and structured logging.
+How to set up and run CAIPO locally. The environment provides a pinned Python environment and two backing services, PostgreSQL and Redis. The application is a Django skeleton: settings, the User foundation, sign-in with TOTP multi-factor authentication, account administration, the registry of countries, languages, and institutions, health endpoints, and structured logging.
 
 Last verified end to end on 2026-10-02. What was verified, and what was not, is recorded in [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §9.
 
@@ -143,7 +143,7 @@ uv run --env-file .env python manage.py create_first_administrator
 uv run --env-file .env python manage.py runserver        # then http://127.0.0.1:8000/login/
 ```
 
-`create_first_administrator` creates the only account the application can create so far. It is interactive and works once; what it asks for, and why it has no options, is in [SECURITY.md](../SECURITY.md), "The first Administrator". Have an authenticator application at hand (any that implements TOTP: six digits, 30 seconds): after the email address, the password, and the confirmation, the command writes a key to the terminal, once, and asks for the code the application shows for it. The account is created only when a code is accepted. After three codes that are not, nothing has been created and the command can be run again. To start again locally after it has succeeded, recreate the development database (`docker compose down -v`).
+`create_first_administrator` creates the first account. Every later account is created by an Administrator on the accounts page ("Creating accounts" below). It is interactive and works once; what it asks for, and why it has no options, is in [SECURITY.md](../SECURITY.md), "The first Administrator". Have an authenticator application at hand (any that implements TOTP: six digits, 30 seconds): after the email address, the password, and the confirmation, the command writes a key to the terminal, once, and asks for the code the application shows for it. The account is created only when a code is accepted. After three codes that are not, nothing has been created and the command can be run again. To start again locally after it has succeeded, recreate the development database (`docker compose down -v`).
 
 During an initial deployment it is run once, by the person installing the system, in a terminal on the server and under the settings of that environment, after `migrate` and before anyone needs to sign in. In a container that means an interactive session, for example `docker compose exec` with a terminal attached. It cannot be put in a start-up script, because it refuses to run without a terminal.
 
@@ -254,9 +254,29 @@ A reset changes the password only. The second factor, its approval, and the role
 
 The limits and the lifetime are `PASSWORD_RESET_*` in `caipo/config/settings/base.py`: 5 requests an hour for one email address, 20 requests in 15 minutes from one source, and 10 refused tokens in 15 minutes from one source. In production no email service is configured yet (ADR-0008), so there a reset can be asked for and its message cannot be sent.
 
+## The registry
+
+Decided in [ADR-0018](adr/0018-registry-and-general-audit-record.md) and built in increments under [ADR-0019](adr/0019-phased-registry-implementation.md); what it protects is in [SECURITY.md](../SECURITY.md).
+
+A fresh database has an empty registry: no migration or code creates a country, language, or institution. An Administrator signed in with a trusted second factor enters the countries and languages at `/registry/entry/`, and institutions are entered there by a Researcher, a Reviewer verified with a trusted second factor, or such an Administrator. Nothing is deleted. A country or language is deactivated, not removed; a name entered by mistake is marked as entered in error, which cannot be undone. Every change writes an audit event in the same transaction. No page reads the audit record yet; it is read with a database query.
+
+| Page | Method | What it does |
+|---|---|---|
+| `/registry/` | GET | Lists countries, languages, and institutions with their names. `REGISTRY_READ`: every role, Reviewer and Administrator only with a trusted second factor. |
+| `/registry/entry/` | GET | The forms. The country and language forms are shown only to an Administrator verified with a trusted second factor. |
+| `/registry/entry/countries/create/`, `/registry/entry/languages/create/` | POST | Create a country or a language (`REGISTRY_REFERENCE_MANAGE`) |
+| `/registry/entry/countries/<id>/rename/`, `…/deactivate/`, `…/reactivate/`, and the same under `languages/` | POST | Change the English name, deactivate, or reactivate (`REGISTRY_REFERENCE_MANAGE`) |
+| `/registry/entry/institutions/create/` | POST | Create an institution with its first name (`REGISTRY_INSTITUTIONS_MANAGE`) |
+| `/registry/entry/institutions/<id>/change/` | POST | Set the kind, country, parent, successor, and validity dates |
+| `/registry/entry/institutions/<id>/names/add/` | POST | Add a name |
+| `/registry/entry/institution-names/<id>/dates/` | POST | Set a name's validity dates |
+| `/registry/entry/institution-names/<id>/mark-entered-in-error/` | POST | Mark a name as entered in error; refused for an institution's only unmarked name |
+
+`<id>` is the record's public identifier, a UUID. The services are in `caipo/registry/services.py` and the reads in `caipo/registry/selectors.py`.
+
 ## Authorization
 
-No page uses this yet apart from the sign-in pages, which are public, and the second-factor pages. It is the layer that views and services are written against.
+Every page is declared through this layer: the sign-in pages (including the recovery request at `/login/verify/recover/`), sign-out, activation, password reset, and the health endpoints are public, and every other page declares a permission. It is the layer that views and services are written against.
 
 **A view declares the access it requires**, outermost, with `public` or with `requires` and a permission. A view with no declaration answers 403.
 

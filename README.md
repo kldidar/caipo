@@ -6,7 +6,7 @@ CAIPO combines policy and legal documents, economic and socioeconomic indicators
 
 ## Status
 
-**Phase 1, project skeleton.** The foundation documents, a reproducible development environment, and the Django application skeleton exist: settings, the User foundation, roles and the authorization layer, sign-in and sign-out, TOTP multi-factor authentication, account provisioning by an Administrator with email verification, password reset by email, recovery from a lost second factor, health endpoints, and structured logging. No email delivery service is configured for production (ADR-0008), so there the verification, reset, and recovery messages cannot be sent yet. There is no research functionality: no documents, policies, indicators, claims, or AI assistant, and nothing is deployed.
+**Phase 1, project skeleton.** The foundation documents, a reproducible development environment, and the Django application skeleton exist: settings, the User foundation, roles and the authorization layer, sign-in and sign-out, TOTP multi-factor authentication, account provisioning by an Administrator with email verification, password reset by email, recovery from a lost second factor, the general audit record, the registry of countries, languages, and institutions with their names, health endpoints, and structured logging. No email delivery service is configured for production (ADR-0008), so there the verification, reset, and recovery messages cannot be sent yet. There is no research functionality: no documents, policies, indicators, claims, or AI assistant, and nothing is deployed.
 
 The architecture gate is **READY for Phase 1** (project skeleton, authentication, countries and institutions) and **NOT READY for Phase 2 and later**: research, data-rights, isolation, and AI-provider questions are still open. They are listed in [docs/PROJECT_SPECIFICATION.md](docs/PROJECT_SPECIFICATION.md#10-architecture-gate). Implementation must not start on a phase until that phase's blockers are closed.
 
@@ -46,11 +46,11 @@ Each is recorded as an [ADR](docs/adr/README.md). Nothing is added to this list 
 
 ## Getting started
 
-The application is a skeleton: it starts, connects to PostgreSQL, and answers health checks.
+The application is a skeleton: authentication, account administration, and the registry, with no research functionality yet.
 
 ```sh
 uv sync
-cp .env.example .env          # then set the two passwords and DJANGO_SECRET_KEY
+cp .env.example .env          # then set the two passwords, DJANGO_SECRET_KEY, and TOTP_ENCRYPTION_KEY (docs/DEVELOPMENT.md)
 docker compose up -d --wait
 uv run --env-file .env pytest
 uv run --env-file .env python manage.py migrate
