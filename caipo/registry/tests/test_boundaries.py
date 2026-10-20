@@ -5,7 +5,7 @@ testing requirements 10 and 13).
 `lint-imports` checks the import contracts themselves. These tests check
 what that tool cannot: that the contract names every module it should, that
 the application holds no code of a particular country, and that the registry
-holds nothing of a later increment.
+holds the records and operations of ADR-0018 and nothing else.
 """
 
 import ast
@@ -16,7 +16,6 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-import pytest
 from django.apps import apps
 from django.conf import settings
 from django.db.models import Model
@@ -24,7 +23,7 @@ from django.db.models import Model
 import caipo.accounts
 import caipo.registry
 from caipo.registry import selectors, services
-from caipo.registry.models import Country, Language
+from caipo.registry.models import Country, Institution, InstitutionName, Language
 
 REPOSITORY = Path(settings.BASE_DIR)
 APPLICATION = REPOSITORY / "caipo"
@@ -35,7 +34,9 @@ PUBLIC_INTERFACE = {"services", "selectors"}
 # Every string of two or three letters that the application code holds, each
 # of them looked at: none is the code of a country or of a language. A new
 # one fails the test below until it has been looked at and is added here.
-SHORT_WORDS = {"GET", "Lax", "UTC", "can", "en", "id", "mfa", "off", "ok", "on", "pk", "url", "web"}
+SHORT_WORDS = {
+    "GET", "Lax", "NFC", "UTC", "can", "en", "id", "mfa", "off", "ok", "on", "pk", "url", "web",
+}  # fmt: skip
 
 
 def _contracts() -> list[dict[str, Any]]:
@@ -236,13 +237,13 @@ def test_the_repository_holds_no_registry_fixture_file() -> None:
     ]
 
 
-# --- Nothing of a later increment (ADR-0019 point 5) --------------------------
+# --- What the registry holds (ADR-0018 points 5, 13, and 61) -----------------
 
 
-def test_the_registry_has_exactly_two_models() -> None:
+def test_the_registry_has_exactly_the_four_models_of_adr_0018() -> None:
     models: list[type[Model]] = list(apps.get_app_config("registry").get_models())
 
-    assert models == [Country, Language]
+    assert models == [Country, Language, Institution, InstitutionName]
 
 
 def test_the_registry_offers_exactly_these_operations_and_reads() -> None:
@@ -265,8 +266,24 @@ def test_the_registry_offers_exactly_these_operations_and_reads() -> None:
         "rename_language",
         "deactivate_language",
         "reactivate_language",
+        "create_institution",
+        "change_institution",
+        "add_institution_name",
+        "change_institution_name_dates",
+        "mark_institution_name_entered_in_error",
     }
-    assert set(selectors.__all__) == {"CountryEntry", "LanguageEntry", "countries", "languages"}
+    assert set(selectors.__all__) == {
+        "CountryEntry",
+        "LanguageEntry",
+        "InstitutionEntry",
+        "InstitutionNameEntry",
+        "InstitutionReference",
+        "InstitutionKind",
+        "InstitutionNameKind",
+        "countries",
+        "languages",
+        "institutions",
+    }
 
 
 def test_no_service_or_selector_deletes_or_changes_a_code() -> None:
@@ -277,18 +294,19 @@ def test_no_service_or_selector_deletes_or_changes_a_code() -> None:
         assert not re.search(r"\.(alpha2|alpha3|code|script_code|public_id)\s*=[^=]", source)
 
 
-@pytest.mark.parametrize("word", ["institution", "Institution"])
-def test_the_registry_package_says_nothing_of_institutions_but_the_permission(word: str) -> None:
-    """No model, operation, selector, or text announces what Increment 3 builds."""
-    mentions = [
-        f"{path.relative_to(REPOSITORY)}: {line.strip()}"
-        for path in sorted(REGISTRY.rglob("*.py"))
-        if "tests" not in path.parts
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if word in line
-    ]
+def test_no_service_or_selector_changes_what_of_a_name_is_set_once() -> None:
+    """A name's institution, text, and language are never assigned (ADR-0018 point 19).
 
-    assert mentions == []
+    The kind of a name is set once too, but `kind` is also an attribute of an
+    institution that may change: that the trigger refuses a change of a
+    name's kind is tested in test_institution_models.py.
+    """
+    for module in (services, selectors):
+        source = Path(str(module.__file__)).read_text(encoding="utf-8")
+
+        assert not re.search(
+            r"\.(text|language|language_id|institution|institution_id)\s*=[^=]", source
+        )
 
 
 def test_the_registry_is_not_registered_with_an_admin_site() -> None:

@@ -1,7 +1,15 @@
+from collections.abc import Sequence
+from typing import Any
+
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from caipo.accounts.selectors import Role
+from caipo.registry.selectors import InstitutionKind, InstitutionNameKind
+
+# The options of a field that refers to a registry record: its public
+# identifier, and what the person choosing is shown.
+type Options = Sequence[tuple[str, str]]
 
 
 class SignInForm(forms.Form):
@@ -229,3 +237,81 @@ class RegistryNameForm(forms.Form):
     """A new English name for a country or a language. Shape only."""
 
     name_en = _registry_name_field()
+
+
+def _registry_date_field() -> forms.DateField:
+    return forms.DateField(
+        required=False,
+        # A full calendar date in one form, or nothing. A date known only to
+        # the year or the month is left empty (ADR-0018 point 21).
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    )
+
+
+def _registry_reference_field(*, required: bool = False) -> forms.UUIDField:
+    # Shape only: that the record exists, and may be referred to, is the
+    # service's to decide. The options are given to the form.
+    return forms.UUIDField(required=required, widget=forms.Select())
+
+
+def _offer(field: forms.Field, options: Options, *, empty: bool) -> None:
+    nothing: list[tuple[str, Any]] = [("", _("None"))] if empty else []
+    field.widget.choices = nothing + list(options)
+
+
+class InstitutionForm(forms.Form):
+    """The kind, country, parent, successor, and validity dates of an institution. Shape only."""
+
+    kind = forms.ChoiceField(label=_("Kind"), choices=InstitutionKind.choices)
+    country = _registry_reference_field()
+    country.label = _("Country")
+    parent = _registry_reference_field()
+    parent.label = _("Parent institution")
+    successor = _registry_reference_field()
+    successor.label = _("Successor")
+    valid_from = _registry_date_field()
+    valid_from.label = _("Valid from")
+    valid_to = _registry_date_field()
+    valid_to.label = _("Valid to")
+
+    def __init__(
+        self, *args: Any, countries: Options = (), institutions: Options = (), **kwargs: Any
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        _offer(self.fields["country"], countries, empty=True)
+        _offer(self.fields["parent"], institutions, empty=True)
+        _offer(self.fields["successor"], institutions, empty=True)
+
+
+class InstitutionNameForm(forms.Form):
+    """A name of an institution: its text, language, kind, and validity dates. Shape only."""
+
+    text = forms.CharField(
+        label=_("Name"),
+        # Longer than a name may be, and bounded. The service removes
+        # surrounding whitespace and decides what is too long.
+        max_length=2048,
+        strip=False,
+        widget=forms.TextInput(attrs={"autocomplete": "off"}),
+    )
+    language = _registry_reference_field(required=True)
+    language.label = _("Language")
+    kind = forms.ChoiceField(label=_("Kind of name"), choices=InstitutionNameKind.choices)
+    valid_from = _registry_date_field()
+    valid_from.label = _("Valid from")
+    valid_to = _registry_date_field()
+    valid_to.label = _("Valid to")
+
+    def __init__(self, *args: Any, languages: Options = (), **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        _offer(self.fields["language"], languages, empty=False)
+
+
+class InstitutionNameDatesForm(forms.Form):
+    """New validity dates for a name of an institution. Shape only."""
+
+    valid_from = _registry_date_field()
+    valid_from.label = _("Valid from")
+    valid_to = _registry_date_field()
+    valid_to.label = _("Valid to")

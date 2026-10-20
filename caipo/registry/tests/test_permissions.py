@@ -270,7 +270,7 @@ def test_a_registry_permission_confers_no_research_permission_and_the_reverse(
 def test_holding_the_institutions_permission_allows_no_country_or_language_operation(
     acting_as: ActingAs, records: Records
 ) -> None:
-    """Until institutions exist it admits to the entry page and nothing else (ADR-0019 point 6)."""
+    """It is a permission of institution maintenance only (ADR-0018 points 11 and 13)."""
     researcher = acting_as(Role.RESEARCHER)
     assert accounts_selectors.can(researcher, Permission.REGISTRY_INSTITUTIONS_MANAGE)
     before = stored()
