@@ -6,17 +6,17 @@ Technical, security, data, and research-readiness audit of the repository at `ma
 
 **The Phase 1 platform is in good health. CAIPO is not yet ready for research work beyond keeping the reference registry.**
 
-- Every quality gate that CI runs passes locally: 4169 tests, ruff, formatting, mypy (strict), both import contracts, Django checks, migration consistency, the dependency audit, and the full-history secret scan. The last six CI runs on `main` passed all four jobs.
+- Every quality gate that CI runs passes locally: 4169 tests, ruff, formatting, mypy (strict), both import contracts, Django checks, migration consistency, the dependency audit, and the full-history secret scan. The last six CI runs on `main` succeeded; the latest, on `4bff508`, passed all four jobs.
 - No Critical or High defect was found. An independent probe of all 40 routes for 8 kinds of actor found no route reachable without its declared permission, no CSRF gap, and no server error under hostile input.
-- The development database is intact. Its 2 countries, 5 languages, 3 institutions, and 3 names are consistent, and the audit record has exactly one `created` event for each, with no orphaned events. Nothing was written to it during the audit.
-- Three Medium findings. One is data: the stored English name of Turkmenistan's statistics body does not match the body's own website. One is usability: an irreversible action takes a single click. One, documentation drift, is fixed on this branch.
+- The development database is intact. Its 2 countries, 5 languages, 3 institutions, and 3 names are consistent, and the audit record has exactly one `created` event for each, with no orphaned events. Nothing was written to it during the audit; that was checked afterwards (§5).
+- Four Medium findings. One is data: the stored English name of Turkmenistan's statistics body does not match the body's own website. One is usability: an irreversible action takes a single click. Two are documentation, both fixed on this branch: drift between the docs and the code, and advice to delete the development database with no warning that its data is lost.
 - Research readiness: the platform cannot yet hold a source, document, policy, indicator, claim, or citation. That is by design. Phase 2 and later are blocked by open research, rights, and isolation decisions (spec §10), most of them the researcher's to make.
 
 | Area | Assessment |
 |---|---|
-| Authentication, MFA, recovery | Implemented as ADR-0013 to 0017 decide; verified by tests and by probe |
+| Authentication, MFA, recovery | Built under ADR-0013 to 0017; its tests pass, and the probe found no access gap. The services were spot-checked, not reviewed line by line. |
 | Authorization | Deny by default, checked at the view and again in each service; no leak found |
-| Registry and audit | Implemented as ADR-0018 and 0019 decide; all 13 testing requirements present and passing |
+| Registry and audit | Services, models, migrations, and views read in full against ADR-0018 and 0019; a test module exists for each of the 13 testing requirements, and all pass |
 | Data integrity (dev database) | Consistent; no fabricated dates, parents, or successors |
 | Production readiness | Not intended yet; HSTS, TLS redirect, CSP, database roles, key management, and email wait for ADR-0008 |
 | Research readiness | Phase 1 only. Phase 2 gate NOT READY. |
@@ -43,7 +43,7 @@ Out of scope: production (none exists), browser automation (none was available),
 | App | What was read |
 |---|---|
 | `core` | Append-only base, correlation IDs, mail boundary, JSON logging |
-| `accounts` | Models (User, session epoch, role, authentication, account, and audit events, TOTP devices, recovery requests), authorization table, selectors (`authentication_context`, `_proven_assurance`, `permissions_of`, `require_permission`), and the security-relevant parts of the services: client-address hashing and throttling. The 3049-line services module was spot-checked, not read line by line, and relies on its tests. |
+| `accounts` | Models (User, session epoch, role, authentication, account, and audit events, TOTP devices, recovery requests), authorization table, selectors (`authentication_context`, `_proven_assurance`, `permissions_of`, `require_permission`), and, in the services, the hashing of client addresses, found by search. The 3049-line services module was spot-checked, not read line by line; its behaviour rests on its tests. |
 | `registry` | Models, both migrations and their four triggers, all 13 services, all 3 selectors |
 | `web` | Access declarations, middleware, sessions, sign-in redirect validation, registry views and forms, templates |
 | `config` | Base, development, testing, and production settings; URL configuration |
@@ -59,9 +59,9 @@ Each was confirmed in code and by passing tests. Where noted, it was also confir
 | Feature | Decided in | Verified |
 |---|---|---|
 | Deny-by-default access declarations on every view | ADR-0007, NFR-11 | Code, tests, probe (0 undeclared of 40) |
-| Roles, permissions, and role events with an append-only trigger | ADR-0012 | Code, tests, trigger present in the database |
-| Sign-in with Argon2, throttling, and authentication events; sign-out | ADR-0013 | Code, tests |
-| First-Administrator bootstrap (TTY only) | ADR-0013 | Tests |
+| Roles, permissions, and role events with an append-only trigger | ADR-0012 | Permission table, tests, trigger present in the database |
+| Sign-in with Argon2, throttling, and authentication events; sign-out | ADR-0013 | Settings (`PASSWORD_HASHERS`, `LOGIN_THROTTLE_*`), tests |
+| First-Administrator bootstrap (TTY only) | ADR-0013 | Tests (8 terminal tests in `test_first_administrator.py`) |
 | TOTP MFA with encrypted secrets, Administrator approval of privileged enrolment, and assurance re-checked against the database on every decision | ADR-0014 | Code (`_proven_assurance`), tests, probe |
 | Account creation by an Administrator; email verification | ADR-0015 | Tests |
 | Password reset | ADR-0016 | Tests |
@@ -73,7 +73,7 @@ Each was confirmed in code and by passing tests. Where noted, it was also confir
 | Health endpoints | DEVELOPMENT.md | Probe: live 200; ready 200 with database `ok`; both `no-store` |
 | Structured JSON logs with correlation IDs | NFR-06 | Observed; every audit event in the dev database has a correlation ID |
 
-**Lock order in the registry**, reviewed by hand. A change of succession takes its row lock (`FOR NO KEY UPDATE`), then the table lock (`SHARE ROW EXCLUSIVE`). Every other write takes row locks only, and marking a name locks the institution before the name. No cycle of waits was found between these paths. The foreign-key checks (`FOR KEY SHARE`) do not conflict with `FOR NO KEY UPDATE`.
+**Lock order in the registry**, reviewed by hand. A change of succession takes its row lock (`FOR NO KEY UPDATE`), then the table lock (`SHARE ROW EXCLUSIVE`). Every other write takes at most row locks, and marking a name locks the institution before the name. No cycle of waits was found between these paths. The foreign-key checks (`FOR KEY SHARE`) do not conflict with `FOR NO KEY UPDATE`.
 
 ## 5. Database state and data integrity
 
@@ -85,7 +85,7 @@ A backup was made before anything else and checked by restoring it.
 | SHA-256 | `4d25052c705bf6a5f19305c0ed556c72e8306b2d7b5a83bd67e79f0c81532133` |
 | Check | Restored into a throwaway database (`--exit-on-error`, exit 0). Row counts were equal to the live database in all 8 tables compared. The throwaway database was dropped. |
 
-All later inspection ran in `BEGIN TRANSACTION READ ONLY … ROLLBACK`.
+All later SQL inspection ran in `BEGIN TRANSACTION READ ONLY … ROLLBACK`. Five anonymous GET requests (`/registry/`, an unknown path, both health endpoints, `/login/`) were made with Django's test client under the development settings, which use this database. Afterwards, a read-only query showed no new session, no authentication, role, or audit event since the audit began at 18:00 UTC, and the row counts of the backup in every table compared.
 
 | Table | Rows | State |
 |---|---|---|
@@ -105,9 +105,9 @@ All later inspection ran in `BEGIN TRANSACTION READ ONLY … ROLLBACK`.
 - Each renamed language's stored name equals the new value of its latest change record.
 - Every institution has a name that is not marked. Every name refers to an existing, active language. Every country reference is to an active country.
 - No date, parent, or successor has been entered, so nothing unsupported is recorded.
-- All nine protection triggers exist: five on the `accounts` event tables, four on the registry tables. Every constraint ADR-0018 names is present.
+- All nine protection triggers exist: five on the `accounts` event tables, four on the registry tables. Every registry constraint ADR-0018 names is present. The audit record's constraints were not queried here; they are covered by the passing tests of `test_audit_event.py`.
 
-**Institutions asked about in the brief.** Both statistical agencies were already present, entered by the owner at 17:55 and 17:56 UTC. **Nothing was created.** Each name was checked against the body's own website on 2026-10-20:
+**Institutions asked about in the brief.** Both statistical agencies were already present, entered at 17:55 and 17:56 UTC by the only account, the bootstrapped Administrator. **Nothing was created.** Each name was checked against the body's own website on 2026-10-20:
 
 | Stored name | Official site | Result |
 |---|---|---|
@@ -115,7 +115,7 @@ All later inspection ran in `BEGIN TRANSACTION READ ONLY … ROLLBACK`.
 | National Statistics Committee of the Republic of Uzbekistan | stat.uz header and footer: the same (other variants appear elsewhere on the page) | Matches |
 | State Statistics Committee of Turkmenistan | stat.gov.tm header and footer: "State Committee of Turkmenistan on Statistics" | **Does not match** (M1) |
 
-Names in Turkmen, Uzbek, and Russian were not checked.
+The sites were read through an automated fetch that turns a page into text. The owner should confirm the wording on the sites themselves (§12). Names in Turkmen, Uzbek, and Russian were not checked.
 
 ## 6. Security and authorization assessment
 
@@ -129,13 +129,13 @@ Names in Turkmen, Uzbek, and Russian were not checked.
 | Reviewer and Administrator on a password alone | Refused on the registry and every administration page, as ADR-0014 and ADR-0018 point 12 require |
 | Disabled account with a verified session | Reaches only the 9 public routes |
 | POST without a CSRF token, as a verified Administrator, to every route | 40 of 40 refused with 403 |
-| 73 hostile registry POSTs: NUL bytes, 5,000-character text, `<script>`, template syntax, SQL fragments, bidi controls, invalid UUIDs, impossible and partial dates, unknown kinds, self-parent, a successor without valid-to, marking the last name | 0 server errors. Refusals: 400 (47), 404 (4), 409 (3). The 19 accepted were valid. |
-| Output escaping | `<script>` stored and shown escaped; `{{ 7*7 }}` shown literally. No `|safe`, `mark_safe`, or `autoescape off` in the code. |
+| 73 hostile registry POSTs: NUL bytes, 5,000-character text, `<script>`, template syntax, SQL fragments, bidi controls, invalid UUIDs, impossible and partial dates, unknown kinds, self-parent, a successor without valid-to, marking a name twice | 0 server errors. Refusals: 400 (47), 404 (4), 409 (3). The 19 accepted were valid. |
+| Output escaping | `<script>` stored and shown escaped; `{{ 7*7 }}` not evaluated. No `|safe`, `mark_safe`, or `autoescape off` in the code. |
 | Open redirect after sign-in | `url_has_allowed_host_and_scheme` is applied both when the destination is accepted and when it is followed |
 | Client address for throttling | `REMOTE_ADDR` only, deliberately not `X-Forwarded-For` (see I2) |
 | Session and cookies (base settings) | Database sessions; 12-hour lifetime; end when the browser closes; `Secure`, `HttpOnly`, `SameSite=Lax`; `X-Frame-Options: DENY`; `nosniff`; `same-origin` referrer |
 | `check --deploy`, production settings, synthetic values | 2 warnings: HSTS (W004) and SSL redirect (W008), both deferred to ADR-0008 as `production.py` says |
-| Secrets | gitleaks over the full history found nothing. `.env`, `/data/`, and `*.dump` are git-ignored. `data/outbox/` is empty. |
+| Secrets | gitleaks over the full history found nothing. `.env`, `/data/`, and `*.dump` are git-ignored. `data/outbox/` holds no files. |
 
 ## 7. Test and quality-gate results
 
@@ -163,7 +163,7 @@ All run on `4bff508`, except where noted.
 
 The re-run after the fixes is in §9.
 
-**Where the 13 testing requirements of ADR-0018 stand** (allocation of ADR-0019): all present and passing. Examples are requirement 5 in `test_protection_inventory.py` and the models tests, requirement 8 in `test_institution_concurrency.py` (10 tests), the second migration's supplementary tests in `test_institution_migration.py` (10 tests, reversal included), and requirement 10 in `test_boundaries.py`.
+**Where the 13 testing requirements of ADR-0018 stand** (allocation of ADR-0019): each was matched to the test modules that carry it, by module and test name, not test by test. All of those modules pass. Examples are requirement 5 in `test_protection_inventory.py` and the models tests, requirement 8 in `test_institution_concurrency.py` (10 tests), the second migration's supplementary tests in `test_institution_migration.py` (10 tests, reversal included), and requirement 10 in `test_boundaries.py` (`test_the_application_code_holds_no_literal_country_or_language_code`).
 
 ## 8. Findings by severity
 
@@ -185,6 +185,12 @@ No Critical and no High finding.
 **M3. Documentation drift. Fixed on this branch.**
 - Evidence: README's quick start told a new developer to set "the two passwords and DJANGO_SECRET_KEY", leaving out `TOTP_ENCRYPTION_KEY`. Without it every `manage.py` command stops (DEVELOPMENT.md, "First-time setup"). README's status and DEVELOPMENT.md did not mention the registry. DEVELOPMENT.md said the bootstrap creates "the only account the application can create so far" and that "no page uses" the authorization layer apart from the sign-in and second-factor pages. Both have been untrue since ADR-0015.
 - Fix: §9.
+
+**M4. The development guide advised deleting the database with no warning that its data is lost. Fixed on this branch.**
+- Evidence: `docs/DEVELOPMENT.md` gave `docker compose down -v`, which deletes the database volume, as the remedy in three places: a changed `POSTGRES_PASSWORD`, starting again after the bootstrap, and a changed TOTP key. A fourth place said "Recreate that database". None said that the registry and the audit record go with it, or how to back up first. None of this was added by this branch; the text is on `main`.
+- Impact: The development database now holds the owner's research reference data and its audit trail. Following the guide would destroy them, with nothing to restore them from.
+- Fix: §9. The command stays in the command list, marked, because it is accurate. A new section, "Deleting the database", says what is lost, that the command never fixes a failing test, and how to back up and check the backup. Each remedy now points to that section instead of naming the command.
+- Validation: the backup commands of the new section were run as written, with the output sent to a scratch directory. They produced a mode-600 dump with all 21 table-data entries, and the scratch copy was deleted.
 
 ### Low
 
@@ -212,19 +218,22 @@ No Critical and no High finding.
 
 | Finding | Change | Files |
 |---|---|---|
+| M4 | `docs/DEVELOPMENT.md`: the "Deleting the database" section, with the backup and check steps; the four remedies point to it | `docs/DEVELOPMENT.md` |
 | M3 | README status names the audit record and the registry. The quick start names `TOTP_ENCRYPTION_KEY` and points to DEVELOPMENT.md. DEVELOPMENT.md's summary names the registry. The bootstrap is "the first account", not "the only". The authorization section says which pages are public and that every other page declares a permission (checked against the probe's list). A new "The registry" section gives the 15 routes, their permissions, and how a fresh database is filled. | `README.md`, `docs/DEVELOPMENT.md` |
 | — | This report | `docs/reports/caipo-full-diagnostic-2026-10-20.md` |
 
 **No application code, test, migration, setting, or CI file was changed.** Only documentation changed, so no regression test applies.
 
-After the fixes, every gate was run again on the branch:
+After the fixes, every gate was run again on the branch, twice: once after the M3 fix (commit `867013e`) and once on the final content, with M4 and the corrections to this report.
 
-| Check | Result on the branch |
-|---|---|
-| `uv lock --check`, `ruff check`, `ruff format --check`, `mypy .`, `lint-imports` | Exit 0 each |
-| `manage.py check`; `makemigrations --check --dry-run` | No issues; no changes |
-| Full suite | **4169 passed**, 0 failed, 0 skipped, exit 0, 8 min 48 s |
-| Secret scan (gitleaks, full history including the audit commit) | Exit 0; 40 commits scanned, no leaks |
+| Check | After `867013e` | Final content |
+|---|---|---|
+| `uv lock --check`, `ruff check`, `ruff format --check`, `mypy .`, `lint-imports` | Exit 0 each | Exit 0 each |
+| `manage.py check`; `makemigrations --check --dry-run` | No issues; no changes | No issues; no changes |
+| Full suite | **4169 passed**, 0 failed, 0 skipped, exit 0, 8 min 48 s | **4169 passed**, 0 failed, 0 skipped, exit 0, 8 min 52 s |
+| Secret scan (gitleaks, full history) | Exit 0; 40 commits scanned, no leaks | Run after the final commit. A report cannot hold the scan of the commit that contains it; the result is in the pull request. |
+
+No test reads `README.md`, `docs/DEVELOPMENT.md`, or this report (checked by search), so the documentation changes cannot change a test result.
 
 ## 10. Features incomplete or intentionally deferred
 
@@ -291,7 +300,7 @@ Recommended order of next work:
 1. Close the researcher-owned Phase 2 blockers: B22, then B8 and B9, then B7 and B10. Nothing research-related can be built before them.
 2. Run the job-system and isolation spikes together (B4, B21), so that ADR-0004 and ADR-0011 can be decided.
 3. A small interface increment for M2, L1, L3, and L5 once decided.
-4. Before many institutions are entered: decide I3, and plan L4 (pagination or a page per institution, which would need an ADR because ADR-0018 allows two pages only).
+4. Before many institutions are entered: decide I3, and plan L4. Pagination fits the two pages. A page per institution would need an ADR, because ADR-0018 allows two pages only.
 
 ## 14. Commands run, and checks not performed
 
@@ -300,7 +309,9 @@ Recommended order of next work:
 - `git status`, `git branch -vv`, `git fetch origin`, `git rev-parse HEAD origin/main`, `git switch -c audit/caipo-full-diagnostic`
 - `docker info`, `docker compose ps`
 - `docker compose exec -T postgres pg_dump --format=custom` (backup); `createdb`, `pg_restore --exit-on-error`, row counts, `dropdb` (restore check in a throwaway database)
-- `psql` with `BEGIN TRANSACTION READ ONLY … ROLLBACK` (inspection of §5)
+- `psql` with `BEGIN TRANSACTION READ ONLY … ROLLBACK` (inspection of §5, and the later check that nothing was written)
+- Django's test client, five anonymous GETs under the development settings (§5, §8 L1)
+- The backup commands of DEVELOPMENT.md's new section, writing to a scratch directory, and a `pg_restore --list` of the result (M4)
 - `uv lock --check`; `uv sync --locked`; `ruff check`; `ruff format --check`; `mypy .`; `lint-imports`
 - `manage.py check`; `check --deploy` (development settings, and production settings with synthetic values); `makemigrations --check --dry-run`; `showmigrations`; `migrate --check`
 - `pytest` (full, and the two focused runs); the audit probe on an exported copy of HEAD with its own database
@@ -313,7 +324,7 @@ Recommended order of next work:
 - Browser end-to-end testing: no browser automation was available (§12).
 - Line-by-line review of `caipo/accounts/services.py` (3049 lines): spot-checked only; its behaviour rests on its tests.
 - Reversing a migration on the development database: not done, because it destroys data. Reversibility is shown by the migration tests, which run on the test database.
-- Any write to the development database: none was needed, because both agencies existed.
+- Any write to the development database: none was needed, because both agencies existed. None was made (§5).
 - A secret scan of uncommitted files: gitleaks scans commits only, as in CI. The branch is scanned after committing (§9).
 - The production configuration: none exists (ADR-0008).
 
