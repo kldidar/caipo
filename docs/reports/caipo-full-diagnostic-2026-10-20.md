@@ -9,7 +9,7 @@ Technical, security, data, and research-readiness audit of the repository at `ma
 - Every quality gate that CI runs passes locally: 4169 tests, ruff, formatting, mypy (strict), both import contracts, Django checks, migration consistency, the dependency audit, and the full-history secret scan. The last six CI runs on `main` succeeded; the latest, on `4bff508`, passed all four jobs.
 - No Critical or High defect was found. An independent probe of all 40 routes for 8 kinds of actor found no route reachable without its declared permission, no CSRF gap, and no server error under hostile input.
 - The development database is intact. Its 2 countries, 5 languages, 3 institutions, and 3 names are consistent, and the audit record has exactly one `created` event for each, with no orphaned events. Nothing was written to it during the audit; that was checked afterwards (§5).
-- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. Two are fixed on this branch, both Medium and both documentation: drift between the docs and the code (M3), and advice to delete the development database with no warning that its data is lost (M4). The other eighteen are open. Two of the open ones are Medium: the stored English name of Turkmenistan's statistics body does not match the body's own website (M1), and an irreversible action takes a single click (M2). Five open findings wait for an owner decision (M1, M2, L1, L5, I3), and four are deferred: I1, I2, and I5 to ADR-0008, I4 by ADR-0018.
+- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. In the follow-up of 2026-10-21, **ten are fixed**: M3 and M4, documentation, on this branch (#16); M2, L1, L2, L3, L5, L6, and L8, application, in pull request #17, which is not merged; and L7 in the GitHub ruleset. **Ten are open**: M1 and L9, corrections to two institution names that are proposed from the official sites and not yet entered: entering them needs an Administrator signed in with a second factor (§15.2); L4, measured, with a recommendation (§15.4); and the seven Informational findings, of which I1, I2, and I5 are deferred to ADR-0008, I4 by ADR-0018, and I3 needs an ADR of its own.
 - Research readiness: the platform cannot yet hold a source, document, policy, indicator, claim, or citation. That is by design. Phase 2 and later are blocked by open research, rights, and isolation decisions (spec §10), most of them the researcher's to make.
 
 | Area | Assessment |
@@ -34,7 +34,7 @@ Technical, security, data, and research-readiness audit of the repository at `ma
 
 In scope: the code, tests, configuration, CI, and documentation of the repository; the local development database, read only; the GitHub CI history and the protection of `main`.
 
-Out of scope: production (none exists), browser automation (none was available), and building any feature of a later phase.
+Out of scope: production (none exists), browser automation (none was available), and building any feature of a later phase. The follow-up of 2026-10-21 is in §15.
 
 ## 3. Components and routes inspected
 
@@ -171,79 +171,83 @@ No Critical and no High finding.
 
 ### Findings register
 
-Every finding of the audit, open ones first. "Open" means nothing was changed for it. "Needs verification" names what the audit could not confirm itself. The register was checked again against the code, the ruleset, and an anonymous request on 2026-10-21 (§14).
+Every finding of the audit, open ones first, then the fixed ones. "Open" means that nothing has yet changed for it. "Fixed in #17" means that the fix is in pull request #17, which is not merged: until it is, `main` behaves as before. "Needs verification" names what the audit could not confirm itself. The evidence was checked again on 2026-10-21 against the code, the ruleset, the official sites, and an anonymous request (§14). The last column says what was done, or is proposed, in the follow-up of 2026-10-21 (§15). The fixes are fixes from the findings of this audit.
 
-| ID | Severity | Finding | Status | Evidence |
-|---|---|---|---|---|
-| M1 | Medium | Turkmenistan statistics body: stored English name differs from the official one | Open, owner decision. Needs verification: the wording on the site itself (§12 item 5) | Read-only query of InstitutionName 3; stat.gov.tm header and footer, fetched as text on 2026-10-20 |
-| M2 | Medium | "Mark as entered in error" is irreversible and takes one click | Open, owner decision | `registry_entry.html` line 148: a single submit button, no confirmation field. Second-factor approval and recovery authorisation have a `confirmed` checkbox |
-| L1 | Low | Refused requests get a bare "403 Forbidden" page | Open, owner decision | Anonymous GET of `/registry/` on 2026-10-21: status 403, body `<h1>403 Forbidden</h1>` and nothing else, no `Cache-Control`, no redirect. No `403.html` template. The case of Reviewer or Administrator on a password alone is from the probe (§6) |
-| L2 | Low | Every refusal is logged twice, once with a traceback | Open | Same request: one `access.denied` WARNING from `caipo.web.middleware`, then one `django.request` WARNING, "Forbidden (Permission denied)", with a traceback. Django's `response_for_exception` logs `PermissionDenied` with `exception=exc` |
-| L3 | Low | Per-institution forms lose typed input on refusal | Open | `caipo/web/registry.py`: `change_institution`, `add_institution_name`, and `change_institution_name_dates` re-render through `_entry_page`, which takes submitted data only for the creation form (`institution_data`); the others are rebuilt from stored values |
-| L4 | Low | Entry page grows with the square of the number of institutions | Open | `_institution_sections` gives each institution a change form whose parent and successor selects list every other institution; no pagination in `web` or `registry` |
-| L5 | Low | Bidirectional control characters accepted and shown without isolation | Open, owner decision | Probe (§6): a name containing U+202E accepted and displayed. Not re-run on 2026-10-21 |
-| L6 | Low | Dates accepted with non-ASCII digits and without zero padding | Open, noted only | Probe (§6): `１２３４-01-01` and `2020-1-1` accepted as valid dates. Not re-run on 2026-10-21 |
-| L7 | Low | Protection of `main`: 0 approvals, status checks not strict | Open | Ruleset "Protect main" (id 24416842), read on 2026-10-21: active; pull request required with `required_approving_review_count: 0`; the 4 CI jobs required with `strict_required_status_checks_policy: false`; deletion and force push blocked; no bypass actors. No classic branch protection |
-| L8 | Low | No custom 404 or 500 templates | Open | No `403.html`, `404.html`, or `500.html` in the repository; no `handler404` or `handler500` |
-| L9 | Low | Ministry's English name is a shortened form | Open. Needs verification: the wording on the site itself (§12 item 5) | digital.uz header, fetched as text on 2026-10-20 |
-| I1 | Info | Production hardening | Deferred to ADR-0008 (Proposed) | `production.py`; `check --deploy` warnings W004 and W008 (§6) |
-| I2 | Info | Throttling by `REMOTE_ADDR` | Deferred to ADR-0008 (Proposed) | §6, "Client address for throttling" |
-| I3 | Info | Registry records no source for a name or a date | Open, owner decision; needs an ADR | ADR-0018: registry maintenance states no claim and cites no source |
-| I4 | Info | No page or selector reads the audit record | Deferred by ADR-0018 | ADR-0018, "Not in this milestone" |
-| I5 | Info | Break-glass command not recorded operationally | Deferred to ADR-0008 (Proposed) | ADR-0017; CLAUDE.md, "Not implemented" |
-| I6 | Info | Older backups hold account data | Open, housekeeping | `~/caipo-backups/`, all mode `600` |
-| I7 | Info | Fourteen local branches of merged work | Open, housekeeping | `git branch -vv` at the start |
-| M3 | Medium | Documentation drift | **Fixed on this branch** | Below; fix in §9 |
-| M4 | Medium | Development guide advised deleting the database with no warning | **Fixed on this branch** | Below; fix in §9 |
+| ID | Severity | Finding | Status | Evidence | Outcome |
+|---|---|---|---|---|---|
+| M1 | Medium | Turkmenistan statistics body: the stored English name is not the form the body's site uses for itself | **Open.** A correction is proposed; nothing is entered yet. Entry needs an Administrator signed in with a second factor (§15.2) | Read-only query of InstitutionName 3; stat.gov.tm/en/about-us, read on 2026-10-21: header and footer "State Committee of Turkmenistan on Statistics"; About text "State Committee of Statistics of Turkmenistan" and, in the renaming sentence, "State Statistics Committee of Turkmenistan" | Proposed: add "State Committee of Turkmenistan on Statistics" as a further English rendering, with no dates. Keep the stored name: the site itself uses it. Mark nothing |
+| L4 | Low | The entry page grows with the square of the number of institutions | **Open**, measured | Measured on 2026-10-21 (§15.4): 10 institutions 78 KB; 50, 706 KB; 100, 2.3 MB and 1.1 s; 200, 8.0 MB and 3.8 s. The browse page grows linearly (184 KB at 200) | Not changed: a fix changes how the page is used. Recommended in §15.4 |
+| L9 | Low | The Ministry's English name is a shortened form | **Open.** An addition is proposed; nothing is entered yet (§15.2) | digital.uz/en, read on 2026-10-21: page title and header "Ministry of Digital Technologies of the Republic of Uzbekistan" | Proposed: add the full form as a further English rendering, with no dates. Keep the short form |
+| I1 | Info | Production hardening | Deferred to ADR-0008 (Proposed) | `production.py`; `check --deploy` warnings W004 and W008 (§6) | Not built: needs ADR-0008 |
+| I2 | Info | Throttling by `REMOTE_ADDR` | Deferred to ADR-0008 (Proposed) | §6, "Client address for throttling" | Not changed: trust in a reverse proxy needs ADR-0008 |
+| I3 | Info | The registry records no source for a name or a date | **Open**; needs an ADR | ADR-0018: registry maintenance states no claim and cites no source. M1 shows the cost | No source field added. The sources of the names in §15.2 are kept in this report only |
+| I4 | Info | No page or selector reads the audit record | Deferred by ADR-0018 | ADR-0018, "Not in this milestone" | Not built: a later increment with its own permission |
+| I5 | Info | The break-glass command is not recorded operationally | Deferred to ADR-0008 (Proposed) | ADR-0017; CLAUDE.md, "Not implemented" | Not built |
+| I6 | Info | Older backups hold account data | Open, housekeeping | `~/caipo-backups/`, all mode `600` | Kept; none deleted, as instructed |
+| I7 | Info | Fourteen local branches of merged work | Open, housekeeping | `git branch -vv` at the start | Kept |
+| M2 | Medium | "Mark as entered in error" is irreversible and took one click | **Fixed in #17** | Before: `registry_entry.html` line 148, a single submit button. After: a ticked confirmation is required, by the same rule as second-factor approval; tests in `test_registry_entry_safeguards.py` | A ticked confirmation before the mark |
+| L1 | Low | A refusal got a bare "403 Forbidden" page | **Fixed in #17** | Before: anonymous GET of `/registry/`, body `<h1>403 Forbidden</h1>`, no `Cache-Control`. After: `caipo/web/errors.py` and `web/403.html`; tests in `test_error_pages.py` | Sign-in link for an anonymous visitor; the second-factor requirement explained where it is what is missing; `no-store`; the refusal itself unchanged |
+| L2 | Low | Every refusal was logged twice, once with a traceback | **Fixed in #17** | Before: the same request gave `access.denied` and a `django.request` WARNING with a traceback. After: `ExpectedRefusalFilter` removes the traceback of a `PermissionDenied` only; tests in `test_error_pages.py` | Keep the structured event and the summary line; drop the traceback of an expected refusal; keep the traceback of a server error |
+| L3 | Low | Per-institution forms lost what was typed when a change was refused | **Fixed in #17** | Before: `_entry_page` rebuilt the three forms from stored values. After: the form a refused change came from is shown again as sent, with its field errors; tests in `test_registry_entry_safeguards.py` | Show the typed values again |
+| L5 | Low | Invisible direction controls were accepted in names | **Fixed in #17** | Before: probe (§6), a name with U+202E accepted. After: the services refuse U+202A to U+202E and U+2066 to U+2069 in every name; tests in `test_direction_controls.py` and `test_registry_entry_safeguards.py` | Refuse the nine controls; allow every letter and the implicit marks U+200E, U+200F, U+061C |
+| L6 | Low | Dates were accepted with other digits and without zero padding | **Fixed in #17** | Before: probe (§6), `１２３４-01-01` and `2020-1-1` accepted. After: `FullDateField` takes `YYYY-MM-DD` in ASCII digits only; tests in `test_registry_entry_safeguards.py` | One strict form of date |
+| L7 | Low | Protection of `main`: 0 approvals, status checks not strict | **Fixed in the ruleset** on 2026-10-21 (§15.5) | Ruleset 24416842: `strict_required_status_checks_policy` changed from `false` to `true`; every other parameter compared and unchanged | Strict checks on. 0 approvals kept, so that one maintainer can merge |
+| L8 | Low | No custom 404 or 500 pages | **Fixed in #17** | After: `web/404.html` and `web/500.html` through `caipo/web/errors.py`; neither shows the path or the exception; tests in `test_error_pages.py` | Plain pages that disclose nothing |
+| M3 | Medium | Documentation drift | **Fixed in #16** (this branch) | Below; fix in §9 | — |
+| M4 | Medium | The development guide advised deleting the database with no warning | **Fixed in #16** (this branch) | Below; fix in §9 | — |
 
-Totals: 20 findings. 18 open (2 Medium, 9 Low, 7 Informational), 2 fixed (2 Medium).
+Totals: 20 findings. **10 open**: 1 Medium (M1), 2 Low (L4, L9), and 7 Informational. **10 fixed**: 3 Medium (M2 in #17; M3 and M4 in #16) and 7 Low (L1, L2, L3, L5, L6, and L8 in #17; L7 in the ruleset).
 
-### Medium, open
+### Open findings
 
-**M1. Stored English name of Turkmenistan's statistics body differs from the body's own.**
-- Evidence: InstitutionName 3 reads "State Statistics Committee of Turkmenistan". The header and footer of stat.gov.tm read "State Committee of Turkmenistan on Statistics" (fetched 2026-10-20).
-- Impact: Documents will be attributed to this institution. A name that the body does not use weakens matching and citation.
-- Validation: The read-only query of §5 and the official site.
-- Recommended action, **for the owner** (research data, and a mark cannot be undone): add the site's form as a new name. Then decide whether the present one is a variant worth keeping or a name entered in error. Not changed by this audit.
+**M1. The stored English name of Turkmenistan's statistics body is not the form the body's site uses for itself.**
+- Evidence: InstitutionName 3 reads "State Statistics Committee of Turkmenistan". On stat.gov.tm/en/about-us, read on 2026-10-21, the header and footer read "State Committee of Turkmenistan on Statistics". The About text uses "State Committee of Statistics of Turkmenistan", and its renaming sentence uses "State Statistics Committee of Turkmenistan", the stored form.
+- Impact: documents will be attributed to this institution. Without the body's own form, matching and citation are weaker.
+- Proposed correction: add the header form as a further `english_rendering` in `eng-Latn`, with no dates. The stored name is kept and not marked as entered in error, because the site itself uses it. No date is entered: the page mentions a reorganisation by a decree of 11 October 2007, but it does not say from when each English form is used.
+- Status: open. **Nothing has been entered.** Only an account signed in with a trusted second factor can make the entry, and the audit stopped before it (§15.2).
+- Limitation of the registry: it cannot say which of several concurrent names of the same kind is the preferred one. A name's kind and text cannot be changed once it is saved (ADR-0018 point 19), and there is no field for preference or for a source. Both are recorded here, not in the model.
 
-**M2. "Mark as entered in error" is irreversible and takes one click.**
-- Evidence: `registry_entry.html` posts the mark with a single button. Elsewhere, irreversible administrative actions need a ticked confirmation (second-factor approval, recovery authorisation).
-- Impact: A misclick marks a correct name for ever. The only remedy is to enter it again, which leaves the mistaken mark in the record.
-- Recommended action: a confirmation step. **Owner decision**: it changes a page that ADR-0018 and 0019 define.
+**L4. The entry page grows with the square of the number of institutions.** Each institution has a change form whose parent and successor lists name every other institution. Measured in §15.4. Left open with a recommendation.
 
-### Medium, fixed on this branch
-
-**M3. Documentation drift. Fixed on this branch.**
-- Evidence: README's quick start told a new developer to set "the two passwords and DJANGO_SECRET_KEY", leaving out `TOTP_ENCRYPTION_KEY`. Without it every `manage.py` command stops (DEVELOPMENT.md, "First-time setup"). README's status and DEVELOPMENT.md did not mention the registry. DEVELOPMENT.md said the bootstrap creates "the only account the application can create so far" and that "no page uses" the authorization layer apart from the sign-in and second-factor pages. Both have been untrue since ADR-0015.
-- Fix: §9.
-
-**M4. The development guide advised deleting the database with no warning that its data is lost. Fixed on this branch.**
-- Evidence: `docs/DEVELOPMENT.md` gave `docker compose down -v`, which deletes the database volume, as the remedy in three places: a changed `POSTGRES_PASSWORD`, starting again after the bootstrap, and a changed TOTP key. A fourth place said "Recreate that database". None said that the registry and the audit record go with it, or how to back up first. None of this was added by this branch; the text is on `main`.
-- Impact: The development database now holds the owner's research reference data and its audit trail. Following the guide would destroy them, with nothing to restore them from.
-- Fix: §9. The command stays in the command list, marked, because it is accurate. A new section, "Deleting the database", says what is lost, that the command never fixes a failing test, and how to back up and check the backup. Each remedy now points to that section instead of naming the command.
-- Validation: the backup commands of the new section were run as written, with the output sent to a scratch directory. They produced a mode-600 dump with all 21 table-data entries, and the scratch copy was deleted.
-
-### Low, all open
-
-- **L1. A refused request gets a bare "403 Forbidden" page.** It has no explanation and no link to sign in. A Reviewer or Administrator on a password alone is not told that a second factor is what is missing. The response also has no `Cache-Control`. A friendlier page, or a redirect to sign-in for anonymous visitors, is a design choice for the owner.
-- **L2. Every refusal is logged twice.** Once as the application's `access.denied` or `authorization.denied`, and once by `django.request` at WARNING with a full traceback. That is noise in an append-only log stream, and not a leak: no values are in the traceback.
-- **L3. The per-institution forms lose typed input on refusal.** The change, add-name, and change-dates forms show no field errors. A refused change shows one general message at the top and the stored values again.
-- **L4. The entry page grows with the square of the number of institutions.** Every institution has a change form with two selects listing every other institution. With 3 institutions this is invisible. With several hundred the page becomes very large. Neither page is paginated.
-- **L5. Bidirectional control characters are accepted in names and shown without isolation.** For example U+202E. Storing text as entered is ADR-0018's decision. Whether to refuse such characters, or to isolate them in display (`dir="auto"` or `<bdi>`), is a policy question.
-- **L6. Dates are accepted with non-ASCII digits and without zero padding.** For example `１２３４-01-01` and `2020-1-1`. They are parsed to valid full dates, so nothing wrong is stored. Noted only.
-- **L7. The ruleset requires 0 approvals and non-strict status checks.** Reasonable for one maintainer. A PR that passed against an older `main` can be merged without re-running against the new one.
-- **L8. No custom 404 or 500 templates.** In production, Django's plain defaults would be shown.
-- **L9. The Ministry's English name is a shortened form.** "Ministry of Digital Technologies" against the site's "Ministry of Digital Technologies of the Republic of Uzbekistan". Accurate, incomplete; the owner may add the full form.
-
-### Informational, open or deferred
+**L9. The Ministry's English name is a shortened form.** "Ministry of Digital Technologies" against the site's "Ministry of Digital Technologies of the Republic of Uzbekistan". Proposed: add the full form as a further `english_rendering`, with no dates, and keep the short one, which is accurate. Its kind cannot be changed to show that it is the short form. Status: open. **Nothing has been entered** (§15.2).
 
 - **I1. Production hardening waits for ADR-0008** (Proposed): HSTS, TLS redirect, the proxy header, trusted CSRF origins, CSP, database roles that stop TRUNCATE and changes to triggers, key storage and rotation, and email delivery. `production.py` lists these itself.
 - **I2. Throttling by `REMOTE_ADDR`.** Behind a reverse proxy every client would share one address, and 20 failures from any of them would lock sign-in for everyone. This must be designed with ADR-0008.
-- **I3. The registry records no source for a name or a date.** ADR-0018 classes registry maintenance as stating no claim and citing no source. M1 shows the cost: where a name came from is recorded nowhere. Worth a decision before many institutions are entered.
+- **I3. The registry records no source for a name or a date.** ADR-0018 classes registry maintenance as stating no claim and citing no source. M1 shows the cost: where a name came from is recorded nowhere in the application. Worth a decision, by ADR, before many institutions are entered.
 - **I4. No page or selector reads the audit record.** Deferred by ADR-0018 to a later increment with its own permission. Until then it is read by SQL.
 - **I5. The break-glass command is not recorded operationally.** Who ran it is not recorded; that waits for ADR-0008.
-- **I6. Older backups in `~/caipo-backups/` hold account data.** All are mode `600`. Keep them restricted, and delete those no longer needed.
+- **I6. Older backups in `~/caipo-backups/` hold account data.** All are mode `600`. Keep them restricted, and delete those no longer needed. None was deleted by this audit.
 - **I7. Fourteen local branches of merged work remain.** Housekeeping only.
+
+### Fixed findings
+
+**M2. "Mark as entered in error" is irreversible and took one click. Fixed in #17.**
+- Evidence before: `registry_entry.html` posted the mark with a single button. Elsewhere, irreversible administrative actions needed a ticked confirmation (second-factor approval, recovery authorisation).
+- Fix: each mark form has a confirmation box, "I have checked that this name was entered by mistake. I understand that the mark cannot be undone." The view refuses the mark with 400, changes nothing, and says why unless the box was ticked. Only what a ticked box sends counts, as for the two existing confirmations. The service and its rules are unchanged.
+
+**L1. A refused request got a bare "403 Forbidden" page. Fixed in #17.** The refusal is unchanged: the status is 403 whoever asks, and the access declarations and services decide as before. The page now says what the person can do. An anonymous visitor gets a link to sign in, which brings them back to the page they asked for by GET. An account that would hold the page's declared permission once signed in with a trusted second factor is told that, and given the two-step verification page. Any other account is told only that it has no access. The answer is `no-store`.
+
+**L2. Every refusal was logged twice, once with a full traceback. Fixed in #17.** The structured event (`access.denied` or `authorization.denied`) stays, and so does Django's one-line summary of the 403. Only the traceback that Django attached to that summary is removed, and only for `PermissionDenied`. A server error keeps its traceback.
+
+**L3. The per-institution forms lost typed input on refusal. Fixed in #17.** A refused change of an institution, a new name, or new dates is shown again in the form it came from, as typed and with its field errors. The other forms still show what is stored.
+
+**L5. Bidirectional control characters were accepted in names. Fixed in #17.** The services refuse U+202A to U+202E and U+2066 to U+2069 in the English names of countries and languages and in the names of institutions. Every letter of every script is accepted, Cyrillic, Latin, and Turkmen and Uzbek letters among them, and so are the implicit marks U+200E, U+200F, and U+061C, which reorder nothing around them. The rule is held by the services, as the NUL rule is, and not by a database check. The development database holds no such character (§5).
+
+**L6. Dates were accepted with non-ASCII digits and without zero padding. Fixed in #17.** Every date field of the entry page takes `YYYY-MM-DD` in ASCII digits with every part padded, or nothing. `2020-1-1`, full-width and Arabic-Indic digits, surrounding spaces, other separators, and impossible dates are refused before a service is called.
+
+**L7. The ruleset required 0 approvals and non-strict status checks. Fixed in the ruleset on 2026-10-21.** Strict status checks are now on, so a pull request must be up to date with `main`, and its checks must have passed on that, before it can be merged. 0 approvals is kept, because one maintainer could not otherwise merge. Details in §15.5.
+
+**L8. No custom 404 or 500 pages. Fixed in #17.** Both are plain pages that show neither the path nor the exception. The 500 page is rendered without the request, so it depends on no session or database.
+
+**M3. Documentation drift. Fixed on this branch (#16).**
+- Evidence: README's quick start told a new developer to set "the two passwords and DJANGO_SECRET_KEY", leaving out `TOTP_ENCRYPTION_KEY`. Without it every `manage.py` command stops (DEVELOPMENT.md, "First-time setup"). README's status and DEVELOPMENT.md did not mention the registry. DEVELOPMENT.md said the bootstrap creates "the only account the application can create so far" and that "no page uses" the authorization layer apart from the sign-in and second-factor pages. Both have been untrue since ADR-0015.
+- Fix: §9.
+
+**M4. The development guide advised deleting the database with no warning that its data is lost. Fixed on this branch (#16).**
+- Evidence: `docs/DEVELOPMENT.md` gave `docker compose down -v`, which deletes the database volume, as the remedy in three places: a changed `POSTGRES_PASSWORD`, starting again after the bootstrap, and a changed TOTP key. A fourth place said "Recreate that database". None said that the registry and the audit record go with it, or how to back up first. None of this was added by this branch; the text is on `main`.
+- Impact: the development database now holds the owner's research reference data and its audit trail. Following the guide would destroy them, with nothing to restore them from.
+- Fix: §9. The command stays in the command list, marked, because it is accurate. A new section, "Deleting the database", says what is lost, that the command never fixes a failing test, and how to back up and check the backup. Each remedy now points to that section instead of naming the command.
+- Validation: the backup commands of the new section were run as written, with the output sent to a scratch directory. They produced a mode-600 dump with all 21 table-data entries, and the scratch copy was deleted.
 
 ## 9. Fixes made and regression tests
 
@@ -253,7 +257,7 @@ Totals: 20 findings. 18 open (2 Medium, 9 Low, 7 Informational), 2 fixed (2 Medi
 | M3 | README status names the audit record and the registry. The quick start names `TOTP_ENCRYPTION_KEY` and points to DEVELOPMENT.md. DEVELOPMENT.md's summary names the registry. The bootstrap is "the first account", not "the only". The authorization section says which pages are public and that every other page declares a permission (checked against the probe's list). A new "The registry" section gives the 15 routes, their permissions, and how a fresh database is filled. | `README.md`, `docs/DEVELOPMENT.md` |
 | — | This report | `docs/reports/caipo-full-diagnostic-2026-10-20.md` |
 
-**No application code, test, migration, setting, or CI file was changed.** Only documentation changed, so no regression test applies.
+**On this branch (#16), no application code, test, migration, setting, or CI file was changed.** Only documentation changed, so no regression test applies here. The application fixes are in #17, below.
 
 After the fixes, every gate was run again on the branch, three times: after the M3 fix (commit `867013e`), after M4 and the first corrections to this report (commit `67d2c68`), and on 2026-10-21 with the findings register added to this report.
 
@@ -265,6 +269,37 @@ After the fixes, every gate was run again on the branch, three times: after the 
 | Secret scan (gitleaks, full history) | Exit 0; 40 commits scanned, no leaks | Exit 0; 41 commits scanned, no leaks | Run after the commit. A report cannot hold the scan of the commit that contains it; the result is in the pull request. |
 
 No test reads `README.md`, `docs/DEVELOPMENT.md`, or this report (checked by search), so the documentation changes cannot change a test result.
+
+The follow-up of 2026-10-21 changed only this report on this branch. Its checks are in pull request #16; the full suite on this branch is run there by CI.
+
+### Fixes of 2026-10-21, in pull request #17
+
+On the branch `fix/audit-findings`, from `main` `4bff508`, commit `96f86ab`. Not merged.
+
+| Finding | Change | Files | Regression tests |
+|---|---|---|---|
+| M2 | A ticked confirmation before a name is marked as entered in error; without it the view answers 400 and changes nothing | `caipo/web/forms.py` (`MarkEnteredInErrorForm`), `caipo/web/registry.py`, `registry_entry.html` | `test_registry_entry_safeguards.py`; the existing page tests now send the confirmation |
+| L1 | Error handler for 403: sign-in link for an anonymous visitor, the second-factor requirement where it is what is missing, otherwise "no access"; `no-store`. A read-only selector, `second_factor_would_grant`, answers the question from the policy | `caipo/web/errors.py`, `web/403.html`, `caipo/config/urls.py`, `caipo/accounts/selectors.py` | `test_error_pages.py`, `test_selectors.py`; the assurance inventory in `test_second_factor.py` is extended by this one read-only use and checks that it builds no context |
+| L2 | `ExpectedRefusalFilter` on `django.request` removes the traceback of a `PermissionDenied` only | `caipo/core/structured_logging.py`, `caipo/config/settings/base.py` | `test_error_pages.py` (refusal without traceback, server error with it) |
+| L3 | The form a refused change came from is shown again as sent, with field errors | `caipo/web/registry.py`, `registry_entry.html` | `test_registry_entry_safeguards.py` |
+| L5 | `DirectionControlError`, a kind of `InvalidEntryError`, for U+202A to U+202E and U+2066 to U+2069 in every name; its own message on the page | `caipo/registry/services.py`, `caipo/web/registry.py` | `test_direction_controls.py` (6 operations, 9 characters, 3 positions; Latin, Cyrillic, Turkmen, and Uzbek letters and the implicit marks accepted), `test_registry_entry_safeguards.py` |
+| L6 | `FullDateField`: `YYYY-MM-DD`, ASCII digits, zero-padded, or nothing | `caipo/web/forms.py` | `test_registry_entry_safeguards.py` (15 refused forms on all three forms with dates) |
+| L8 | Handlers for 404 and 500 and their pages; the 500 page is rendered without the request | `caipo/web/errors.py`, `web/404.html`, `web/500.html` | `test_error_pages.py` |
+| — | The rules written down | `docs/DATA_MODEL.md`, `SECURITY.md`, `docs/ARCHITECTURE.md` §10 | — |
+
+No permission, route, model, migration, or dependency is added; there are still 40 routes. Two existing tests that state exact sets were extended for what is new: the set of refusals the institution views answer gains `DirectionControlError`, and the assurance inventory gains one mention. No test was weakened, skipped, or removed.
+
+| Check on `96f86ab` | Result |
+|---|---|
+| `uv lock --check`, `ruff check`, `ruff format --check` (188 files), `mypy .` (153 files), `lint-imports` (2 kept) | Exit 0 each |
+| `manage.py check`; `makemigrations --check --dry-run` | No issues; no changes |
+| Full suite (`pytest -rfE --tb=short`) | **4452 passed**, 0 failed, 0 skipped, exit 0, 8 min 51 s |
+| Dependency audit (`pip-audit` 2.10.1 on the exported lockfile) | No known vulnerabilities; the lockfile is unchanged |
+| Secret scan (gitleaks v8.30.1, full history, after the commit) | Exit 0; 43 commits scanned, no leaks |
+| Raw direction controls in the repository's code and documents | None: the tests write them as `\u` escapes |
+| CI on GitHub, pull request #17 at `96f86ab` | All four required jobs passed: Code quality, Django checks and tests, Dependency audit, Secret scan |
+
+Two earlier full runs on the branch: the first gave 4451 passed and 1 failed, the assurance inventory, which was then extended as described above; the second gave 4452 passed. Comments and documents were then reworded, and the run above is on the commit that holds them.
 
 ## 10. Features incomplete or intentionally deferred
 
@@ -314,24 +349,21 @@ No browser automation was available. These were not verified in a browser:
 2. The keyboard and screen-reader experience of the entry page. Its many "Deactivate", "Change the dates", and "Mark as entered in error" buttons have the same text.
 3. A real sign-in with an authenticator application, and the 403 a password-only Administrator sees on the registry.
 4. Cookie behaviour over plain HTTP under the development settings.
-5. Whether "State Committee of Turkmenistan on Statistics" is the form to record, and whether names in the national languages should be added (M1, L9).
+5. Entering the two names proposed in §15.2, signed in with your authenticator, and whether names in the national languages should be added (M1, L9).
+6. After #17 is merged: the new 403, 404, and 500 pages, and the confirmation box of "Mark as entered in error", in a browser.
 
 ## 13. Outstanding decisions and next steps
 
-Decisions for the owner. This audit made none of them:
+Fixed in the follow-up of 2026-10-21, as fixes from the findings of this audit: M2, L1, L2, L3, L5, L6, and L8 in #17, and L7 in the ruleset. Proposed and not yet entered: the names of M1 and L9 (§15.2).
 
-1. **M1:** how to correct the Turkmenistan agency's name.
-2. **M2:** whether marking a name needs a confirmation step.
-3. **I3:** whether registry names and dates should carry the source they came from. This needs an ADR, because ADR-0018 says registry maintenance cites no source.
-4. **L1:** the page anonymous and under-assured users see when refused.
-5. **L5:** whether names may contain bidirectional control characters.
+Still open, with what each needs, in §15.6: I3 (an ADR), a preferred name (an ADR), I4 (a later increment), I1, I2, and I5 (ADR-0008), L4 (a choice between the options of §15.4), a database check for L5 (a migration), and the "Update branch" button.
 
 Recommended order of next work:
 
-1. Close the researcher-owned Phase 2 blockers: B22, then B8 and B9, then B7 and B10. Nothing research-related can be built before them.
-2. Run the job-system and isolation spikes together (B4, B21), so that ADR-0004 and ADR-0011 can be decided.
-3. A small interface increment for M2, L1, L3, and L5 once decided.
-4. Before many institutions are entered: decide I3, and plan L4. Pagination fits the two pages. A page per institution would need an ADR, because ADR-0018 allows two pages only.
+1. Merge #16 and #17, each brought up to date with `main` first (§15.5), and enter the two names of §15.2.
+2. Close the researcher-owned Phase 2 blockers: B22, then B8 and B9, then B7 and B10. Nothing research-related can be built before them.
+3. Run the job-system and isolation spikes together (B4, B21), so that ADR-0004 and ADR-0011 can be decided.
+4. Before many institutions are entered: decide I3 and the question of a preferred name, and choose a fix for L4.
 
 ## 14. Commands run, and checks not performed
 
@@ -356,13 +388,98 @@ Recommended order of next work:
 - `gh api …/rulesets/24416842` and `…/branches/main/protection` (L7)
 - Two anonymous GETs of `/registry/` with Django's test client under the development settings, the same kind of request as in §5. The first was refused with 400 because the client's default host, `testserver`, is not an allowed host. The second, with the host `localhost`, gave the status, headers, body, and two log lines recorded for L1 and L2
 
+**Follow-up of 2026-10-21** (§15):
+
+- `git status`, `git fetch`, `gh api …/pulls/16`, `gh run list` (state at the start)
+- Fetches of `https://stat.uz/en/about/overview`, `https://stat.gov.tm/en/about-us`, and `https://digital.uz/en`
+- `psql` with `BEGIN TRANSACTION READ ONLY … ROLLBACK`: the registry's names, row counts, and a search for direction controls
+- A temporary test, deleted afterwards and never committed, that measured both pages with 10 to 200 synthetic institutions in the test database (§15.4)
+- `gh api` GET, PUT, and GET again of ruleset 24416842, with the before and after compared field by field (§15.5)
+- On `fix/audit-findings`: `ruff`, `mypy`, `lint-imports`, `manage.py check`, `makemigrations --check`, focused `pytest` runs, and the full suite (§9)
+
 **Not performed, and why:**
 
 - Browser end-to-end testing: no browser automation was available (§12).
 - Line-by-line review of `caipo/accounts/services.py` (3049 lines): spot-checked only; its behaviour rests on its tests.
 - Reversing a migration on the development database: not done, because it destroys data. Reversibility is shown by the migration tests, which run on the test database.
-- Any write to the development database: none was needed, because both agencies existed. None was made (§5).
+- Any write to the development database: none was needed during the audit, because both agencies existed. In the follow-up, the two names of §15.2 were not entered, because only the Administrator signed in with a second factor may enter them, and doing it without them would bypass the second factor and the audit record. None was made.
+- A browser check of the pages changed in #17: no browser automation was available (§12).
 - A secret scan of uncommitted files: gitleaks scans commits only, as in CI. The branch is scanned after committing (§9).
 - The production configuration: none exists (ADR-0008).
 
 Detailed logs are kept outside the repository, in the session scratchpad (`logs/`). They contain no secrets: pytest output is filtered for `password=`, and the log was searched for secret-looking strings.
+
+## 15. Follow-up of 2026-10-21
+
+On 2026-10-21 the project owner asked for the confirmed findings to be fixed where an Accepted ADR allows it, for the names of the institutions to be brought in line with named official sources, and for every finding to carry its status, severity, evidence, and outcome. This section records what was done and what was not, and why.
+
+### 15.1 State at the start
+
+The branch `audit/caipo-full-diagnostic` was clean at `eee1a09`, pull request #16 was open with all four CI jobs passed, and `main` was at `4bff508`. The fixes were made on a new branch, `fix/audit-findings`, from `main`, and are in pull request #17. Neither pull request is merged.
+
+### 15.2 Names of institutions
+
+The official sites named by the owner were read on 2026-10-21, through an automated fetch that turns a page into text:
+
+| Institution | Source | What it shows | Stored now | Proposed |
+|---|---|---|---|---|
+| National Statistics Committee of the Republic of Uzbekistan | https://stat.uz/en/about/overview | Overview, full official name: "National Statistics Committee of the Republic of Uzbekistan"; the same in the footer | The same text, `english_rendering`, `eng-Latn` | Matches. No change |
+| Turkmenistan's statistics body | https://stat.gov.tm/en/about-us | Header and footer: "State Committee of Turkmenistan on Statistics". About text: "State Committee of Statistics of Turkmenistan", and "State Statistics Committee of Turkmenistan" in the sentence on its renaming | "State Statistics Committee of Turkmenistan", `english_rendering`, `eng-Latn` | Add "State Committee of Turkmenistan on Statistics" as `english_rendering` in `eng-Latn`, no dates. Keep the stored name. Mark nothing |
+| Ministry of Digital Technologies | https://digital.uz/en | Page title and header: "Ministry of Digital Technologies of the Republic of Uzbekistan" | "Ministry of Digital Technologies", `english_rendering`, `eng-Latn` | Add the full form as `english_rendering` in `eng-Latn`, no dates. Keep the short form |
+
+These links are kept in this report. **They are not stored in the registry**, which has no field for a source (I3).
+
+**What the registry can and cannot say.** It can hold several English renderings of one institution, each with its own dates, so both corrections fit without breaking an invariant. It cannot say which of several concurrent renderings is the preferred or current one, and it cannot record that a form is short: a name's kind and text are set once (ADR-0018 point 19), and the kinds are `official`, `transliteration`, `english_rendering`, and `abbreviation`. No validity date was entered, because no source gives the first day on which a form was used. The 2007 decree that the Turkmen page mentions is a reorganisation, not the start of an English form.
+
+**Why the two names were not entered by the audit.** Every registry write goes through a service that requires `registry.institutions.manage`, and the only account in the development database is the Administrator, who holds it only when signed in with a trusted second factor. The audit has neither that account's password nor its authenticator. A context claiming a verified second factor could be built in a Django shell from the device's identifier alone. That would pass the check without anyone entering a code, and the audit events would name the Administrator for changes they did not make. That is a bypass of the second factor and of the audit record, so the operation was stopped there. No data was changed, so no backup was needed and none was made. A read-only query on 2026-10-21 showed the registry as in §5: 2 countries, 5 languages, 3 institutions, 3 names, 16 audit events, and no name holding a direction control.
+
+**Steps for the owner**, through the supported page:
+
+1. Sign in at `/login/` with your password and a code from your authenticator.
+2. Open `/registry/entry/`.
+3. Under the Turkmenistan statistics body, in "Add a name", enter `State Committee of Turkmenistan on Statistics`, choose the English language in Latin script, choose the kind "English rendering", leave both dates empty, and add it.
+4. Under the Ministry of Digital Technologies, in "Add a name", enter `Ministry of Digital Technologies of the Republic of Uzbekistan` in the same way.
+5. Mark nothing. Each addition writes one `created` audit event for an institution name, under your account.
+
+The third form on the Turkmen page, "State Committee of Statistics of Turkmenistan", is attested too. It was not part of the decision and is not proposed for entry.
+
+### 15.3 Application fixes
+
+M2, L1, L2, L3, L5, L6, and L8 are fixed in #17, as §8 describes and §9 lists. Each is within an Accepted ADR: the entry page and the browse page remain the only registry pages (ADR-0018 point 59), every view keeps its access declaration, and no permission, route, model, migration, or dependency is added. The settings change only the logging configuration, and the root URL configuration only names the three error handlers. No service gains or loses a permission check. The new rules for names and dates are fixes from the findings L5 and L6, and are written into `docs/DATA_MODEL.md` and `SECURITY.md` in #17.
+
+### 15.4 L4, measured
+
+The entry page and the browse page were requested by a verified Administrator in the test database, with synthetic institutions created through the services:
+
+| Institutions | Entry page | `<option>` elements | Time to answer | Browse page |
+|---|---|---|---|---|
+| 10 | 78 KB | 376 | 0.09 s | 10 KB |
+| 50 | 706 KB | 5,816 | 0.33 s | 47 KB |
+| 100 | 2.3 MB | 21,616 | 1.14 s | 93 KB |
+| 200 | 8.0 MB | 83,216 | 3.75 s | 185 KB |
+
+The growth is quadratic, as expected: each institution's change form offers every other institution twice, as parent and as successor. With 3 institutions it costs nothing. **Not fixed**: every fix changes how the page is used, which the owner asked not to do without need. Recommended, in order of preference: show the change form of one institution at a time on the same entry page, chosen by a link (a query parameter, so still two pages and no ADR); or paginate the institutions on the entry page. A page for each institution would need an ADR, because ADR-0018 allows two pages.
+
+### 15.5 L7, the ruleset
+
+The ruleset "Protect main" (24416842) was read, changed in one parameter, and read again on 2026-10-21:
+
+| Parameter | Before | After |
+|---|---|---|
+| `strict_required_status_checks_policy` | `false` | `true` |
+| `required_approving_review_count` | 0 | 0, unchanged |
+| Required checks | Code quality, Dependency audit, Secret scan, Django checks and tests | Unchanged |
+| Deletion and force push | Blocked | Unchanged |
+| Bypass actors | None | Unchanged |
+
+Why it is safe: CI runs on every pull request to `main`, with no path filter, so the required checks always run; no approval is required; nobody can bypass it. What it costs: when two pull requests are open, merging one makes the other out of date, and it must be updated from `main` and pass CI again before it can be merged. The repository's "Update branch" button is off (`allow_update_branch: false`), so that is done with git. Turning the button on is recommended and was not done.
+
+### 15.6 Decisions that still need an ADR or the owner
+
+- **I3**: a source for a registry name or date. ADR-0018 says registry maintenance cites no source, so this needs a new ADR.
+- **A preferred name** among concurrent names of one kind, or a "short form" kind. A field or kind on InstitutionName that ADR-0018 does not have; needs an ADR.
+- **I4**: a page or selector that reads the audit record, with its own permission (ADR-0018, a later increment).
+- **I1, I2, I5**: production configuration, trust in a reverse proxy, and the operational record of the break-glass command, all with ADR-0008 (Proposed).
+- **L4**: which of the options in §15.4.
+- **L5, in the database**: whether the rule on direction controls is also held by a database check, as the forms of the codes are. It would need a migration.
+- **The "Update branch" button**: whether to turn it on (§15.5).
