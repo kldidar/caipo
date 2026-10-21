@@ -222,6 +222,9 @@ LOGGING = {
     "formatters": {
         "json": {"()": "caipo.core.structured_logging.JsonFormatter"},
     },
+    "filters": {
+        "expected_refusal": {"()": "caipo.core.structured_logging.ExpectedRefusalFilter"},
+    },
     "handlers": {
         "stdout": {
             "class": "logging.StreamHandler",
@@ -235,5 +238,8 @@ LOGGING = {
         # loggers reach the root handler once, in the same format as the rest.
         "django": {"level": "INFO", "propagate": True},
         "django.server": {"level": "INFO", "propagate": True},
+        # A refusal is logged once with its traceback removed: the code that
+        # refused logs it as an event of its own.
+        "django.request": {"level": "INFO", "propagate": True, "filters": ["expected_refusal"]},
     },
 }

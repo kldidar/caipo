@@ -1592,7 +1592,9 @@ def test_no_production_module_reaches_into_the_tests() -> None:
 def test_a_verified_context_is_created_only_by_the_two_operations_that_check_a_code() -> None:
     # MFA_VERIFIED is written in exactly these places outside the tests: where
     # it is defined and compared, where a claim from the session is wrapped for
-    # checking, and where a code has just been accepted.
+    # checking, where a code has just been accepted, and where a refusal page
+    # asks what the account's roles would confer with a second factor. That
+    # last one builds no context: it only names the assurance to the policy.
     mentions = {
         str(path.relative_to(PACKAGE_ROOT)): path.read_text().count("Assurance.MFA_VERIFIED")
         for path in _production_modules()
@@ -1602,9 +1604,14 @@ def test_a_verified_context_is_created_only_by_the_two_operations_that_check_a_c
     assert mentions == {
         "accounts/authentication.py": 1,
         "accounts/authorization.py": 1,
-        "accounts/selectors.py": 3,
+        "accounts/selectors.py": 4,
         "accounts/services.py": 2,
     }
+    selectors_source = (PACKAGE_ROOT / "accounts" / "selectors.py").read_text()
+    asking = selectors_source.split("def second_factor_would_grant(")[1].split("\ndef ")[0]
+    assert asking.count("Assurance.MFA_VERIFIED") == 1
+    assert "permissions_for(roles, assurance=Assurance.MFA_VERIFIED)" in asking
+    assert "AuthenticationContext(" not in asking
     services_source = (PACKAGE_ROOT / "accounts" / "services.py").read_text()
     for operation in ("verify_second_factor", "confirm_mfa_enrollment"):
         body = services_source.split(f"def {operation}(")[1].split("\ndef ")[0]

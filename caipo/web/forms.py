@@ -1,5 +1,7 @@
+import re
 from collections.abc import Sequence
-from typing import Any
+from datetime import date, datetime
+from typing import Any, Final
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
@@ -101,6 +103,22 @@ class RecoveryAuthorizationForm(_ExplicitConfirmationForm):
         label=_(
             "I identified this person by a means other than this site, and they gave me"
             " this request number."
+        ),
+        required=True,
+    )
+
+
+class MarkEnteredInErrorForm(_ExplicitConfirmationForm):
+    """The explicit confirmation without which a name is not marked as entered in error.
+
+    The mark is never cleared (ADR-0018 point 19), so a single click is not
+    enough to set it.
+    """
+
+    confirmed = forms.BooleanField(
+        label=_(
+            "I have checked that this name was entered by mistake. I understand that the mark"
+            " cannot be undone."
         ),
         required=True,
     )
@@ -239,12 +257,41 @@ class RegistryNameForm(forms.Form):
     name_en = _registry_name_field()
 
 
-def _registry_date_field() -> forms.DateField:
-    return forms.DateField(
+# YYYY-MM-DD in ASCII digits, every part padded with zeros. A Python range of
+# ASCII digits matches those ten characters and no other digit.
+_FULL_DATE: Final = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+
+
+class FullDateField(forms.DateField):
+    """A date given as YYYY-MM-DD and in no other form, or nothing.
+
+    Django's own parsing goes through `strptime`, which also takes digits of
+    other scripts and parts without their leading zeros: `2020-1-1` and a
+    year in full-width digits both become dates. Here the text is matched
+    whole, as sent, before it is read as a date (diagnostic of 2026-10-20,
+    L6).
+    """
+
+    def to_python(self, value: Any) -> date | None:
+        if value in self.empty_values:
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if not isinstance(value, str) or _FULL_DATE.fullmatch(value) is None:
+            raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            raise forms.ValidationError(self.error_messages["invalid"], code="invalid") from None
+
+
+def _registry_date_field() -> FullDateField:
+    return FullDateField(
         required=False,
-        # A full calendar date in one form, or nothing. A date known only to
-        # the year or the month is left empty (ADR-0018 point 21).
-        input_formats=["%Y-%m-%d"],
+        # A full calendar date, or nothing. A date known only to the year or
+        # the month is left empty (ADR-0018 point 21).
         widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
     )
 

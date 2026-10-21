@@ -157,7 +157,7 @@ def _changes(
         ),
         "mark a name as entered in error": (
             f"/registry/entry/institution-names/{name}/mark-entered-in-error/",
-            {},
+            {"confirmed": "on"},
         ),
     }
 
@@ -507,6 +507,7 @@ def test_every_refusal_of_an_institution_service_is_answered_and_nothing_else_is
     """An error that no refusal names is raised as it is, and is not taken for one."""
     assert set(registry.INSTITUTION_REFUSALS) == {
         services.InvalidEntryError,
+        services.DirectionControlError,
         services.RecordNotFoundError,
         services.NoChangeError,
         services.DeactivatedReferenceError,

@@ -1,0 +1,18 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "No access" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "No access" %}</h1>
+  {% if situation == "anonymous" %}
+    <p>{% translate "This page is open only to signed-in accounts that may use it. Sign in, and you will be brought back here if your account may use it." %}</p>
+    <p><a href="{% url 'login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">{% translate "Sign in" %}</a></p>
+  {% elif situation == "second_factor" %}
+    <p>{% translate "Your role gives access to this page only after you sign in with a code from your authenticator application. A password alone is not enough for a Reviewer or an Administrator." %}</p>
+    <p>{% translate "If two-step verification is on for your account and an Administrator has approved it, sign out and sign in again with a code. If it is not, turn it on; an Administrator then approves it." %}</p>
+    <p><a href="{% url 'second-factor' %}">{% translate "Two-step verification" %}</a></p>
+  {% else %}
+    <p>{% translate "Your account does not have access to this page. If you think it should, ask an Administrator." %}</p>
+  {% endif %}
+{% endblock %}

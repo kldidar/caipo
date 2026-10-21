@@ -332,7 +332,7 @@ Start with the minimum that makes failures diagnosable, and add only on demonstr
 | Health | Liveness and readiness endpoints that check database, Redis, and artifact store |
 | Task state | IngestionRequest and IngestionEvent rows, so a stuck pipeline is visible with a query and in the interface |
 | AI pipeline | Stage records hold latency per stage, tokens, cost, outcome, and verification results. Dashboards are queries over these tables. |
-| Security events | Logged with a distinct event type: blocked fetches, parser kills, permission denials, verification failures |
+| Security events | Logged with a distinct event type: blocked fetches, parser kills, permission denials, verification failures. An expected refusal carries no traceback; an unexpected error does. |
 | Audit | Append-only audit events for approvals, role changes, rights determinations, index changes, and redactions |
 
 What is never logged: secrets, session identifiers, document bodies, full prompts, full user questions.

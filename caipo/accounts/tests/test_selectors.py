@@ -10,7 +10,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
 from caipo.accounts import selectors
-from caipo.accounts.models import RoleEvent, RoleEventType, User
+from caipo.accounts.models import AccountStatus, RoleEvent, RoleEventType, User
 from caipo.accounts.selectors import Assurance, AuthenticationContext, Permission, Role
 from caipo.accounts.tests.fixtures import (
     UserFactory,
@@ -269,3 +269,75 @@ def test_require_permission_stops_and_logs_when_it_is_not_held(
 def test_require_permission_stops_an_anonymous_visitor(visitor: AnonymousUser | None) -> None:
     with pytest.raises(PermissionDenied):
         selectors.require_permission(selectors.authentication_context(visitor), READ)
+
+
+# --- What a refused account is told (second_factor_would_grant) ---------------------
+
+
+@pytest.mark.parametrize(
+    ("roles", "permission"),
+    [
+        ((Role.ADMINISTRATOR,), REGISTRY_READ),
+        ((Role.ADMINISTRATOR,), MANAGE_ROLES),
+        ((Role.REVIEWER,), REVIEW),
+        ((Role.REVIEWER,), REGISTRY_INSTITUTIONS),
+    ],
+)
+def test_a_second_factor_would_grant_what_a_privileged_role_holds_on_a_password(
+    user_with_roles: UserFactory, roles: tuple[Role, ...], permission: Permission
+) -> None:
+    context = signed_in(user_with_roles(*roles))
+
+    assert not selectors.can(context, permission)
+    assert selectors.second_factor_would_grant(context, permission)
+
+
+@pytest.mark.parametrize(
+    ("roles", "permission"),
+    [
+        # Held already.
+        ((Role.RESEARCHER,), REGISTRY_INSTITUTIONS),
+        ((Role.ADMINISTRATOR,), OWN_MFA),
+        # Not held at any assurance.
+        ((Role.READER,), REGISTRY_INSTITUTIONS),
+        ((Role.REVIEWER,), MANAGE_ROLES),
+        ((Role.ADMINISTRATOR,), READ),
+        ((), REGISTRY_READ),
+    ],
+)
+def test_a_second_factor_would_not_grant_what_is_held_or_never_conferred(
+    user_with_roles: UserFactory, roles: tuple[Role, ...], permission: Permission
+) -> None:
+    assert not selectors.second_factor_would_grant(signed_in(user_with_roles(*roles)), permission)
+
+
+def test_a_verified_account_is_never_told_that_a_second_factor_would_grant_more(
+    user_with_roles: UserFactory,
+) -> None:
+    context = verified(user_with_roles(Role.REVIEWER))
+
+    assert not selectors.second_factor_would_grant(context, MANAGE_ROLES)
+    assert not selectors.second_factor_would_grant(context, REVIEW)
+
+
+def test_a_second_factor_would_grant_nothing_to_no_one_or_to_a_disabled_account(
+    user_with_roles: UserFactory,
+) -> None:
+    user = user_with_roles(Role.ADMINISTRATOR)
+    context = signed_in(user)
+    User.objects.filter(pk=user.pk).update(status=AccountStatus.DISABLED)
+    user.refresh_from_db()
+
+    assert not selectors.second_factor_would_grant(None, REGISTRY_READ)
+    assert not selectors.second_factor_would_grant(context, REGISTRY_READ)
+
+
+def test_whether_a_second_factor_would_grant_a_permission_changes_nothing(
+    user_with_roles: UserFactory,
+) -> None:
+    context = signed_in(user_with_roles(Role.ADMINISTRATOR))
+
+    with CaptureQueriesContext(connection) as queries:
+        selectors.second_factor_would_grant(context, REGISTRY_READ)
+
+    assert all(query["sql"].lstrip().upper().startswith("SELECT") for query in queries)

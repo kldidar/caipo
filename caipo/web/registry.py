@@ -18,7 +18,7 @@ again for itself.
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, QueryDict
@@ -37,6 +37,7 @@ from caipo.registry.selectors import InstitutionEntry, InstitutionNameEntry
 from caipo.registry.services import (
     CycleError,
     DeactivatedReferenceError,
+    DirectionControlError,
     DuplicateCodeError,
     InvalidEntryError,
     LastNameError,
@@ -54,6 +55,7 @@ from caipo.web.forms import (
     InstitutionNameDatesForm,
     InstitutionNameForm,
     LanguageCreationForm,
+    MarkEnteredInErrorForm,
     Options,
     RegistryNameForm,
 )
@@ -90,6 +92,14 @@ SUCCESSION_MESSAGE = _(
     "Nothing was saved. An institution that names a successor has a valid-to date, and a"
     " successor did not end before the institution it succeeded."
 )
+DIRECTION_CONTROL_MESSAGE = _(
+    "Nothing was saved. The name holds an invisible character that changes the direction of"
+    " text (U+202A to U+202E or U+2066 to U+2069). Type the name again without it."
+)
+MARK_NOT_CONFIRMED_MESSAGE = _(
+    "Nothing was changed. A name is marked as entered in error only when the confirmation is"
+    " ticked, because the mark cannot be undone."
+)
 LAST_NAME_MESSAGE = _(
     "Nothing was changed. This is the institution's only name that is not marked as entered in"
     " error. Add the right name first."
@@ -102,6 +112,7 @@ FIRST_NAME_PREFIX = "first-name"
 # these are answered: any other error is raised as it is.
 INSTITUTION_REFUSALS: dict[type[RegistryError], tuple[Promise, int]] = {
     InvalidEntryError: (INVALID_INSTITUTION_MESSAGE, 400),
+    DirectionControlError: (DIRECTION_CONTROL_MESSAGE, 400),
     RecordNotFoundError: (NOT_FOUND_MESSAGE, 404),
     NoChangeError: (NO_CHANGE_MESSAGE, 409),
     DeactivatedReferenceError: (DEACTIVATED_REFERENCE_MESSAGE, 409),
@@ -112,11 +123,29 @@ INSTITUTION_REFUSALS: dict[type[RegistryError], tuple[Promise, int]] = {
 
 
 @dataclass(frozen=True)
+class _Submitted:
+    """What was sent with a refused change to one institution or one name.
+
+    The form it was sent from is shown again with it, as it was typed, and
+    with its field errors. `public_id` is the institution's for a change or
+    a new name, and the name's for its dates.
+    """
+
+    form: Literal["change", "name", "dates"]
+    public_id: uuid.UUID
+    data: QueryDict
+
+    def data_for(self, form: str, public_id: uuid.UUID) -> QueryDict | None:
+        return self.data if self.form == form and self.public_id == public_id else None
+
+
+@dataclass(frozen=True)
 class _NameSection:
-    """A name of an institution on the entry page, with the form that changes its dates."""
+    """A name of an institution on the entry page, with its two forms."""
 
     name: InstitutionNameEntry
     dates_form: InstitutionNameDatesForm
+    mark_form: MarkEnteredInErrorForm
 
 
 @dataclass(frozen=True)
@@ -161,10 +190,21 @@ def _language_options(actor: AuthenticationContext) -> Options:
 
 
 def _institution_sections(
-    institutions: list[InstitutionEntry], countries: Options, languages: Options
+    institutions: list[InstitutionEntry],
+    countries: Options,
+    languages: Options,
+    submitted: _Submitted | None,
 ) -> list[_InstitutionSection]:
-    """Return each institution with its forms, filled in with what is stored."""
+    """Return each institution with its forms, filled in with what is stored.
+
+    The one form a refused change was sent from is filled in with what was
+    sent instead.
+    """
     everyone = [(str(entry.public_id), entry.label) for entry in institutions]
+
+    def sent(form: str, public_id: uuid.UUID) -> QueryDict | None:
+        return submitted.data_for(form, public_id) if submitted is not None else None
+
     sections = []
     for entry in institutions:
         public_id = str(entry.public_id)
@@ -172,6 +212,7 @@ def _institution_sections(
             _InstitutionSection(
                 institution=entry,
                 change_form=InstitutionForm(
+                    sent("change", entry.public_id),
                     initial={
                         "kind": entry.kind,
                         "country": entry.country,
@@ -185,14 +226,20 @@ def _institution_sections(
                     # It is not offered itself: the service would refuse it.
                     institutions=[option for option in everyone if option[0] != public_id],
                 ),
-                name_form=InstitutionNameForm(auto_id=f"name-{public_id}-%s", languages=languages),
+                name_form=InstitutionNameForm(
+                    sent("name", entry.public_id),
+                    auto_id=f"name-{public_id}-%s",
+                    languages=languages,
+                ),
                 names=[
                     _NameSection(
                         name,
                         InstitutionNameDatesForm(
+                            sent("dates", name.public_id),
                             initial={"valid_from": name.valid_from, "valid_to": name.valid_to},
                             auto_id=f"dates-{name.public_id}-%s",
                         ),
+                        MarkEnteredInErrorForm(auto_id=f"mark-{name.public_id}-%s"),
                     )
                     for name in entry.names
                 ],
@@ -208,13 +255,15 @@ def _entry_page(
     country_form: CountryCreationForm | None = None,
     language_form: LanguageCreationForm | None = None,
     institution_data: QueryDict | None = None,
+    submitted: _Submitted | None = None,
     error: Promise | None = None,
     status: int = 200,
 ) -> HttpResponse:
     """Render the entry page.
 
     `institution_data` is what was sent with a creation of an institution
-    that was refused, so that it is shown again as it was typed.
+    that was refused, and `submitted` what was sent with a refused change to
+    an institution or a name, so that each is shown again as it was typed.
     """
     may_manage_reference = accounts_selectors.can(actor, Permission.REGISTRY_REFERENCE_MANAGE)
     institutions = selectors.institutions(actor)
@@ -231,7 +280,7 @@ def _entry_page(
         "first_name_form": InstitutionNameForm(
             institution_data, prefix=FIRST_NAME_PREFIX, languages=languages
         ),
-        "institutions": _institution_sections(institutions, countries, languages),
+        "institutions": _institution_sections(institutions, countries, languages, submitted),
     }
     if may_manage_reference:
         context |= {
@@ -254,6 +303,8 @@ def _change(
     """Make one change to an existing record and answer for it."""
     try:
         change()
+    except DirectionControlError:
+        return _entry_page(request, actor, error=DIRECTION_CONTROL_MESSAGE, status=400)
     except InvalidEntryError:
         return _entry_page(request, actor, error=INVALID_NAME_MESSAGE, status=400)
     except NoChangeError:
@@ -264,14 +315,17 @@ def _change(
 
 
 def _institution_change(
-    request: HttpRequest, actor: AuthenticationContext, change: Callable[[], object]
+    request: HttpRequest,
+    actor: AuthenticationContext,
+    change: Callable[[], object],
+    submitted: _Submitted | None = None,
 ) -> HttpResponse:
     """Make one change to an institution or a name, and answer for it."""
     try:
         change()
     except tuple(INSTITUTION_REFUSALS) as error:
         message, status = INSTITUTION_REFUSALS[type(error)]
-        return _entry_page(request, actor, error=message, status=status)
+        return _entry_page(request, actor, submitted=submitted, error=message, status=status)
     return _saved()
 
 
@@ -316,6 +370,10 @@ def create_country(request: HttpRequest) -> HttpResponse:
             alpha2=form.cleaned_data["alpha2"],
             alpha3=form.cleaned_data["alpha3"],
             name_en=form.cleaned_data["name_en"],
+        )
+    except DirectionControlError:
+        return _entry_page(
+            request, actor, country_form=form, error=DIRECTION_CONTROL_MESSAGE, status=400
         )
     except InvalidEntryError:
         return _entry_page(
@@ -389,6 +447,10 @@ def create_language(request: HttpRequest) -> HttpResponse:
             code=form.cleaned_data["code"],
             script_code=form.cleaned_data["script_code"],
             name_en=form.cleaned_data["name_en"],
+        )
+    except DirectionControlError:
+        return _entry_page(
+            request, actor, language_form=form, error=DIRECTION_CONTROL_MESSAGE, status=400
         )
     except InvalidEntryError:
         return _entry_page(
@@ -489,9 +551,12 @@ def create_institution(request: HttpRequest) -> HttpResponse:
 def change_institution(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
     """Change the kind, country, parent, successor, and validity dates of an institution."""
     actor = _actor(request)
+    submitted = _Submitted("change", public_id, request.POST)
     form = InstitutionForm(request.POST)
     if not form.is_valid():
-        return _entry_page(request, actor, error=INVALID_INSTITUTION_MESSAGE, status=400)
+        return _entry_page(
+            request, actor, submitted=submitted, error=INVALID_INSTITUTION_MESSAGE, status=400
+        )
     attributes = form.cleaned_data
     return _institution_change(
         request,
@@ -506,6 +571,7 @@ def change_institution(request: HttpRequest, public_id: uuid.UUID) -> HttpRespon
             valid_from=attributes["valid_from"],
             valid_to=attributes["valid_to"],
         ),
+        submitted,
     )
 
 
@@ -516,14 +582,18 @@ def change_institution(request: HttpRequest, public_id: uuid.UUID) -> HttpRespon
 def add_institution_name(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
     """Add a name to an institution."""
     actor = _actor(request)
+    submitted = _Submitted("name", public_id, request.POST)
     form = InstitutionNameForm(request.POST)
     if not form.is_valid():
-        return _entry_page(request, actor, error=INVALID_INSTITUTION_MESSAGE, status=400)
+        return _entry_page(
+            request, actor, submitted=submitted, error=INVALID_INSTITUTION_MESSAGE, status=400
+        )
     name = _new_name(form.cleaned_data)
     return _institution_change(
         request,
         actor,
         lambda: services.add_institution_name(actor=actor, institution=public_id, name=name),
+        submitted,
     )
 
 
@@ -534,9 +604,12 @@ def add_institution_name(request: HttpRequest, public_id: uuid.UUID) -> HttpResp
 def change_institution_name_dates(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
     """Change the validity dates of a name of an institution."""
     actor = _actor(request)
+    submitted = _Submitted("dates", public_id, request.POST)
     form = InstitutionNameDatesForm(request.POST)
     if not form.is_valid():
-        return _entry_page(request, actor, error=INVALID_INSTITUTION_MESSAGE, status=400)
+        return _entry_page(
+            request, actor, submitted=submitted, error=INVALID_INSTITUTION_MESSAGE, status=400
+        )
     dates = form.cleaned_data
     return _institution_change(
         request,
@@ -547,6 +620,7 @@ def change_institution_name_dates(request: HttpRequest, public_id: uuid.UUID) ->
             valid_from=dates["valid_from"],
             valid_to=dates["valid_to"],
         ),
+        submitted,
     )
 
 
@@ -557,8 +631,10 @@ def change_institution_name_dates(request: HttpRequest, public_id: uuid.UUID) ->
 def mark_institution_name_entered_in_error(
     request: HttpRequest, public_id: uuid.UUID
 ) -> HttpResponse:
-    """Mark a name of an institution as entered in error."""
+    """Mark a name of an institution as entered in error, once the confirmation is ticked."""
     actor = _actor(request)
+    if not MarkEnteredInErrorForm(request.POST).is_valid():
+        return _entry_page(request, actor, error=MARK_NOT_CONFIRMED_MESSAGE, status=400)
     return _institution_change(
         request,
         actor,
