@@ -16,9 +16,12 @@ import logging
 from typing import Any
 
 import pytest
+from django.conf import LazySettings
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
-from django.test import Client, RequestFactory
+from django.template import Context, RequestContext
+from django.test import Client
+from django.test.signals import template_rendered
 from django.urls import get_resolver, include, path
 
 from caipo.accounts.models import AccountStatus, User
@@ -224,15 +227,57 @@ def test_a_failure_is_answered_with_a_page_that_says_nothing_about_it() -> None:
     assert _never_cached(response)
 
 
+class _UntouchableRequest(HttpRequest):
+    """A request that fails the test as soon as anything reads from it.
+
+    Rendering with a request reads it: the `auth` context processor asks for
+    `request.user`, which raises here. Only Python's own dunder lookups pass.
+    """
+
+    def __getattribute__(self, name: str) -> Any:
+        if not name.startswith("__"):
+            raise AssertionError(f"The failure page read request.{name}.")
+        return super().__getattribute__(name)
+
+
 def test_the_failure_page_is_rendered_without_the_request() -> None:
-    """Nothing that may itself have failed, such as the session or the database, is used."""
-    response = errors.server_error(RequestFactory().get("/"))
+    """Nothing that may itself have failed, such as the session or the database, is used.
+
+    Two checks, each enough alone: the request raises when read, and the
+    template is rendered with a plain context, not one built from a request.
+    """
+    contexts: list[Context] = []
+
+    def record(sender: object, template: object, context: Context, **kwargs: object) -> None:
+        contexts.append(context)
+
+    template_rendered.connect(record)
+    try:
+        response = errors.server_error(_UntouchableRequest())
+    finally:
+        template_rendered.disconnect(record)
 
     assert response.status_code == 500
     assert "Something went wrong" in _text(response)
+    assert contexts
+    assert not any(isinstance(context, RequestContext) for context in contexts)
 
 
-# --- L2: a refusal is logged once with its traceback --------------------------------
+@pytest.mark.parametrize("url", [BROWSE, ENTRY])
+def test_a_refusal_gets_the_same_page_with_debug_on(
+    client: Client, settings: LazySettings, url: str
+) -> None:
+    """Django's diagnostic pages replace the 404 and 500 pages with DEBUG on, never the 403 page."""
+    settings.DEBUG = True
+
+    response = client.get(url)
+
+    assert response.status_code == 403
+    assert ANONYMOUS_TEXT in _text(response)
+    assert _never_cached(response)
+
+
+# --- L2: a refusal keeps its summary line and loses its traceback -------------------
 
 
 def _request_log(client: Client, method: str, url: str) -> tuple[int, list[dict[str, Any]]]:
