@@ -18,7 +18,7 @@
 
     <h2>{% translate "Add a country" %}</h2>
     <p>{% translate "The alpha-2 code is two capital letters and the alpha-3 code is three. Only their form is checked." %}</p>
-    <form method="post" action="{% url 'registry-country-create' %}" novalidate>
+    <form method="post" action="{% url 'registry-country-create' %}{{ selection }}" novalidate>
       {% csrf_token %}
       {% for field in country_form %}
         <p>
@@ -33,7 +33,7 @@
     <h2>{% translate "Countries" %}</h2>
     {% for country in countries %}
       <h3>{{ country.alpha2 }} · {{ country.alpha3 }} · {{ country.name_en }}{% if not country.is_active %} · {% translate "Deactivated" %}{% endif %}</h3>
-      <form method="post" action="{% url 'registry-country-rename' country.public_id %}" novalidate>
+      <form method="post" action="{% url 'registry-country-rename' country.public_id %}{{ selection }}" novalidate>
         {% csrf_token %}
         <p>
           <label for="country-name-{{ country.public_id }}">{{ name_form.name_en.label }}</label>
@@ -42,12 +42,12 @@
         <button type="submit">{% translate "Change the name" %}</button>
       </form>
       {% if country.is_active %}
-        <form method="post" action="{% url 'registry-country-deactivate' country.public_id %}">
+        <form method="post" action="{% url 'registry-country-deactivate' country.public_id %}{{ selection }}">
           {% csrf_token %}
           <button type="submit">{% translate "Deactivate" %}</button>
         </form>
       {% else %}
-        <form method="post" action="{% url 'registry-country-reactivate' country.public_id %}">
+        <form method="post" action="{% url 'registry-country-reactivate' country.public_id %}{{ selection }}">
           {% csrf_token %}
           <button type="submit">{% translate "Reactivate" %}</button>
         </form>
@@ -58,7 +58,7 @@
 
     <h2>{% translate "Add a language" %}</h2>
     <p>{% translate "A language is entered once for each script it is written in. The language code is three lower-case letters. The script code is one capital letter followed by three lower-case letters. Only their form is checked." %}</p>
-    <form method="post" action="{% url 'registry-language-create' %}" novalidate>
+    <form method="post" action="{% url 'registry-language-create' %}{{ selection }}" novalidate>
       {% csrf_token %}
       {% for field in language_form %}
         <p>
@@ -73,7 +73,7 @@
     <h2>{% translate "Languages" %}</h2>
     {% for language in languages %}
       <h3>{{ language.code }} · {{ language.script_code }} · {{ language.name_en }}{% if not language.is_active %} · {% translate "Deactivated" %}{% endif %}</h3>
-      <form method="post" action="{% url 'registry-language-rename' language.public_id %}" novalidate>
+      <form method="post" action="{% url 'registry-language-rename' language.public_id %}{{ selection }}" novalidate>
         {% csrf_token %}
         <p>
           <label for="language-name-{{ language.public_id }}">{{ name_form.name_en.label }}</label>
@@ -82,12 +82,12 @@
         <button type="submit">{% translate "Change the name" %}</button>
       </form>
       {% if language.is_active %}
-        <form method="post" action="{% url 'registry-language-deactivate' language.public_id %}">
+        <form method="post" action="{% url 'registry-language-deactivate' language.public_id %}{{ selection }}">
           {% csrf_token %}
           <button type="submit">{% translate "Deactivate" %}</button>
         </form>
       {% else %}
-        <form method="post" action="{% url 'registry-language-reactivate' language.public_id %}">
+        <form method="post" action="{% url 'registry-language-reactivate' language.public_id %}{{ selection }}">
           {% csrf_token %}
           <button type="submit">{% translate "Reactivate" %}</button>
         </form>
@@ -100,7 +100,7 @@
   <h2>{% translate "Add an institution" %}</h2>
   <p>{% translate "An institution is added together with its first name. A body that is renamed stays the same institution and is given another name. A successor is a different institution that took over when this one ended." %}</p>
   <p>{% translate "A date is a full calendar date. Valid-from is the first day, and valid-to the first day that is no longer covered. A date that is not known to the day is left empty: do not enter the first of January or the first of a month to stand for a year or a month." %}</p>
-  <form method="post" action="{% url 'registry-institution-create' %}" novalidate>
+  <form method="post" action="{% url 'registry-institution-create' %}{{ selection }}" novalidate>
     {% csrf_token %}
     {% for field in institution_form %}
       <p>
@@ -122,24 +122,32 @@
 
   <h2>{% translate "Institutions" %}</h2>
   <p>{% translate "A name cannot be changed once it is saved, except for its dates. A name entered by mistake is marked as entered in error, which cannot be undone; the right name is added first." %}</p>
+  <p>{% translate "The kind, country, parent, successor, and dates of one institution at a time are changed: open its form with the link below its name." %}</p>
   {% for section in institutions %}
+    <section id="institution-{{ section.institution.public_id }}">
     <h3>{{ section.institution.label }}</h3>
-    <form method="post" action="{% url 'registry-institution-change' section.institution.public_id %}" novalidate>
-      {% csrf_token %}
-      {% for field in section.change_form %}
-        <p>
-          {{ field.label_tag }}
-          {{ field }}
-          {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-        </p>
-      {% endfor %}
-      <button type="submit">{% translate "Change the institution" %}</button>
-    </form>
+    {% if section.change_form %}
+      <form method="post" action="{% url 'registry-institution-change' section.institution.public_id %}{{ selection }}" novalidate>
+        {% csrf_token %}
+        {% for field in section.change_form %}
+          <p>
+            {{ field.label_tag }}
+            {{ field }}
+            {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+          </p>
+        {% endfor %}
+        <button type="submit">{% translate "Change the institution" %}</button>
+      </form>
+      <p><a href="{% url 'registry-entry' %}">{% translate "Close the form" %}</a></p>
+    {% else %}
+      {% include "web/_institution_attributes.html" with institution=section.institution %}
+      <p><a href="{% url 'registry-entry' %}?change={{ section.institution.public_id }}#institution-{{ section.institution.public_id }}">{% blocktranslate trimmed with name=section.institution.label %}Change {{ name }}{% endblocktranslate %}</a></p>
+    {% endif %}
 
     <h4>{% translate "Names" %}</h4>
     {% for entry in section.names %}
       <p>{{ entry.name.text }} · {{ entry.name.language_code }}-{{ entry.name.script_code }} · {{ entry.name.kind_label }}</p>
-      <form method="post" action="{% url 'registry-institution-name-dates' entry.name.public_id %}" novalidate>
+      <form method="post" action="{% url 'registry-institution-name-dates' entry.name.public_id %}{{ selection }}" novalidate>
         {% csrf_token %}
         {% for field in entry.dates_form %}
           <p>
@@ -151,7 +159,7 @@
         <button type="submit">{% translate "Change the dates" %}</button>
       </form>
       {% if section.names|length > 1 %}
-        <form method="post" action="{% url 'registry-institution-name-mark' entry.name.public_id %}" novalidate>
+        <form method="post" action="{% url 'registry-institution-name-mark' entry.name.public_id %}{{ selection }}" novalidate>
           {% csrf_token %}
           <p><label>{{ entry.mark_form.confirmed }} {{ entry.mark_form.confirmed.label }}</label></p>
           <button type="submit">{% translate "Mark as entered in error" %}</button>
@@ -168,7 +176,7 @@
     {% endif %}
 
     <h4>{% translate "Add a name" %}</h4>
-    <form method="post" action="{% url 'registry-institution-name-add' section.institution.public_id %}" novalidate>
+    <form method="post" action="{% url 'registry-institution-name-add' section.institution.public_id %}{{ selection }}" novalidate>
       {% csrf_token %}
       {% for field in section.name_form %}
         <p>
@@ -179,6 +187,7 @@
       {% endfor %}
       <button type="submit">{% translate "Add the name" %}</button>
     </form>
+    </section>
   {% empty %}
     <p>{% translate "No institution has been entered." %}</p>
   {% endfor %}

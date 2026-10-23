@@ -599,7 +599,8 @@ def test_the_entry_page_shows_each_institution_with_what_is_stored(
         valid_to=None,
     )
 
-    page = _text(researcher_client.get(ENTRY))
+    # The change form is shown for the institution opened for change (L4).
+    page = _text(researcher_client.get(f"{ENTRY}?change={records.institution}"))
 
     section = page[page.index("<h3>TEST Ministry</h3>") : page.index("<h3>TEST Parent</h3>")]
     assert '<option value="regulator" selected>' in section

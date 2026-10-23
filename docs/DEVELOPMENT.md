@@ -278,7 +278,7 @@ A fresh database has an empty registry: no migration or code creates a country, 
 | Page | Method | What it does |
 |---|---|---|
 | `/registry/` | GET | Lists countries, languages, and institutions with their names. `REGISTRY_READ`: every role, Reviewer and Administrator only with a trusted second factor. |
-| `/registry/entry/` | GET | The forms. The country and language forms are shown only to an Administrator verified with a trusted second factor. |
+| `/registry/entry/` | GET | The forms. The country and language forms are shown only to an Administrator verified with a trusted second factor. An institution's kind, country, parent, successor, and dates are changed in the form of one institution at a time, opened with `?change=<id>` from the link under its name; a value that is not one identifier is answered with 400, and one that names no institution with 404. Every form posts with the same parameter, so a refused submission comes back with the same form open (a fix from the diagnostic of 2026-10-20, finding L4). |
 | `/registry/entry/countries/create/`, `/registry/entry/languages/create/` | POST | Create a country or a language (`REGISTRY_REFERENCE_MANAGE`) |
 | `/registry/entry/countries/<id>/rename/`, `…/deactivate/`, `…/reactivate/`, and the same under `languages/` | POST | Change the English name, deactivate, or reactivate (`REGISTRY_REFERENCE_MANAGE`) |
 | `/registry/entry/institutions/create/` | POST | Create an institution with its first name (`REGISTRY_INSTITUTIONS_MANAGE`) |
