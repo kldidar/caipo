@@ -285,7 +285,7 @@ A fresh database has an empty registry: no migration or code creates a country, 
 | `/registry/entry/institutions/<id>/change/` | POST | Set the kind, country, parent, successor, and validity dates |
 | `/registry/entry/institutions/<id>/names/add/` | POST | Add a name |
 | `/registry/entry/institution-names/<id>/dates/` | POST | Set a name's validity dates |
-| `/registry/entry/institution-names/<id>/mark-entered-in-error/` | POST | Mark a name as entered in error; refused for an institution's only unmarked name |
+| `/registry/entry/institution-names/<id>/mark-entered-in-error/` | POST | Mark a name as entered in error. Needs the ticked confirmation "I have checked that this name was entered by mistake. I understand that the mark cannot be undone."; without it the answer is 400 and nothing changes. Refused for an institution's only unmarked name |
 
 `<id>` is the record's public identifier, a UUID. The services are in `caipo/registry/services.py` and the reads in `caipo/registry/selectors.py`.
 
