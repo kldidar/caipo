@@ -6,6 +6,14 @@ maintains institutions and their names, and an Administrator also maintains
 countries and languages. There is no third page: every change is a POST that
 answers with the entry page or a redirect to it.
 
+The entry page shows the change form of one institution at most, the one
+that `?change=<public id>` names; every other institution is shown as it is
+stored, with a link that opens its form. Offering every institution's form at
+once lists every other institution twice in each, as parent and as successor,
+and the page grows with the square of their number (finding L4 of the
+diagnostic of 2026-10-20). The parameter only chooses what the page shows: it
+is not a page of its own, and it grants and refuses nothing.
+
 These views handle the request and nothing else. Who may read, who may
 change what, what a valid code or name is, and what is recorded are decided
 by `caipo.registry` and `caipo.accounts`. A change is made by POST with a
@@ -19,6 +27,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Literal
+from urllib.parse import urlencode
 
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, QueryDict
@@ -104,7 +113,12 @@ LAST_NAME_MESSAGE = _(
     "Nothing was changed. This is the institution's only name that is not marked as entered in"
     " error. Add the right name first."
 )
+INVALID_SELECTION_MESSAGE = _(
+    "No institution was opened for change: the link does not name one institution."
+)
+UNKNOWN_SELECTION_MESSAGE = _("No institution was opened for change: there is no such institution.")
 SAVED_QUERY = "saved"
+CHANGE_QUERY = "change"
 INSTITUTION_PREFIX = "institution"
 FIRST_NAME_PREFIX = "first-name"
 
@@ -150,10 +164,13 @@ class _NameSection:
 
 @dataclass(frozen=True)
 class _InstitutionSection:
-    """An institution on the entry page, with the forms that change it and add a name to it."""
+    """An institution on the entry page, with the forms that change it and add a name to it.
+
+    `change_form` is None unless the institution is the one opened for change.
+    """
 
     institution: InstitutionEntry
-    change_form: InstitutionForm
+    change_form: InstitutionForm | None
     name_form: InstitutionNameForm
     names: list[_NameSection]
 
@@ -189,18 +206,49 @@ def _language_options(actor: AuthenticationContext) -> Options:
     ]
 
 
+def _selection(request: HttpRequest) -> uuid.UUID | None:
+    """Return the identifier `?change=` gives, or None unless it gives exactly one.
+
+    Only the form of the identifier is checked here; whether an institution
+    has it is checked against the institutions read for the page.
+    """
+    values = request.GET.getlist(CHANGE_QUERY)
+    if len(values) != 1:
+        return None
+    try:
+        return uuid.UUID(values[0])
+    except ValueError:
+        return None
+
+
+def _opened(
+    request: HttpRequest, submitted: _Submitted | None, known: set[uuid.UUID]
+) -> uuid.UUID | None:
+    """Return the institution whose change form the page opens, if any.
+
+    A refused change of an institution opens that institution's form, so that
+    what was typed is shown again. Otherwise the institution `?change=` names
+    is opened, if it exists. Each form on the page posts with the same
+    parameter, so a refused submission comes back with the same form open.
+    """
+    if submitted is not None and submitted.form == "change" and submitted.public_id in known:
+        return submitted.public_id
+    selected = _selection(request)
+    return selected if selected in known else None
+
+
 def _institution_sections(
     institutions: list[InstitutionEntry],
     countries: Options,
     languages: Options,
     submitted: _Submitted | None,
+    opened: uuid.UUID | None,
 ) -> list[_InstitutionSection]:
     """Return each institution with its forms, filled in with what is stored.
 
-    The one form a refused change was sent from is filled in with what was
-    sent instead.
+    Only the institution opened for change has a change form. The one form a
+    refused change was sent from is filled in with what was sent instead.
     """
-    everyone = [(str(entry.public_id), entry.label) for entry in institutions]
 
     def sent(form: str, public_id: uuid.UUID) -> QueryDict | None:
         return submitted.data_for(form, public_id) if submitted is not None else None
@@ -208,24 +256,31 @@ def _institution_sections(
     sections = []
     for entry in institutions:
         public_id = str(entry.public_id)
+        change_form = None
+        if entry.public_id == opened:
+            change_form = InstitutionForm(
+                sent("change", entry.public_id),
+                initial={
+                    "kind": entry.kind,
+                    "country": entry.country,
+                    "parent": entry.parent and entry.parent.public_id,
+                    "successor": entry.successor and entry.successor.public_id,
+                    "valid_from": entry.valid_from,
+                    "valid_to": entry.valid_to,
+                },
+                auto_id=f"institution-{public_id}-%s",
+                countries=countries,
+                # It is not offered itself: the service would refuse it.
+                institutions=[
+                    (str(other.public_id), other.label)
+                    for other in institutions
+                    if other.public_id != entry.public_id
+                ],
+            )
         sections.append(
             _InstitutionSection(
                 institution=entry,
-                change_form=InstitutionForm(
-                    sent("change", entry.public_id),
-                    initial={
-                        "kind": entry.kind,
-                        "country": entry.country,
-                        "parent": entry.parent and entry.parent.public_id,
-                        "successor": entry.successor and entry.successor.public_id,
-                        "valid_from": entry.valid_from,
-                        "valid_to": entry.valid_to,
-                    },
-                    auto_id=f"institution-{public_id}-%s",
-                    countries=countries,
-                    # It is not offered itself: the service would refuse it.
-                    institutions=[option for option in everyone if option[0] != public_id],
-                ),
+                change_form=change_form,
                 name_form=InstitutionNameForm(
                     sent("name", entry.public_id),
                     auto_id=f"name-{public_id}-%s",
@@ -258,29 +313,45 @@ def _entry_page(
     submitted: _Submitted | None = None,
     error: Promise | None = None,
     status: int = 200,
+    report_selection: bool = False,
 ) -> HttpResponse:
     """Render the entry page.
 
     `institution_data` is what was sent with a creation of an institution
     that was refused, and `submitted` what was sent with a refused change to
     an institution or a name, so that each is shown again as it was typed.
+    With `report_selection`, given only for the page itself, a `?change=`
+    that opens no form is answered with 400 if it does not give one
+    identifier and 404 if no institution has it. When a refused submission is
+    answered, the refusal is what is reported, and such a `?change=` opens no
+    form.
     """
     may_manage_reference = accounts_selectors.can(actor, Permission.REGISTRY_REFERENCE_MANAGE)
     institutions = selectors.institutions(actor)
     countries = _country_options(actor)
     languages = _language_options(actor)
     everyone = [(str(entry.public_id), entry.label) for entry in institutions]
+    opened = _opened(request, submitted, {entry.public_id for entry in institutions})
+    if report_selection and opened is None and CHANGE_QUERY in request.GET:
+        if _selection(request) is None:
+            error, status = INVALID_SELECTION_MESSAGE, 400
+        else:
+            error, status = UNKNOWN_SELECTION_MESSAGE, 404
     context: dict[str, Any] = {
         "may_manage_reference": may_manage_reference,
         "error": error,
         "saved": SAVED_QUERY in request.GET,
+        # Every form posts with the selection, so that a refusal keeps it.
+        "selection": f"?{urlencode({CHANGE_QUERY: opened})}" if opened else "",
         "institution_form": InstitutionForm(
             institution_data, prefix=INSTITUTION_PREFIX, countries=countries, institutions=everyone
         ),
         "first_name_form": InstitutionNameForm(
             institution_data, prefix=FIRST_NAME_PREFIX, languages=languages
         ),
-        "institutions": _institution_sections(institutions, countries, languages, submitted),
+        "institutions": _institution_sections(
+            institutions, countries, languages, submitted, opened
+        ),
     }
     if may_manage_reference:
         context |= {
@@ -348,8 +419,11 @@ def browse(request: HttpRequest) -> HttpResponse:
 @never_cache
 @require_GET
 def entry(request: HttpRequest) -> HttpResponse:
-    """Show the entry page: the institution forms, and the reference forms to an Administrator."""
-    return _entry_page(request, _actor(request))
+    """Show the entry page: the institution forms, and the reference forms to an Administrator.
+
+    `?change=<public id>` opens that institution's change form.
+    """
+    return _entry_page(request, _actor(request), report_selection=True)
 
 
 @requires(Permission.REGISTRY_REFERENCE_MANAGE)

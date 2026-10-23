@@ -2,7 +2,7 @@
 
 Technical, security, data, and research-readiness audit of the repository at `main` `4bff508` and of the local development database. Carried out by an AI agent (Claude Code) at the project owner's request, on the branch `audit/caipo-full-diagnostic`.
 
-**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15, §16, and §17 are dated follow-ups and keep the state of their own day, including statements that a pull request was open or that a name was not yet entered. The Status column of the register in §8 records the status after the merges of §17, on 2026-10-23. The current status of every finding is in §1 and §18, which records the entry of the two institution names later on 2026-10-23.
+**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15, §16, and §17 are dated follow-ups and keep the state of their own day, including statements that a pull request was open or that a name was not yet entered. The Status column of the register in §8 records the status after the merges of §17, on 2026-10-23. §18 records the entry of the two institution names on 2026-10-23. The current status of every finding is in §1 and §19, which records the L4 optimization proposed in open pull request #20 and the housekeeping of 2026-10-24.
 
 ## 1. Executive summary
 
@@ -11,7 +11,7 @@ Technical, security, data, and research-readiness audit of the repository at `ma
 - Every quality gate that CI runs passes locally: 4169 tests, ruff, formatting, mypy (strict), both import contracts, Django checks, migration consistency, the dependency audit, and the full-history secret scan. The last six CI runs on `main` succeeded; the latest, on `4bff508`, passed all four jobs.
 - No Critical or High defect was found. An independent probe of all 40 routes for 8 kinds of actor found no route reachable without its declared permission, no CSRF gap, and no server error under hostile input.
 - The development database is intact. At the audit, its 2 countries, 5 languages, 3 institutions, and 3 names were consistent, and the audit record had exactly one `created` event for each, with no orphaned events. Nothing was written to it during the audit; that was checked afterwards (§5). On 2026-10-24 it holds 3 institutions, 5 names, and 18 audit events, after the two names of §15.2 were entered (§18).
-- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. Current status, 2026-10-24 (§18): **ten are fixed**: M3 and M4, documentation, merged in pull request #16 (`ba8a89e`); M2, L1, L2, L3, L5, L6, and L8, application, merged in pull request #17 (`e0a9cbb`); and L7, in the GitHub ruleset, which is in force. **Two are resolved in the development registry**: M1 and L9, by the two English renderings proposed in §15.2, entered on 2026-10-23 by the Administrator through the entry page. **Eight are open**: L4, measured, with a recommendation (§15.4, §18.4); and the seven Informational findings, of which I1, I2, and I5 are deferred to ADR-0008, I4 by ADR-0018, I3 needs an ADR of its own, and I6 and I7 are housekeeping. The names do not resolve I3: the registry still records no source for a name.
+- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. Current status, 2026-10-24 (§19.4): **ten are fixed**: M3 and M4, documentation, merged in pull request #16 (`ba8a89e`); M2, L1, L2, L3, L5, L6, and L8, application, merged in pull request #17 (`e0a9cbb`); and L7, in the GitHub ruleset, which is in force. **Three are resolved**: M1 and L9 in the development registry, by the two English renderings proposed in §15.2, entered on 2026-10-23 by the Administrator through the entry page; and I7, by the removal of the merged local branches on 2026-10-24. **One is addressed in pull request #20, not yet merged**: L4. **Six are open**: I1, I2, and I5, deferred to ADR-0008; I3, which needs an ADR of its own; I4, deferred by ADR-0018; and I6, housekeeping. When #20 is merged, L4 is fixed and six findings remain open. The names do not resolve I3: the registry still records no source for a name. A database check for L5 is optional further hardening, not an open finding: L5 is fixed in the services (§19.4).
 - Research readiness: the platform cannot yet hold a source, document, policy, indicator, claim, or citation. That is by design. Phase 2 and later are blocked by open research, rights, and isolation decisions (spec §10), most of them the researcher's to make.
 
 | Area | Assessment |
@@ -175,7 +175,7 @@ No Critical and no High finding.
 
 Every finding of the audit: the open ones first, then the fixed ones. The Finding and Evidence columns record what the audit found on `main` `4bff508` ("Before") and, for a fix, what changed ("After"). The Status column is the status on 2026-10-23, after the merges of §17. "Open" means that nothing has yet changed for it. "Fixed, merged in #16" or "#17" means that the fix is on `main`, in the merge commit named. "Fixed in the ruleset" means that the change is in force on GitHub. "Needs verification" names what the audit could not confirm itself. The evidence was checked again on 2026-10-21 against the code, the ruleset, the official sites, and an anonymous request (§14), and every status again on 2026-10-23 against the diffs of both pull requests and the settings on GitHub (§16), and after both merges against `main` `e0a9cbb` (§17). The last column says what was done, or is proposed, in the follow-up of 2026-10-21 (§15). The fixes are fixes from the findings of this audit.
 
-**This register is kept as it stood after the merges of §17.** Later on 2026-10-23, M1 and L9 were resolved in the development registry, when the two names it proposes were entered. The current status of every finding is in §18.2.
+**This register is kept as it stood after the merges of §17.** Later on 2026-10-23, M1 and L9 were resolved in the development registry, when the two names it proposes were entered. The current status of every finding is in §19.4.
 
 | ID | Severity | Finding | Status | Evidence | Outcome |
 |---|---|---|---|---|---|
@@ -361,13 +361,13 @@ No browser automation was available. These were not verified in a browser:
 
 As fixes from the findings of this audit: M2, L1, L2, L3, L5, L6, and L8 are fixed and merged in pull request #17 (`e0a9cbb`); M3 and M4 are fixed and merged in pull request #16 (`ba8a89e`); and L7 is fixed in the ruleset. M1 and L9 are resolved in the development registry: the two names of §15.2 were entered on 2026-10-23 (§18).
 
-Still open, with what each needs, in §15.6: I3 (an ADR), a preferred name (an ADR), I4 (a later increment), I1, I2, and I5 (ADR-0008), L4 (a choice between the options of §15.4, refined in §18.4), a database check for L5 (a migration), and the "Update branch" button.
+Still open, with what each needs, in §15.6: I3 (an ADR), a preferred name (an ADR), I4 (a later increment), I1, I2, and I5 (ADR-0008), and the "Update branch" button. L4 is addressed in pull request #20, not yet merged (§19). I6 needs the owner's choice of backups to delete (§19.5). A database check for L5 (a migration) is optional further hardening, not an open finding (§19.4).
 
 Recommended order of next work (the merges of #16 and #17, their record in this report, the line on the ticked confirmation in `docs/DEVELOPMENT.md`, and the entry of the two names of §15.2 are done: §17, §18):
 
 1. Close the researcher-owned Phase 2 blockers: B22, then B8 and B9, then B7 and B10. Nothing research-related can be built before them.
 2. Run the job-system and isolation spikes together (B4, B21), so that ADR-0004 and ADR-0011 can be decided.
-3. Before many institutions are entered: decide I3 and the question of a preferred name, and choose a fix for L4 (§18.4).
+3. Before many institutions are entered: decide I3 and the question of a preferred name, and merge the fix for L4 (pull request #20, §19).
 
 ## 14. Commands run, and checks not performed
 
@@ -590,7 +590,7 @@ A read-only query of the development database on 2026-10-23, after both merges, 
 
 ## 18. Follow-up of 2026-10-24: the two institution names, and L4 measured again
 
-*A dated record: it keeps the state of 2026-10-24.*
+*A dated record: it keeps the state of 2026-10-24 before the work of §19, which proposed the L4 optimization in pull request #20 later that day.*
 
 ### 18.1 The two names, as entered
 
@@ -676,3 +676,127 @@ ADR-0018 point 59 and ADR-0019 point 16 allow two pages and no others. A query p
 This report only: the note at its head, §1, the note above the register and the totals in §8, the M1 and L9 entries in §8, §12 item 5, §13, the note at the head of §17, and this section. No application code, test, migration, setting, CI file, or database row changed.
 
 Commands run: `gh pr view 18`; `git fetch`, `git status`, `git worktree list`; `psql` in sessions with `default_transaction_read_only` on (counts, the names with their audit events, and the authentication event types after 19:30 UTC on 2026-10-23); `git archive` of `e025567` into a scratch directory and the measurement test run there with its own database; reading `caipo/web/registry.py`, `caipo/web/forms.py`, `registry_entry.html`, `caipo/registry/selectors.py`, ADR-0010, ADR-0018, and ADR-0019.
+
+## 19. Follow-up of 2026-10-24: the L4 optimization proposed in open pull request #20, a verified backup, and housekeeping
+
+*A dated record: it keeps the state of 2026-10-24. Pull request #20 is open and not merged.*
+
+### 19.1 L4: one change form at a time
+
+On 2026-10-24 the project owner approved the reading proposed in §18.4: a query parameter on the entry page is not a page of its own, so ADR-0018 point 59 and ADR-0019 point 16 still hold. The optimization is proposed in pull request #20, open and not merged, on the branch `feat/l4-entry-page-one-change-form` from `main` `b43b997`:
+
+- Only the institution named by `?change=<public id>` has its change form. Every other institution is shown as stored, with a link that opens its form. The stored fields are kind, country, parent, the two dates, and successor, rendered by the same partial as the browse page.
+- Every form on the page posts with the same parameter, so any refused submission comes back with the selected institution open. A refused change of an institution opens that institution's form, with the typed values and field errors (L3), whatever the parameter says.
+- A value that does not give one identifier (empty, repeated, or not a UUID) is answered with 400. A value that names no institution is answered with 404. Neither opens a form, and neither value is shown back. After a refused submission, the refusal is what is reported, and such a value opens no form.
+- A saved change still redirects to `?saved=1`.
+- Nothing new is added: no route (still 40), model, migration, permission, access declaration, setting, dependency, or JavaScript. The CSRF check and the services are unchanged.
+
+Files: `caipo/web/registry.py`, `registry_entry.html`, `registry.html`, the new `_institution_attributes.html`, `docs/DEVELOPMENT.md`, `SECURITY.md`, and the tests.
+
+### 19.2 Measured before and after
+
+The method of §18.4, extended. One test file, kept outside the repository, was run unchanged on exported copies of `b43b997` (before) and `619fa1d` (after). Each run had its own test database. Synthetic institutions were created through the services, and each request was made by a verified Administrator. Times are the median of five requests in one run on one machine, so they are indicative. The "Page" columns give the whole response body. The "Lists" columns give only the per-institution parent and successor `<select>` elements. The creation form's two lists are linear and unchanged: 43,834 bytes at 200 institutions, before and after. The code before ignores `?change=`, so its first two rows at each size are the same page.
+
+| Institutions | Request | Page before | Page after | Lists before | Lists after | Time before | Time after |
+|---|---|---|---|---|---|---|---|
+| 10 | Entry page | 84,726 | 46,269 | 22,400 | 0 | 0.065 s | 0.038 s |
+| 10 | With `?change=` | 84,726 | 51,595 | 22,400 | 2,240 | 0.057 s | 0.042 s |
+| 10 | Refused change | 85,129 | 51,998 | 22,400 | 2,240 | 0.054 s | 0.038 s |
+| 50 | Entry page | 823,526 | 194,669 | 548,000 | 0 | 0.343 s | 0.096 s |
+| 50 | With `?change=` | 823,526 | 212,235 | 548,000 | 10,960 | 0.392 s | 0.108 s |
+| 50 | Refused change | 823,929 | 212,638 | 548,000 | 10,960 | 0.342 s | 0.114 s |
+| 100 | Entry page | 2,728,026 | 380,169 | 2,186,000 | 0 | 1.302 s | 0.173 s |
+| 100 | With `?change=` | 2,728,026 | 413,035 | 2,186,000 | 21,860 | 1.512 s | 0.206 s |
+| 100 | Refused change | 2,728,429 | 413,438 | 2,186,000 | 21,860 | 1.027 s | 0.200 s |
+| 200 | Entry page | 9,807,026 | 751,169 | 8,732,000 | 0 | 4.331 s | 0.386 s |
+| 200 | With `?change=` | 9,807,026 | 814,635 | 8,732,000 | 43,660 | 5.281 s | 0.415 s |
+| 200 | Refused change | 9,807,429 | 815,038 | 8,732,000 | 43,660 | 3.999 s | 0.396 s |
+
+At 200 institutions the page holds 1,417 `<option>` elements instead of 83,417, or 1,827 with one form open. The entry page still makes 22 queries at every size. The browse page shows the same content through the shared partial, still with 16 queries; it is 3 bytes smaller (193,315 bytes at 200, against 193,318), the whitespace of a template line that is no longer needed. The entry page now grows linearly, by about 3.7 KB per institution.
+
+### 19.3 Tests
+
+- New module `caipo/web/tests/test_registry_entry_selection.py`, 40 tests. They cover:
+  - which form opens, the links, and the stored summary;
+  - every form posting with the selection;
+  - 400 for a value that is malformed or repeated, and 404 for an unknown identifier, including a name's and a country's, without the value shown back;
+  - escaping of a label in a link;
+  - access for 7 kinds of account and an anonymous visitor;
+  - refusal without the permission and without a CSRF token, and a CSRF token in each of the 15 forms;
+  - a saved change;
+  - refused submissions that keep the selection and what was typed: a change (both a form error and a service refusal), a new name, dates, an unconfirmed mark, a creation, and a country;
+  - linear growth with a constant number of queries.
+- Run against `b43b997`, 27 of the 40 fail. The 13 that pass check rules that must hold both before and after: access, CSRF, and nothing stored being changed.
+- One existing test, `test_the_entry_page_shows_each_institution_with_what_is_stored`, now opens the form with `?change=`. Its assertions are unchanged. No test was weakened, skipped, or removed.
+- Full suite, run locally on `6ecaee4` with `pytest -rfE --tb=short`: **4494 passed**, 0 failed, 0 errors, exit 0, in 8 min 59 s. That is 4454 before this change plus the 40 new tests.
+- CI on `6ecaee4`, run 40025415621: all four required checks passed. Code quality took 19 s; Django checks and tests took 9 min 5 s and reported 4494 passed; Dependency audit took 10 s; and Secret scan took 12 s.
+- Static checks on `6ecaee4`, all exit 0: `uv lock --check`, `ruff check`, `ruff format --check` (190 files), `mypy .` (154 files), `lint-imports` (2 contracts kept), `manage.py check`, and `makemigrations --check --dry-run`. Also run: `pip-audit` 2.10.1 on the exported lockfile (no known vulnerabilities; the lockfile is unchanged) and gitleaks v8.30.1, which found no leaks in 31 commits.
+- The commit that adds these results changes this report only. Its own CI result is in pull request #20: a report cannot hold the result for the commit that contains it.
+
+### 19.4 Status of the findings, 2026-10-24
+
+| Group | Findings | Count |
+|---|---|---|
+| Fixed, merged in #16 (`ba8a89e`) | M3, M4 | 2 |
+| Fixed, merged in #17 (`e0a9cbb`) | M2, L1, L2, L3, L5, L6, L8 | 7 |
+| Fixed in the ruleset, in force since 2026-10-21 | L7 | 1 |
+| Resolved | M1, L9 in the development registry on 2026-10-23 (§18); I7 by the housekeeping of 2026-10-24 (§19.5) | 3 |
+| Addressed in pull request #20, not merged | L4 | 1 |
+| Open | I1, I2, I5 (ADR-0008); I3 (needs an ADR); I4 (deferred by ADR-0018); I6 (housekeeping, §19.5) | 6 |
+
+20 findings: 10 fixed, 3 resolved, 1 addressed in an open pull request, and 6 open. When #20 is merged: 11 fixed, 3 resolved, and 6 open. Since §18.2, L4 has moved from open to addressed, and I7 from open to resolved. No finding was added or withdrawn.
+
+**L5 and a database check.** L5 was fixed in #17 at the level of the services: every operation that saves a name refuses the nine direction controls, and its tests prove it. A database check that also refused them, like the checks on the forms of the codes (§15.6), would be further hardening: a second line of defence against a write that bypasses the services. It is not part of finding L5, and it is not counted as an open finding. Adding it needs a migration and the owner's decision.
+
+### 19.5 Housekeeping
+
+**Local branches (I7).** After pull request #19 was merged, the local `main` was fast-forwarded from `4bff508` to `b43b997`. Before anything was removed, the following was checked:
+
+- No pull request was open.
+- Both worktrees were clean, apart from an ignored lint cache, and there was no stash.
+- For each of the 17 branches with a merged pull request, the local tip was the pull request's head. For `fix/audit-findings`, the tip was an ancestor of the head. In every case, the head's tree and patch were equal to those of its squash commit on `main`.
+- `feat/adr-0018-country-language` had no pull request and no commit that is not on `main`: its tip is the squash commit of #12.
+
+The worktree of the #19 branch was removed with `git worktree remove`, without `--force`. The 18 branches were deleted with `git branch -d`, never `-D`. The 17 with a pull request were `audit/caipo-full-diagnostic` and these:
+
+- `docs/adr-0017-account-recovery`, `docs/adr-0018-registry-audit-foundations`, `docs/adr-0019-phased-registry-implementation`, `docs/diagnostic-followup-m1-l9`, and `docs/record-pr17-merge`;
+- the six `feat/adr-0017-recovery-*` branches (foundation, request, authorization, completion, break-glass, and visibility-notifications);
+- `feat/adr-0018-audit-foundation`, `feat/adr-0019-increment-2-country-language`, `feat/adr-0019-increment-3-institutions`, `feat/password-reset`, and `fix/audit-findings`.
+
+The eighteenth was `feat/adr-0018-country-language`.
+
+No remote branch was deleted or pruned, so every deleted branch can be restored from `origin`. The local branches that remain are `main` and the branch of #20.
+
+**A fresh, verified backup.** The development database was backed up on 2026-10-23 at 21:01 UTC, with the commands in `docs/DEVELOPMENT.md`, "Deleting the database".
+
+| Item | Value |
+|---|---|
+| File | `~/caipo-backups/caipo_dev_20261023_210151.dump`, 94,667 bytes, mode `600`; the directory is mode `700` |
+| SHA-256 | `45381ebf2ee765e02b660bc947ec9ae9a457b485556f76c5e535c9d3f457d9af` |
+| Check | Restored into a throwaway database with `pg_restore --exit-on-error`, which exited 0. The row counts of all 21 tables were equal to those of the live database: among them 2 countries, 5 languages, 3 institutions, 5 names, 18 audit events, and 3 change records. The throwaway database was dropped. |
+
+Nothing was written to the development database. Its row counts were read in a session with `default_transaction_read_only` on.
+
+**Older backups (I6).** The older backups were inspected through `pg_restore --list` and their tables of applied migrations only. No account data was displayed. None was deleted.
+
+| Backup | Holds | Advice |
+|---|---|---|
+| `caipo_dev_20261023_210151.dump` | The current registry: `registry` 0002, 3 institutions, 5 names | Keep: the verified current backup |
+| `caipo_dev_before_audit_20261020_180112.dump` | `registry` 0002, before the audit; its SHA-256 is in §5 | Keep: the audit's documented baseline |
+| `…before_increment3_20261020_004625.dump` | `registry` 0001 | May be deleted later |
+| `…before_mfa_recovery_20261015_092517.dump`, `…_20261019_192856.dump`, `…_20261019_193010.dump`, `…before_mfa_rotation_20261019_192459.dump` | `registry` 0001, `accounts` 0009 | May be deleted later |
+| `…before_registry_20261013_103738.dump`, `…_20261013_181927.dump` | `accounts` 0007, no registry tables | May be deleted later |
+
+The seven that may be deleted later are older states that the two backups to keep replace, and each holds account data and password hashes. I6 stays open until the owner decides.
+
+### 19.6 Commands run
+
+- `gh pr view 19`; `git fetch`; `git fetch origin main:main`, a fast-forward only; `git switch`.
+- `git worktree list`, `git status --ignored`, and `git stash list`.
+- `gh pr list --state all`, compared with each branch's tip, and `git diff` and `git patch-id` between each pull request's head and its squash commit.
+- `git worktree remove` and `git branch -d`.
+- `pg_dump` by the documented command, `createdb`, `pg_restore --exit-on-error`, row counts of the live database in a read-only session and of the throwaway database, and `dropdb`.
+- `pg_restore --list` of each older backup.
+- `git archive` of `b43b997` and `d9ddb75` into a scratch directory, and the measurement test run in each with its own database.
+- The new tests run against `b43b997`.
+- `ruff`, `mypy`, and focused and full `pytest` runs.

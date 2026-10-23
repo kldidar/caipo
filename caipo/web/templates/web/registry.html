@@ -61,23 +61,9 @@
 
   <h2>{% translate "Institutions" %}</h2>
   {% translate "Not recorded" as not_recorded %}
-  {% translate "None" as none %}
   {% for institution in institutions %}
     <h3>{{ institution.label }}</h3>
-    <dl>
-      <dt>{% translate "Kind" %}</dt>
-      <dd>{{ institution.kind_label }}</dd>
-      <dt>{% translate "Country" %}</dt>
-      <dd>{{ institution.country_alpha2|default:none }}</dd>
-      <dt>{% translate "Parent institution" %}</dt>
-      <dd>{% if institution.parent %}{{ institution.parent.label }}{% else %}{{ none }}{% endif %}</dd>
-      <dt>{% translate "Valid from" %}</dt>
-      <dd>{{ institution.valid_from|date:"Y-m-d"|default:not_recorded }}</dd>
-      <dt>{% translate "Valid to" %}</dt>
-      <dd>{{ institution.valid_to|date:"Y-m-d"|default:not_recorded }}</dd>
-      <dt>{% translate "Successor" %}</dt>
-      <dd>{% if institution.successor %}{{ institution.successor.label }}{% else %}{{ none }}{% endif %}</dd>
-    </dl>
+    {% include "web/_institution_attributes.html" %}
     <table>
       <caption>{% translate "Names" %}</caption>
       <thead>
