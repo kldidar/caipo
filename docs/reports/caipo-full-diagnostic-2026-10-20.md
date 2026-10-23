@@ -2,7 +2,7 @@
 
 Technical, security, data, and research-readiness audit of the repository at `main` `4bff508` and of the local development database. Carried out by an AI agent (Claude Code) at the project owner's request, on the branch `audit/caipo-full-diagnostic`.
 
-**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15, §16, and §17 are dated follow-ups and keep the state of their own day, including statements that a pull request was open or that a name was not yet entered. The Status column of the register in §8 records the status after the merges of §17, on 2026-10-23. §18 records the entry of the two institution names on 2026-10-23. The current status of every finding is in §1 and §19, which records the fix of L4 in pull request #20 and the housekeeping of 2026-10-24.
+**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15, §16, and §17 are dated follow-ups and keep the state of their own day, including statements that a pull request was open or that a name was not yet entered. The Status column of the register in §8 records the status after the merges of §17, on 2026-10-23. §18 records the entry of the two institution names on 2026-10-23. The current status of every finding is in §1 and §19, which records the L4 optimization proposed in open pull request #20 and the housekeeping of 2026-10-24.
 
 ## 1. Executive summary
 
@@ -590,7 +590,7 @@ A read-only query of the development database on 2026-10-23, after both merges, 
 
 ## 18. Follow-up of 2026-10-24: the two institution names, and L4 measured again
 
-*A dated record: it keeps the state of 2026-10-24 before the work of §19, which fixed L4 later that day.*
+*A dated record: it keeps the state of 2026-10-24 before the work of §19, which proposed the L4 optimization in pull request #20 later that day.*
 
 ### 18.1 The two names, as entered
 
@@ -677,13 +677,13 @@ This report only: the note at its head, §1, the note above the register and the
 
 Commands run: `gh pr view 18`; `git fetch`, `git status`, `git worktree list`; `psql` in sessions with `default_transaction_read_only` on (counts, the names with their audit events, and the authentication event types after 19:30 UTC on 2026-10-23); `git archive` of `e025567` into a scratch directory and the measurement test run there with its own database; reading `caipo/web/registry.py`, `caipo/web/forms.py`, `registry_entry.html`, `caipo/registry/selectors.py`, ADR-0010, ADR-0018, and ADR-0019.
 
-## 19. Follow-up of 2026-10-24: L4 fixed, a verified backup, and housekeeping
+## 19. Follow-up of 2026-10-24: the L4 optimization proposed in open pull request #20, a verified backup, and housekeeping
 
 *A dated record: it keeps the state of 2026-10-24. Pull request #20 is open and not merged.*
 
 ### 19.1 L4: one change form at a time
 
-On 2026-10-24 the project owner approved the reading proposed in §18.4: a query parameter on the entry page is not a page of its own, so ADR-0018 point 59 and ADR-0019 point 16 still hold. The fix is in pull request #20, on the branch `feat/l4-entry-page-one-change-form` from `main` `b43b997`:
+On 2026-10-24 the project owner approved the reading proposed in §18.4: a query parameter on the entry page is not a page of its own, so ADR-0018 point 59 and ADR-0019 point 16 still hold. The optimization is proposed in pull request #20, open and not merged, on the branch `feat/l4-entry-page-one-change-form` from `main` `b43b997`:
 
 - Only the institution named by `?change=<public id>` has its change form. Every other institution is shown as stored, with a link that opens its form. The stored fields are kind, country, parent, the two dates, and successor, rendered by the same partial as the browse page.
 - Every form on the page posts with the same parameter, so any refused submission comes back with the selected institution open. A refused change of an institution opens that institution's form, with the typed values and field errors (L3), whatever the parameter says.
@@ -728,7 +728,10 @@ At 200 institutions the page holds 1,417 `<option>` elements instead of 83,417, 
   - linear growth with a constant number of queries.
 - Run against `b43b997`, 27 of the 40 fail. The 13 that pass check rules that must hold both before and after: access, CSRF, and nothing stored being changed.
 - One existing test, `test_the_entry_page_shows_each_institution_with_what_is_stored`, now opens the form with `?change=`. Its assertions are unchanged. No test was weakened, skipped, or removed.
-- The full suite and the checks are in pull request #20.
+- Full suite, run locally on `6ecaee4` with `pytest -rfE --tb=short`: **4494 passed**, 0 failed, 0 errors, exit 0, in 8 min 59 s. That is 4454 before this change plus the 40 new tests.
+- CI on `6ecaee4`, run 40025415621: all four required checks passed. Code quality took 19 s; Django checks and tests took 9 min 5 s and reported 4494 passed; Dependency audit took 10 s; and Secret scan took 12 s.
+- Static checks on `6ecaee4`, all exit 0: `uv lock --check`, `ruff check`, `ruff format --check` (190 files), `mypy .` (154 files), `lint-imports` (2 contracts kept), `manage.py check`, and `makemigrations --check --dry-run`. Also run: `pip-audit` 2.10.1 on the exported lockfile (no known vulnerabilities; the lockfile is unchanged) and gitleaks v8.30.1, which found no leaks in 31 commits.
+- The commit that adds these results changes this report only. Its own CI result is in pull request #20: a report cannot hold the result for the commit that contains it.
 
 ### 19.4 Status of the findings, 2026-10-24
 
