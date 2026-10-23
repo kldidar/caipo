@@ -1,6 +1,6 @@
 # Development environment
 
-How to set up and run CAIPO locally. The environment provides a pinned Python environment and two backing services, PostgreSQL and Redis. The application is a Django skeleton: settings, the User foundation, sign-in with TOTP multi-factor authentication, health endpoints, and structured logging.
+How to set up and run CAIPO locally. The environment provides a pinned Python environment and two backing services, PostgreSQL and Redis. The application is a Django skeleton: settings, the User foundation, sign-in with TOTP multi-factor authentication, account administration, the registry of countries, languages, and institutions, health endpoints, and structured logging.
 
 Last verified end to end on 2026-10-02. What was verified, and what was not, is recorded in [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §9.
 
@@ -58,8 +58,23 @@ docker compose ps             # status and health
 docker compose logs -f        # follow logs
 docker compose stop           # stop, keep containers and data
 docker compose down           # remove containers, keep the database volume
-docker compose down -v        # remove containers AND delete the database
+docker compose down -v        # remove containers AND delete the database (read the warning below)
 ```
+
+### Deleting the database
+
+**`docker compose down -v` deletes the database volume, and nothing brings it back.** Every account, second factor, registry record, and audit event in it is lost. It is never a fix for a failing test: the tests use their own database, `test_<POSTGRES_DB>`, and do not touch the development database. Before deleting a development database that holds anything you want to keep, back it up and check that the backup restores:
+
+```sh
+mkdir -p -m 700 ~/caipo-backups
+docker compose exec -T postgres sh -c 'pg_dump --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --format=custom' \
+  > ~/caipo-backups/caipo_dev_$(date -u +%Y%m%d_%H%M%S).dump
+chmod 600 ~/caipo-backups/*.dump
+```
+
+The command runs inside the container, so the password is not typed or shown. To check a backup, restore it into a throwaway database (`createdb`, then `pg_restore --exit-on-error`, then `dropdb`, each run inside the container) and compare row counts. A backup holds account data and password hashes: keep it out of the repository, which ignores `*.dump`, and readable by you alone.
+
+Where the steps below say to recreate the development database, they mean this command, after this backup.
 
 ### Checking health
 
@@ -74,7 +89,7 @@ To check connectivity from the host with the credentials in `.env`, run the test
 
 ### Things to know
 
-- `POSTGRES_PASSWORD` is applied only when the database volume is first created. Changing it in `.env` later does not change it in the database. Either change it inside PostgreSQL or run `docker compose down -v` and start again.
+- `POSTGRES_PASSWORD` is applied only when the database volume is first created. Changing it in `.env` later does not change it in the database. Change it inside PostgreSQL. Recreating the database also applies it, and deletes everything in it ("Deleting the database" above).
 - The database is created with UTF-8 encoding and PostgreSQL's built-in `C.UTF-8` collation provider, set explicitly in the Compose file.
 - Redis requires the password and has persistence turned off.
 
@@ -143,7 +158,7 @@ uv run --env-file .env python manage.py create_first_administrator
 uv run --env-file .env python manage.py runserver        # then http://127.0.0.1:8000/login/
 ```
 
-`create_first_administrator` creates the only account the application can create so far. It is interactive and works once; what it asks for, and why it has no options, is in [SECURITY.md](../SECURITY.md), "The first Administrator". Have an authenticator application at hand (any that implements TOTP: six digits, 30 seconds): after the email address, the password, and the confirmation, the command writes a key to the terminal, once, and asks for the code the application shows for it. The account is created only when a code is accepted. After three codes that are not, nothing has been created and the command can be run again. To start again locally after it has succeeded, recreate the development database (`docker compose down -v`).
+`create_first_administrator` creates the first account. Every later account is created by an Administrator on the accounts page ("Creating accounts" below). It is interactive and works once; what it asks for, and why it has no options, is in [SECURITY.md](../SECURITY.md), "The first Administrator". Have an authenticator application at hand (any that implements TOTP: six digits, 30 seconds): after the email address, the password, and the confirmation, the command writes a key to the terminal, once, and asks for the code the application shows for it. The account is created only when a code is accepted. After three codes that are not, nothing has been created and the command can be run again. To start again locally after it has succeeded, recreate the development database, which deletes everything in it ("Deleting the database" above).
 
 During an initial deployment it is run once, by the person installing the system, in a terminal on the server and under the settings of that environment, after `migrate` and before anyone needs to sign in. In a container that means an interactive session, for example `docker compose exec` with a terminal attached. It cannot be put in a start-up script, because it refuses to run without a terminal.
 
@@ -151,7 +166,7 @@ The pages are `/login/` and `/logout/`. A view never checks a password itself: `
 
 The first Administrator signs in with its password and then a code from the authenticator that was set up by the command: the password alone signs nobody in, and there is no setting that changes it. See the next section.
 
-A development database whose Administrator was created before the bootstrap set up the second factor (migration `accounts/0005_second_factor_approval`) has an Administrator whose second factor nobody approved, and nobody who could approve it. Recreate that database.
+A development database whose Administrator was created before the bootstrap set up the second factor (migration `accounts/0005_second_factor_approval`) has an Administrator whose second factor nobody approved, and nobody who could approve it. Recreate that database, after the backup described in "Deleting the database".
 
 The sign-in tests use the real Argon2 hasher, which is why the suite takes about a minute.
 
@@ -184,7 +199,7 @@ From then on `/login/` asks for the password and then, at `/login/verify/`, for 
 
 After 5 refused codes for one account within 15 minutes the pages answer 429 until earlier refusals are 15 minutes old. Nothing lifts that sooner. The limits and lifetimes are `MFA_*` and `TOTP_*` in `caipo/config/settings/base.py`.
 
-**The encryption key.** TOTP secrets are stored encrypted under `TOTP_ENCRYPTION_KEY`. Changing that key, or losing it, makes every enrolled second factor unusable: each enrolled account is refused at the code step. Locally, recreate the development database (`docker compose down -v`) or delete the rows of `accounts_totpdevice`. Rotating the key without that loss is not built; it is designed with the deployment decision (ADR-0008).
+**The encryption key.** TOTP secrets are stored encrypted under `TOTP_ENCRYPTION_KEY`. Changing that key, or losing it, makes every enrolled second factor unusable: each enrolled account is refused at the code step. Locally, recreate the development database, which deletes everything in it ("Deleting the database" above), or delete the rows of `accounts_totpdevice`; back up first either way. Rotating the key without that loss is not built; it is designed with the deployment decision (ADR-0008).
 
 **A lost device.** There are no recovery codes. A Reviewer or Administrator asks for recovery on the page that takes the code (`/login/verify/`) and is shown a request number. An Administrator who is signed in with a trusted second factor authorises or rejects that number at `/administration/recovery-requests/` within 30 minutes; authorising deletes the lost device and ends the account's sessions. The account then signs in with its password and enrols again, and a different Administrator approves at `/administration/second-factor-requests/`: the one who authorised is refused. An authorisation that is not made answers with one sentence and status 409 whatever the reason; the reason is in the log line `mfa_recovery.decision_unavailable`. Two things to know locally: no recovery is authorised within 24 hours of the account's password reset, and recovering an Administrator needs two other Administrators with trusted second factors, a Reviewer two Administrators. With fewer, an Administrator is recovered by the break-glass command below, and a Reviewer is not recovered until two Administrators exist. For a Reader or Researcher, the account's row in `accounts_totpdevice` has to be deleted in the database by its owner, or the development database recreated. The decisions are in [ADR-0017](adr/0017-account-recovery.md). Keep a second Administrator in any database that matters.
 
@@ -254,9 +269,29 @@ A reset changes the password only. The second factor, its approval, and the role
 
 The limits and the lifetime are `PASSWORD_RESET_*` in `caipo/config/settings/base.py`: 5 requests an hour for one email address, 20 requests in 15 minutes from one source, and 10 refused tokens in 15 minutes from one source. In production no email service is configured yet (ADR-0008), so there a reset can be asked for and its message cannot be sent.
 
+## The registry
+
+Decided in [ADR-0018](adr/0018-registry-and-general-audit-record.md) and built in increments under [ADR-0019](adr/0019-phased-registry-implementation.md); what it protects is in [SECURITY.md](../SECURITY.md).
+
+A fresh database has an empty registry: no migration or code creates a country, language, or institution. An Administrator signed in with a trusted second factor enters the countries and languages at `/registry/entry/`, and institutions are entered there by a Researcher, a Reviewer verified with a trusted second factor, or such an Administrator. Nothing is deleted. A country or language is deactivated, not removed; a name entered by mistake is marked as entered in error, which cannot be undone. Every change writes an audit event in the same transaction. No page reads the audit record yet; it is read with a database query.
+
+| Page | Method | What it does |
+|---|---|---|
+| `/registry/` | GET | Lists countries, languages, and institutions with their names. `REGISTRY_READ`: every role, Reviewer and Administrator only with a trusted second factor. |
+| `/registry/entry/` | GET | The forms. The country and language forms are shown only to an Administrator verified with a trusted second factor. |
+| `/registry/entry/countries/create/`, `/registry/entry/languages/create/` | POST | Create a country or a language (`REGISTRY_REFERENCE_MANAGE`) |
+| `/registry/entry/countries/<id>/rename/`, `…/deactivate/`, `…/reactivate/`, and the same under `languages/` | POST | Change the English name, deactivate, or reactivate (`REGISTRY_REFERENCE_MANAGE`) |
+| `/registry/entry/institutions/create/` | POST | Create an institution with its first name (`REGISTRY_INSTITUTIONS_MANAGE`) |
+| `/registry/entry/institutions/<id>/change/` | POST | Set the kind, country, parent, successor, and validity dates |
+| `/registry/entry/institutions/<id>/names/add/` | POST | Add a name |
+| `/registry/entry/institution-names/<id>/dates/` | POST | Set a name's validity dates |
+| `/registry/entry/institution-names/<id>/mark-entered-in-error/` | POST | Mark a name as entered in error; refused for an institution's only unmarked name |
+
+`<id>` is the record's public identifier, a UUID. The services are in `caipo/registry/services.py` and the reads in `caipo/registry/selectors.py`.
+
 ## Authorization
 
-No page uses this yet apart from the sign-in pages, which are public, and the second-factor pages. It is the layer that views and services are written against.
+Every page is declared through this layer: the sign-in pages (including the recovery request at `/login/verify/recover/`), sign-out, activation, password reset, and the health endpoints are public, and every other page declares a permission. It is the layer that views and services are written against.
 
 **A view declares the access it requires**, outermost, with `public` or with `requires` and a permission. A view with no declaration answers 403.
 
