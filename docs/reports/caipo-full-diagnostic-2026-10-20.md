@@ -2,7 +2,7 @@
 
 Technical, security, data, and research-readiness audit of the repository at `main` `4bff508` and of the local development database. Carried out by an AI agent (Claude Code) at the project owner's request, on the branch `audit/caipo-full-diagnostic`.
 
-**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15 and §16 are dated follow-ups and keep the state of their own day, including statements that a pull request was open. The current status of every finding is in §1, in the Status column of the register in §8, and in §17, which records the merges of pull requests #16 and #17 on 2026-10-23.
+**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15, §16, and §17 are dated follow-ups and keep the state of their own day, including statements that a pull request was open or that a name was not yet entered. The Status column of the register in §8 records the status after the merges of §17, on 2026-10-23. The current status of every finding is in §1 and §18, which records the entry of the two institution names later on 2026-10-23.
 
 ## 1. Executive summary
 
@@ -10,8 +10,8 @@ Technical, security, data, and research-readiness audit of the repository at `ma
 
 - Every quality gate that CI runs passes locally: 4169 tests, ruff, formatting, mypy (strict), both import contracts, Django checks, migration consistency, the dependency audit, and the full-history secret scan. The last six CI runs on `main` succeeded; the latest, on `4bff508`, passed all four jobs.
 - No Critical or High defect was found. An independent probe of all 40 routes for 8 kinds of actor found no route reachable without its declared permission, no CSRF gap, and no server error under hostile input.
-- The development database is intact. Its 2 countries, 5 languages, 3 institutions, and 3 names are consistent, and the audit record has exactly one `created` event for each, with no orphaned events. Nothing was written to it during the audit; that was checked afterwards (§5).
-- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. Since both pull requests were merged on 2026-10-23 (§17), they stand in two groups. **Ten are fixed**: M3 and M4, documentation, merged in pull request #16 (`ba8a89e`); M2, L1, L2, L3, L5, L6, and L8, application, merged in pull request #17 (`e0a9cbb`); and L7, in the GitHub ruleset, which is in force. **Ten are open**: M1 and L9, corrections to two institution names that are proposed from the official sites and not yet entered: entering them needs an Administrator signed in with a second factor (§15.2); L4, measured, with a recommendation (§15.4); and the seven Informational findings, of which I1, I2, and I5 are deferred to ADR-0008, I4 by ADR-0018, I3 needs an ADR of its own, and I6 and I7 are housekeeping.
+- The development database is intact. At the audit, its 2 countries, 5 languages, 3 institutions, and 3 names were consistent, and the audit record had exactly one `created` event for each, with no orphaned events. Nothing was written to it during the audit; that was checked afterwards (§5). On 2026-10-24 it holds 3 institutions, 5 names, and 18 audit events, after the two names of §15.2 were entered (§18).
+- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. Current status, 2026-10-24 (§18): **ten are fixed**: M3 and M4, documentation, merged in pull request #16 (`ba8a89e`); M2, L1, L2, L3, L5, L6, and L8, application, merged in pull request #17 (`e0a9cbb`); and L7, in the GitHub ruleset, which is in force. **Two are resolved in the development registry**: M1 and L9, by the two English renderings proposed in §15.2, entered on 2026-10-23 by the Administrator through the entry page. **Eight are open**: L4, measured, with a recommendation (§15.4, §18.4); and the seven Informational findings, of which I1, I2, and I5 are deferred to ADR-0008, I4 by ADR-0018, I3 needs an ADR of its own, and I6 and I7 are housekeeping. The names do not resolve I3: the registry still records no source for a name.
 - Research readiness: the platform cannot yet hold a source, document, policy, indicator, claim, or citation. That is by design. Phase 2 and later are blocked by open research, rights, and isolation decisions (spec §10), most of them the researcher's to make.
 
 | Area | Assessment |
@@ -175,6 +175,8 @@ No Critical and no High finding.
 
 Every finding of the audit: the open ones first, then the fixed ones. The Finding and Evidence columns record what the audit found on `main` `4bff508` ("Before") and, for a fix, what changed ("After"). The Status column is the status on 2026-10-23, after the merges of §17. "Open" means that nothing has yet changed for it. "Fixed, merged in #16" or "#17" means that the fix is on `main`, in the merge commit named. "Fixed in the ruleset" means that the change is in force on GitHub. "Needs verification" names what the audit could not confirm itself. The evidence was checked again on 2026-10-21 against the code, the ruleset, the official sites, and an anonymous request (§14), and every status again on 2026-10-23 against the diffs of both pull requests and the settings on GitHub (§16), and after both merges against `main` `e0a9cbb` (§17). The last column says what was done, or is proposed, in the follow-up of 2026-10-21 (§15). The fixes are fixes from the findings of this audit.
 
+**This register is kept as it stood after the merges of §17.** Later on 2026-10-23, M1 and L9 were resolved in the development registry, when the two names it proposes were entered. The current status of every finding is in §18.2.
+
 | ID | Severity | Finding | Status | Evidence | Outcome |
 |---|---|---|---|---|---|
 | M1 | Medium | Turkmenistan statistics body: the stored English name is not the form the body's site uses for itself | **Open.** A correction is proposed; nothing is entered yet. Entry needs an Administrator signed in with a second factor (§15.2) | Read-only query of InstitutionName 3; stat.gov.tm/en/about-us, read on 2026-10-21: header and footer "State Committee of Turkmenistan on Statistics"; About text "State Committee of Statistics of Turkmenistan" and, in the renaming sentence, "State Statistics Committee of Turkmenistan" | Proposed: add "State Committee of Turkmenistan on Statistics" as a further English rendering, with no dates. Keep the stored name: the site itself uses it. Mark nothing |
@@ -198,7 +200,7 @@ Every finding of the audit: the open ones first, then the fixed ones. The Findin
 | M3 | Medium | Documentation drift | **Fixed**, merged in #16 (`ba8a89e`) | Below; fix in §9 | — |
 | M4 | Medium | The development guide advised deleting the database with no warning | **Fixed**, merged in #16 (`ba8a89e`) | Below; fix in §9 | — |
 
-Totals: 20 findings. **10 fixed**: 2 Medium merged in #16 (M3, M4); 1 Medium (M2) and 6 Low (L1, L2, L3, L5, L6, L8) merged in #17; and 1 Low in the ruleset (L7). **10 open**: 1 Medium (M1), 2 Low (L4, L9), and 7 Informational.
+Totals after the merges of §17: 20 findings. **10 fixed**: 2 Medium merged in #16 (M3, M4); 1 Medium (M2) and 6 Low (L1, L2, L3, L5, L6, L8) merged in #17; and 1 Low in the ruleset (L7). **10 open**: 1 Medium (M1), 2 Low (L4, L9), and 7 Informational. Current totals, with M1 and L9 resolved: 10 fixed, 2 resolved, 8 open (§18.2).
 
 ### Open findings
 
@@ -207,11 +209,12 @@ Totals: 20 findings. **10 fixed**: 2 Medium merged in #16 (M3, M4); 1 Medium (M2
 - Impact: documents will be attributed to this institution. Without the body's own form, matching and citation are weaker.
 - Proposed correction: add the header form as a further `english_rendering` in `eng-Latn`, with no dates. The stored name is kept and not marked as entered in error, because the site itself uses it. No date is entered: the page mentions a reorganisation by a decree of 11 October 2007, but it does not say from when each English form is used.
 - Status: open. **Nothing has been entered.** Only an account signed in with a trusted second factor can make the entry, and the audit stopped before it (§15.2).
+- *Update: resolved on 2026-10-23 in the development registry. The Administrator entered the proposed form as a further English rendering (§18).*
 - Limitation of the registry: it cannot say which of several concurrent names of the same kind is the preferred one. A name's kind and text cannot be changed once it is saved (ADR-0018 point 19), and there is no field for preference or for a source. Both are recorded here, not in the model.
 
 **L4. The entry page grows with the square of the number of institutions.** Each institution has a change form whose parent and successor lists name every other institution. Measured in §15.4. Left open with a recommendation.
 
-**L9. The Ministry's English name is a shortened form.** "Ministry of Digital Technologies" against the site's "Ministry of Digital Technologies of the Republic of Uzbekistan". Proposed: add the full form as a further `english_rendering`, with no dates, and keep the short one, which is accurate. Its kind cannot be changed to show that it is the short form. Status: open. **Nothing has been entered** (§15.2).
+**L9. The Ministry's English name is a shortened form.** "Ministry of Digital Technologies" against the site's "Ministry of Digital Technologies of the Republic of Uzbekistan". Proposed: add the full form as a further `english_rendering`, with no dates, and keep the short one, which is accurate. Its kind cannot be changed to show that it is the short form. Status: open. **Nothing has been entered** (§15.2). *Update: resolved on 2026-10-23 in the development registry. The Administrator entered the full form as a further English rendering (§18).*
 
 - **I1. Production hardening waits for ADR-0008** (Proposed): HSTS, TLS redirect, the proxy header, trusted CSRF origins, CSP, database roles that stop TRUNCATE and changes to triggers, key storage and rotation, and email delivery. `production.py` lists these itself.
 - **I2. Throttling by `REMOTE_ADDR`.** Behind a reverse proxy every client would share one address, and 20 failures from any of them would lock sign-in for everyone. This must be designed with ADR-0008.
@@ -351,21 +354,20 @@ No browser automation was available. These were not verified in a browser:
 2. The keyboard and screen-reader experience of the entry page. Its many "Deactivate", "Change the dates", and "Mark as entered in error" buttons have the same text.
 3. A real sign-in with an authenticator application, and the 403 a password-only Administrator sees on the registry.
 4. Cookie behaviour over plain HTTP under the development settings.
-5. Entering the two names proposed in §15.2, signed in with your authenticator, and whether names in the national languages should be added (M1, L9).
+5. Whether names in the national languages should be added to the three institutions. (The two English names proposed in §15.2 were entered on 2026-10-23: §18.)
 6. The new 403, 404, and 500 pages, on `main` since #17 was merged (§17), and the confirmation box of "Mark as entered in error", in a browser. The 404 and 500 pages appear only with `DEBUG` off; under the development settings Django shows its diagnostic pages instead (R1, §16). The 403 page and the confirmation box can be checked under the development settings.
 
 ## 13. Outstanding decisions and next steps
 
-As fixes from the findings of this audit: M2, L1, L2, L3, L5, L6, and L8 are fixed and merged in pull request #17 (`e0a9cbb`); M3 and M4 are fixed and merged in pull request #16 (`ba8a89e`); and L7 is fixed in the ruleset. Proposed and not yet entered: the names of M1 and L9 (§15.2).
+As fixes from the findings of this audit: M2, L1, L2, L3, L5, L6, and L8 are fixed and merged in pull request #17 (`e0a9cbb`); M3 and M4 are fixed and merged in pull request #16 (`ba8a89e`); and L7 is fixed in the ruleset. M1 and L9 are resolved in the development registry: the two names of §15.2 were entered on 2026-10-23 (§18).
 
-Still open, with what each needs, in §15.6: I3 (an ADR), a preferred name (an ADR), I4 (a later increment), I1, I2, and I5 (ADR-0008), L4 (a choice between the options of §15.4), a database check for L5 (a migration), and the "Update branch" button.
+Still open, with what each needs, in §15.6: I3 (an ADR), a preferred name (an ADR), I4 (a later increment), I1, I2, and I5 (ADR-0008), L4 (a choice between the options of §15.4, refined in §18.4), a database check for L5 (a migration), and the "Update branch" button.
 
-Recommended order of next work:
+Recommended order of next work (the merges of #16 and #17, their record in this report, the line on the ticked confirmation in `docs/DEVELOPMENT.md`, and the entry of the two names of §15.2 are done: §17, §18):
 
-1. Enter the two names of §15.2. (The merges of #16 and #17, the record of them in this report, and the line on the ticked confirmation in `docs/DEVELOPMENT.md` are done: §17.)
-2. Close the researcher-owned Phase 2 blockers: B22, then B8 and B9, then B7 and B10. Nothing research-related can be built before them.
-3. Run the job-system and isolation spikes together (B4, B21), so that ADR-0004 and ADR-0011 can be decided.
-4. Before many institutions are entered: decide I3 and the question of a preferred name, and choose a fix for L4.
+1. Close the researcher-owned Phase 2 blockers: B22, then B8 and B9, then B7 and B10. Nothing research-related can be built before them.
+2. Run the job-system and isolation spikes together (B4, B21), so that ADR-0004 and ADR-0011 can be decided.
+3. Before many institutions are entered: decide I3 and the question of a preferred name, and choose a fix for L4 (§18.4).
 
 ## 14. Commands run, and checks not performed
 
@@ -534,6 +536,8 @@ The table of registry routes in `docs/DEVELOPMENT.md` says that marking a name a
 
 ## 17. Merges of pull requests #16 and #17, 2026-10-23
 
+*A dated record: it keeps the state of 2026-10-23 after the merges. The two names of §15.2 were entered later that day (§18).*
+
 ### 17.1 What was merged
 
 Both pull requests were merged by the project owner on 2026-10-23, read from GitHub after the merges:
@@ -583,3 +587,92 @@ A read-only query of the development database on 2026-10-23, after both merges, 
 1. Enter the two names of §15.2.
 2. The browser checks of §12, the new pages of #17 among them.
 3. The decisions of §15.6, and the open findings above.
+
+## 18. Follow-up of 2026-10-24: the two institution names, and L4 measured again
+
+*A dated record: it keeps the state of 2026-10-24.*
+
+### 18.1 The two names, as entered
+
+On 2026-10-23 the two English renderings proposed in §15.2 were entered in the development registry, through the entry page, by the Administrator account. The authentication record shows a sign-in verified with a second factor at 20:10 UTC, the minute before the first entry. A read-only query on 2026-10-24, in a session with `default_transaction_read_only` on, showed:
+
+| Table | Rows |
+|---|---|
+| Country | 2 |
+| Language | 5 |
+| Institution | 3 |
+| InstitutionName | 5 |
+| AuditEvent | 18: 15 `created` (2 countries, 5 languages, 3 institutions, 5 names) and 3 `updated` (languages) |
+| AuditEventChange | 3 |
+| User | 1 |
+
+| Institution | Name added | Kind | Language | Dates | Audit event (UTC) |
+|---|---|---|---|---|---|
+| Turkmenistan's statistics body | State Committee of Turkmenistan on Statistics | `english_rendering` | `eng-Latn` | None | One `created`, 2026-10-23 20:11 |
+| Ministry of Digital Technologies | Ministry of Digital Technologies of the Republic of Uzbekistan | `english_rendering` | `eng-Latn` | None | One `created`, 2026-10-23 20:13 |
+
+**Checks, all passed:** each text is the form proposed in §15.2, character for character, and is in NFC. Neither new name has a date or is marked. The earlier names are kept and are not marked. Each new name has exactly one `created` event, with a correlation ID, by the one account. No audit event names a record that does not exist. Every institution has a name that is not marked, and no institution has a date, a parent, or a successor. Nothing was written to the database by this follow-up.
+
+### 18.2 Status of the findings, 2026-10-24
+
+| Group | Findings | Count |
+|---|---|---|
+| Fixed, merged in #16 (`ba8a89e`) | M3, M4 | 2 |
+| Fixed, merged in #17 (`e0a9cbb`) | M2, L1, L2, L3, L5, L6, L8 | 7 |
+| Fixed in the ruleset, in force since 2026-10-21 | L7 | 1 |
+| Resolved in the development registry on 2026-10-23 | M1, L9 | 2 |
+| Open | L4 (§18.4); I1, I2, I5 (ADR-0008); I3 (needs an ADR); I4 (deferred by ADR-0018); I6, I7 (housekeeping) | 8 |
+
+20 findings: 10 fixed, 2 resolved, and 8 open. The audit's count after the merges of §17 was 10 fixed and 10 open. The register of §8 is kept as it stood then. No finding was added or withdrawn.
+
+M1 and L9 are counted as resolved and not as fixed because no code changed. The names are data in the development database, which is not in the repository. A new database starts with an empty registry (ADR-0018 point 58) and would not hold them.
+
+### 18.3 What the names do not resolve
+
+- **I3 stays open.** This report records what the official sites showed: stat.gov.tm/en/about-us and digital.uz/en, read through an automated fetch on 2026-10-21 and again on 2026-10-23 (§15.2, §16.1). Those are source facts held in this report. The registry stores the names only. It records no source, no date of reading, and no link for any name, so where these forms came from cannot be traced from the application.
+- **A preferred name is still not recorded.** Each of the two institutions now has two concurrent English renderings, and the registry cannot say which is preferred (§15.6). An institution is labelled by its first unmarked name (`InstitutionEntry.label`), so another institution's parent or successor list still shows the earlier forms, "State Statistics Committee of Turkmenistan" and "Ministry of Digital Technologies".
+- **Names in the national languages** were not entered or checked (§12, item 5).
+
+### 18.4 L4, measured again
+
+The measurement of §15.4 was repeated on `main` `e025567` with a test kept outside the repository. It ran on an exported copy with its own test database and was never committed. The test created synthetic institutions through the services and requested both pages as a verified Administrator. Times are the median of three requests.
+
+| Institutions | Entry page | `<option>` elements | Share in parent and successor lists | Time | Queries | Browse page | Browse time | Browse queries |
+|---|---|---|---|---|---|---|---|---|
+| 10 | 85 KB | 387 | 26% | 0.07 s | 22 | 11 KB | 0.01 s | 16 |
+| 50 | 824 KB | 5,867 | 67% | 0.36 s | 22 | 49 KB | 0.02 s | 16 |
+| 100 | 2.7 MB | 21,717 | 80% | 1.18 s | 22 | 97 KB | 0.02 s | 16 |
+| 200 | 9.8 MB | 83,417 | 89% | 4.37 s | 22 | 193 KB | 0.03 s | 16 |
+
+The figures are slightly above those of §15.4 because the synthetic names were longer and #17 added a confirmation box to every mark form. The growth itself is the same.
+
+**Where it comes from.** The number of queries does not depend on the number of institutions: `selectors.institutions` reads institutions and names in two queries. All the growth is in rendering. Each institution's change form (`_institution_sections` in `caipo/web/registry.py`) offers every other institution twice, as parent and as successor: 2 × N × (N − 1) options, 79,600 of the 83,417 at 200. A refused POST renders the same page again, so a refusal costs the same.
+
+**Recommended, the smallest change that keeps the ADRs:** the first option of §15.4, made concrete. The entry page shows the change form of at most one institution, chosen by a query parameter on the same URL (`/registry/entry/?change=<public id>`), and every other institution has a link to open its form. A refused change opens the form it came from, so L3 still holds. The add-a-name, dates, and mark forms and the creation form are unchanged. The view, its access declaration, the routes (still 40), the permissions, the models, the migrations, and the dependencies are unchanged, and no JavaScript is added. The parent and successor lists then grow linearly: at 200 institutions, an estimated 400 options (about 45 KB) instead of 79,600. The rest of the page is already linear: about 1.1 MB at 200, and less once the other fields of the change forms that are no longer shown go too.
+
+ADR-0018 point 59 and ADR-0019 point 16 allow two pages and no others. A query parameter selects what the entry page shows and adds no page. This report reads it that way, and the owner should confirm that reading before the work starts.
+
+**Not recommended:**
+
+- Pagination: each page is still quadratic in its own size, and it splits a list that is short today.
+- A page for each institution: a third page, which needs an ADR.
+- An HTMX fragment: it needs another endpoint, and HTMX is not installed.
+- Response compression: it reduces neither the rendering time nor the size of the page in the browser, and compressing pages that hold a CSRF token raises the BREACH question.
+- One shared `<datalist>`: it turns a choice into free text of identifiers.
+
+**Test plan for the change:**
+
+1. Without `change`, the page holds no institution change form, and each institution has a link to its form.
+2. With `change=<public id>`, the page holds exactly that institution's form, with its stored values selected, and the institution is not offered as its own parent or successor. `test_the_entry_page_shows_each_institution_with_what_is_stored` in `test_registry_institution_pages.py` makes its request with the parameter. Its assertions are unchanged.
+3. Linear growth: with N and 2N synthetic institutions, the exact `<option>` count follows a linear formula, and the number of queries is the same for both.
+4. A `change` value that is not a UUID, names no institution, names a name, is repeated, or is very long gives the page with no form open: never a 500, and the value is never shown back.
+5. A refused change of an institution opens its form with the typed values and the same status. The existing L3 tests in `test_registry_entry_safeguards.py` pass unchanged.
+6. Access is unchanged. The parameter gives nothing to an anonymous visitor or an account without `REGISTRY_INSTITUTIONS_MANAGE`, and the route count in `test_break_glass_unreachable.py` stays 40.
+7. A successful change still redirects to `?saved=1`.
+8. The full suite, `ruff`, `mypy`, and `lint-imports` pass, and the new link text is marked for translation.
+
+### 18.5 Changes and checks
+
+This report only: the note at its head, §1, the note above the register and the totals in §8, the M1 and L9 entries in §8, §12 item 5, §13, the note at the head of §17, and this section. No application code, test, migration, setting, CI file, or database row changed.
+
+Commands run: `gh pr view 18`; `git fetch`, `git status`, `git worktree list`; `psql` in sessions with `default_transaction_read_only` on (counts, the names with their audit events, and the authentication event types after 19:30 UTC on 2026-10-23); `git archive` of `e025567` into a scratch directory and the measurement test run there with its own database; reading `caipo/web/registry.py`, `caipo/web/forms.py`, `registry_entry.html`, `caipo/registry/selectors.py`, ADR-0010, ADR-0018, and ADR-0019.
