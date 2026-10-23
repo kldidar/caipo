@@ -127,7 +127,11 @@
     <form method="post" action="{% url 'registry-institution-change' section.institution.public_id %}" novalidate>
       {% csrf_token %}
       {% for field in section.change_form %}
-        <p>{{ field.label_tag }} {{ field }}</p>
+        <p>
+          {{ field.label_tag }}
+          {{ field }}
+          {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+        </p>
       {% endfor %}
       <button type="submit">{% translate "Change the institution" %}</button>
     </form>
@@ -138,13 +142,18 @@
       <form method="post" action="{% url 'registry-institution-name-dates' entry.name.public_id %}" novalidate>
         {% csrf_token %}
         {% for field in entry.dates_form %}
-          <p>{{ field.label_tag }} {{ field }}</p>
+          <p>
+            {{ field.label_tag }}
+            {{ field }}
+            {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+          </p>
         {% endfor %}
         <button type="submit">{% translate "Change the dates" %}</button>
       </form>
       {% if section.names|length > 1 %}
-        <form method="post" action="{% url 'registry-institution-name-mark' entry.name.public_id %}">
+        <form method="post" action="{% url 'registry-institution-name-mark' entry.name.public_id %}" novalidate>
           {% csrf_token %}
+          <p><label>{{ entry.mark_form.confirmed }} {{ entry.mark_form.confirmed.label }}</label></p>
           <button type="submit">{% translate "Mark as entered in error" %}</button>
         </form>
       {% endif %}
@@ -162,7 +171,11 @@
     <form method="post" action="{% url 'registry-institution-name-add' section.institution.public_id %}" novalidate>
       {% csrf_token %}
       {% for field in section.name_form %}
-        <p>{{ field.label_tag }} {{ field }}</p>
+        <p>
+          {{ field.label_tag }}
+          {{ field }}
+          {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+        </p>
       {% endfor %}
       <button type="submit">{% translate "Add the name" %}</button>
     </form>

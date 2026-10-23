@@ -1,0 +1,9 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Something went wrong" %}{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Something went wrong" %}</h1>
+  <p>{% translate "The request could not be completed. Nothing about it is shown here. If it keeps happening, tell an Administrator when it happened." %}</p>
+{% endblock %}

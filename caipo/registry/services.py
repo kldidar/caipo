@@ -82,6 +82,14 @@ _COUNTRY_CODE_CONSTRAINTS: Final = frozenset(
 )
 _LANGUAGE_CODE_CONSTRAINTS: Final = frozenset({"registry_language_codes_unique"})
 
+# The invisible characters that embed, override, or isolate a direction of
+# text: U+202A to U+202E and U+2066 to U+2069. Inside a name they can make it
+# read differently from the characters it holds, and no name of a body needs
+# them, so a name that holds one is refused (diagnostic of 2026-10-20, L5).
+# The implicit marks U+200E, U+200F, and U+061C reorder nothing around them,
+# can be needed in right-to-left text, and are allowed.
+_DIRECTION_CONTROLS: Final = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
+
 
 class RegistryError(Exception):
     """The requested change to the registry cannot be made."""
@@ -89,6 +97,14 @@ class RegistryError(Exception):
 
 class InvalidEntryError(RegistryError):
     """What was entered is not a valid value for the record."""
+
+
+class DirectionControlError(InvalidEntryError):
+    """A name holds an invisible character that sets a direction of text.
+
+    These are the characters that embed, override, or isolate a direction:
+    U+202A to U+202E and U+2066 to U+2069.
+    """
 
 
 class DuplicateCodeError(RegistryError):
@@ -147,8 +163,9 @@ def create_country(
     Preconditions: the actor holds `REGISTRY_REFERENCE_MANAGE`; `alpha2` is
     two capital ASCII letters and `alpha3` three, exactly as given, with
     nothing trimmed or converted; neither code is in use; the name, with
-    surrounding whitespace removed, is not empty and is at most 200
-    characters. Whether a code is assigned by ISO 3166 is not checked.
+    surrounding whitespace removed, is not empty, is at most 200
+    characters, and holds no direction control (U+202A to U+202E, U+2066 to
+    U+2069). Whether a code is assigned by ISO 3166 is not checked.
 
     Side effects: one Country and one `created` audit event, in one
     transaction, and a log line once it has committed. The name is stored
@@ -156,7 +173,8 @@ def create_country(
 
     Raises PermissionDenied if the actor may not maintain the reference
     lists, before anything else is examined; InvalidEntryError if a code or
-    the name is not valid; DuplicateCodeError if either code is in use,
+    the name is not valid, DirectionControlError (a kind of it) if the name
+    holds a direction control; DuplicateCodeError if either code is in use,
     including when another transaction took it first. Any other failure of
     the database, or of the audit writer, is raised as it is. In every case
     nothing is stored and no audit event is written.
@@ -187,7 +205,8 @@ def rename_country(*, actor: AuthenticationContext, public_id: uuid.UUID, name_e
 
     Preconditions: the actor holds `REGISTRY_REFERENCE_MANAGE`; the country
     exists; the name, with surrounding whitespace removed, is not empty, is
-    at most 200 characters, and differs from the stored name. A deactivated
+    at most 200 characters, holds no direction control (U+202A to U+202E,
+    U+2066 to U+2069), and differs from the stored name. A deactivated
     country can be renamed.
 
     Side effects: the name is overwritten, and one `updated` audit event
@@ -196,7 +215,8 @@ def rename_country(*, actor: AuthenticationContext, public_id: uuid.UUID, name_e
 
     Raises PermissionDenied if the actor may not maintain the reference
     lists, before the country is looked up; RecordNotFoundError if no country
-    has the identifier; InvalidEntryError if the name is not valid;
+    has the identifier; InvalidEntryError if the name is not valid,
+    DirectionControlError (a kind of it) if it holds a direction control;
     NoChangeError if the name is the stored one. In every case nothing is
     changed and no audit event is written.
     """
@@ -237,8 +257,9 @@ def create_language(
     three lower-case ASCII letters and `script_code` one capital ASCII letter
     followed by three lower-case, exactly as given, with nothing trimmed or
     converted, and no other form is accepted; the pair is not in use; the
-    name, with surrounding whitespace removed, is not empty and is at most
-    200 characters. Whether a code is assigned by ISO 639-3 or ISO 15924 is
+    name, with surrounding whitespace removed, is not empty, is at most 200
+    characters, and holds no direction control (U+202A to U+202E, U+2066 to
+    U+2069). Whether a code is assigned by ISO 639-3 or ISO 15924 is
     not checked. The same language code may occur with another script code.
 
     Side effects: one Language and one `created` audit event, in one
@@ -247,7 +268,8 @@ def create_language(
 
     Raises PermissionDenied if the actor may not maintain the reference
     lists, before anything else is examined; InvalidEntryError if a code or
-    the name is not valid; DuplicateCodeError if the pair is in use,
+    the name is not valid, DirectionControlError (a kind of it) if the name
+    holds a direction control; DuplicateCodeError if the pair is in use,
     including when another transaction took it first. Any other failure of
     the database, or of the audit writer, is raised as it is. In every case
     nothing is stored and no audit event is written.
@@ -457,7 +479,8 @@ def add_institution_name(
     Preconditions: the actor holds `REGISTRY_INSTITUTIONS_MANAGE`; the
     institution exists; the text, with surrounding whitespace removed and in
     Unicode Normalization Form C, is not empty, is at most 500 characters,
-    and holds no NUL character; the language exists and is active; the kind
+    and holds no NUL character and no direction control (U+202A to U+202E,
+    U+2066 to U+2069); the language exists and is active; the kind
     is one of InstitutionNameKind; each date is a calendar date or empty, and
     where both are known valid-from is before valid-to. The same text may be
     added again.
@@ -469,7 +492,8 @@ def add_institution_name(
     Raises PermissionDenied if the actor may not maintain institutions,
     before anything else is examined; RecordNotFoundError if the
     institution or the language does not exist; InvalidEntryError if the
-    text, the kind, or a date is not valid; DeactivatedReferenceError if the
+    text, the kind, or a date is not valid, DirectionControlError (a kind of
+    it) if the text holds a direction control; DeactivatedReferenceError if the
     language is deactivated. In every case nothing is stored and no audit
     event is written.
     """
@@ -732,6 +756,7 @@ def _valid_new_name(name: NewName) -> _ValidName:
         raise InvalidEntryError("The name is too long.")
     if "\x00" in text:
         raise InvalidEntryError("The name holds a character that cannot be stored.")
+    _require_no_direction_control(text)
     if not isinstance(name.kind, str) or name.kind not in InstitutionNameKind.values:
         raise InvalidEntryError("The kind is not one of the kinds of name.")
     start, end = _valid_period(name.valid_from, name.valid_to)
@@ -904,7 +929,7 @@ def _valid_name(name_en: str) -> str:
 
     Raises InvalidEntryError if nothing is left, if it is longer than
     NAME_MAX_LENGTH, or if it holds a NUL character, which PostgreSQL cannot
-    store in text.
+    store in text; DirectionControlError if it holds a direction control.
     """
     if not isinstance(name_en, str):
         raise InvalidEntryError("The English name is text.")
@@ -915,7 +940,15 @@ def _valid_name(name_en: str) -> str:
         raise InvalidEntryError("The English name is too long.")
     if "\x00" in name:
         raise InvalidEntryError("The English name holds a character that cannot be stored.")
+    _require_no_direction_control(name)
     return name
+
+
+def _require_no_direction_control(text: str) -> None:
+    if not _DIRECTION_CONTROLS.isdisjoint(text):
+        raise DirectionControlError(
+            "The name holds an invisible character that changes the direction of text."
+        )
 
 
 def _violated_constraint(error: IntegrityError) -> str | None:

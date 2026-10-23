@@ -82,6 +82,7 @@ __all__ = [
     "recovery_requests_awaiting_decision",
     "require_permission",
     "roles_of",
+    "second_factor_would_grant",
 ]
 
 logger = logging.getLogger(__name__)
@@ -751,6 +752,27 @@ def permissions_of(context: AuthenticationContext | None) -> frozenset[Permissio
 def can(context: AuthenticationContext | None, permission: Permission) -> bool:
     """Return whether the context holds the permission now. Never raises."""
     return permission in permissions_of(context)
+
+
+def second_factor_would_grant(
+    context: AuthenticationContext | None, permission: Permission
+) -> bool:
+    """Return whether the context lacks the permission only for want of a trusted second factor.
+
+    True when the context does not hold the permission now and would hold
+    it, with the roles its active account holds now, once signed in with a
+    code from a trusted second factor. False for an anonymous visitor, a
+    deactivated account, and an account whose roles do not confer it at any
+    assurance. It says what a page may tell the person refused, and decides
+    nothing. Reads only; never raises.
+    """
+    if not isinstance(context, AuthenticationContext) or can(context, permission):
+        return False
+    user = context.user
+    if not isinstance(user, User) or user.pk is None or not user.is_active:
+        return False
+    roles = _granted_roles(user.pk, active_accounts_only=True)
+    return permission in permissions_for(roles, assurance=Assurance.MFA_VERIFIED)
 
 
 def require_permission(context: AuthenticationContext | None, permission: Permission) -> None:

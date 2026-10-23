@@ -222,6 +222,9 @@ LOGGING = {
     "formatters": {
         "json": {"()": "caipo.core.structured_logging.JsonFormatter"},
     },
+    "filters": {
+        "expected_refusal": {"()": "caipo.core.structured_logging.ExpectedRefusalFilter"},
+    },
     "handlers": {
         "stdout": {
             "class": "logging.StreamHandler",
@@ -235,5 +238,9 @@ LOGGING = {
         # loggers reach the root handler once, in the same format as the rest.
         "django": {"level": "INFO", "propagate": True},
         "django.server": {"level": "INFO", "propagate": True},
+        # Django's summary line of a refusal stays and loses only its
+        # traceback, which repeats where PermissionDenied was raised. The
+        # structured denial event logged by the code that refused stays too.
+        "django.request": {"level": "INFO", "propagate": True, "filters": ["expected_refusal"]},
     },
 }

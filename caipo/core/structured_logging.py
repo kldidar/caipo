@@ -5,6 +5,8 @@ import logging
 import re
 from datetime import UTC, datetime
 
+from django.core.exceptions import PermissionDenied
+
 from caipo.core.correlation import CORRELATION_ATTRIBUTE, get_correlation_id
 
 REDACTED = "[redacted]"
@@ -66,3 +68,22 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False)
+
+
+class ExpectedRefusalFilter(logging.Filter):
+    """Drop the traceback from Django's summary of a refusal, and keep the line.
+
+    Django logs every response that a PermissionDenied produced at WARNING,
+    with the exception attached. A refusal is expected: the code that refused
+    has already logged it as a structured event (`access.denied`,
+    `authorization.denied`), and the traceback only repeats where the
+    exception was raised. The summary line stays, with its status and
+    correlation ID. Every other record, the summary of a server error among
+    them, keeps its traceback.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.exc_info and isinstance(record.exc_info[1], PermissionDenied):
+            record.exc_info = None
+            record.exc_text = None
+        return True
