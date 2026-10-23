@@ -61,7 +61,6 @@
 
   <h2>{% translate "Institutions" %}</h2>
   {% translate "Not recorded" as not_recorded %}
-  {% translate "None" as none %}
   {% for institution in institutions %}
     <h3>{{ institution.label }}</h3>
     {% include "web/_institution_attributes.html" %}
