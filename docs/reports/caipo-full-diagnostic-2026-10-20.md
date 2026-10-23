@@ -2,6 +2,8 @@
 
 Technical, security, data, and research-readiness audit of the repository at `main` `4bff508` and of the local development database. Carried out by an AI agent (Claude Code) at the project owner's request, on the branch `audit/caipo-full-diagnostic`.
 
+**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15 and §16 are dated follow-ups and keep the state of their own day, including statements that a pull request was open. The current status of every finding is in §1, in the Status column of the register in §8, and in §17, which records the merges of pull requests #16 and #17 on 2026-10-23.
+
 ## 1. Executive summary
 
 **The Phase 1 platform is in good health. CAIPO is not yet ready for research work beyond keeping the reference registry.**
@@ -9,7 +11,7 @@ Technical, security, data, and research-readiness audit of the repository at `ma
 - Every quality gate that CI runs passes locally: 4169 tests, ruff, formatting, mypy (strict), both import contracts, Django checks, migration consistency, the dependency audit, and the full-history secret scan. The last six CI runs on `main` succeeded; the latest, on `4bff508`, passed all four jobs.
 - No Critical or High defect was found. An independent probe of all 40 routes for 8 kinds of actor found no route reachable without its declared permission, no CSRF gap, and no server error under hostile input.
 - The development database is intact. Its 2 countries, 5 languages, 3 institutions, and 3 names are consistent, and the audit record has exactly one `created` event for each, with no orphaned events. Nothing was written to it during the audit; that was checked afterwards (§5).
-- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. As of 2026-10-23 they stand in three groups. **Three are fixed**: M3 and M4, documentation, on this branch (pull request #16, which is open, so they reach `main` only when it is merged); and L7, in the GitHub ruleset, which is in force. **Seven are addressed in pull request #17, which is open and not merged**: M2, L1, L2, L3, L5, L6, and L8, application. Until #17 is merged, `main` behaves as before for each of them. **Ten are open**: M1 and L9, corrections to two institution names that are proposed from the official sites and not yet entered: entering them needs an Administrator signed in with a second factor (§15.2); L4, measured, with a recommendation (§15.4); and the seven Informational findings, of which I1, I2, and I5 are deferred to ADR-0008, I4 by ADR-0018, I3 needs an ADR of its own, and I6 and I7 are housekeeping.
+- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. Since both pull requests were merged on 2026-10-23 (§17), they stand in two groups. **Ten are fixed**: M3 and M4, documentation, merged in pull request #16 (`ba8a89e`); M2, L1, L2, L3, L5, L6, and L8, application, merged in pull request #17 (`e0a9cbb`); and L7, in the GitHub ruleset, which is in force. **Ten are open**: M1 and L9, corrections to two institution names that are proposed from the official sites and not yet entered: entering them needs an Administrator signed in with a second factor (§15.2); L4, measured, with a recommendation (§15.4); and the seven Informational findings, of which I1, I2, and I5 are deferred to ADR-0008, I4 by ADR-0018, I3 needs an ADR of its own, and I6 and I7 are housekeeping.
 - Research readiness: the platform cannot yet hold a source, document, policy, indicator, claim, or citation. That is by design. Phase 2 and later are blocked by open research, rights, and isolation decisions (spec §10), most of them the researcher's to make.
 
 | Area | Assessment |
@@ -171,7 +173,7 @@ No Critical and no High finding.
 
 ### Findings register
 
-Every finding of the audit: the open ones first, then those addressed in open #17 or fixed. "Open" means that nothing has yet changed for it. "Fixed on this branch" means that the fix is in this pull request, #16, which is open: it reaches `main` when #16 is merged. "Fixed in the ruleset" means that the change is in force on GitHub. "Addressed in open #17" means that the fix is in pull request #17, which is open and not merged: until it is merged, `main` behaves as before. "Needs verification" names what the audit could not confirm itself. The evidence was checked again on 2026-10-21 against the code, the ruleset, the official sites, and an anonymous request (§14), and every status again on 2026-10-23 against the diffs of both pull requests and the settings on GitHub (§16). The last column says what was done, or is proposed, in the follow-up of 2026-10-21 (§15). The fixes are fixes from the findings of this audit.
+Every finding of the audit: the open ones first, then the fixed ones. The Finding and Evidence columns record what the audit found on `main` `4bff508` ("Before") and, for a fix, what changed ("After"). The Status column is the status on 2026-10-23, after the merges of §17. "Open" means that nothing has yet changed for it. "Fixed, merged in #16" or "#17" means that the fix is on `main`, in the merge commit named. "Fixed in the ruleset" means that the change is in force on GitHub. "Needs verification" names what the audit could not confirm itself. The evidence was checked again on 2026-10-21 against the code, the ruleset, the official sites, and an anonymous request (§14), and every status again on 2026-10-23 against the diffs of both pull requests and the settings on GitHub (§16), and after both merges against `main` `e0a9cbb` (§17). The last column says what was done, or is proposed, in the follow-up of 2026-10-21 (§15). The fixes are fixes from the findings of this audit.
 
 | ID | Severity | Finding | Status | Evidence | Outcome |
 |---|---|---|---|---|---|
@@ -185,18 +187,18 @@ Every finding of the audit: the open ones first, then those addressed in open #1
 | I5 | Info | The break-glass command is not recorded operationally | Deferred to ADR-0008 (Proposed) | ADR-0017; CLAUDE.md, "Not implemented" | Not built |
 | I6 | Info | Older backups hold account data | Open, housekeeping | `~/caipo-backups/`, all mode `600` | Kept; none deleted, as instructed |
 | I7 | Info | Fourteen local branches of merged work | Open, housekeeping | `git branch -vv` at the start | Kept |
-| M2 | Medium | "Mark as entered in error" is irreversible and took one click | **Addressed in open #17** | Before: `registry_entry.html` line 148, a single submit button. After: a ticked confirmation is required, by the same rule as second-factor approval; tests in `test_registry_entry_safeguards.py` | A ticked confirmation before the mark |
-| L1 | Low | A refusal got a bare "403 Forbidden" page | **Addressed in open #17** | Before: anonymous GET of `/registry/`, body `<h1>403 Forbidden</h1>`, no `Cache-Control`. After: `caipo/web/errors.py` and `web/403.html`; tests in `test_error_pages.py` | Sign-in link for an anonymous visitor; the second-factor requirement explained where it is what is missing; `no-store`; the refusal itself unchanged |
-| L2 | Low | Every refusal was logged twice, once with a traceback | **Addressed in open #17** | Before: the same request gave `access.denied` and a `django.request` WARNING with a traceback. After: `ExpectedRefusalFilter` removes the traceback of a `PermissionDenied` only; tests in `test_error_pages.py` | Keep the structured event and the summary line; drop the traceback of an expected refusal; keep the traceback of a server error |
-| L3 | Low | Per-institution forms lost what was typed when a change was refused | **Addressed in open #17** | Before: `_entry_page` rebuilt the three forms from stored values. After: the form a refused change came from is shown again as sent, with its field errors; tests in `test_registry_entry_safeguards.py` | Show the typed values again |
-| L5 | Low | Invisible direction controls were accepted in names | **Addressed in open #17** | Before: probe (§6), a name with U+202E accepted. After: the services refuse U+202A to U+202E and U+2066 to U+2069 in every name; tests in `test_direction_controls.py` and `test_registry_entry_safeguards.py` | Refuse the nine controls; allow every letter and the implicit marks U+200E, U+200F, U+061C |
-| L6 | Low | Dates were accepted with other digits and without zero padding | **Addressed in open #17** | Before: probe (§6), `１２３４-01-01` and `2020-1-1` accepted. After: `FullDateField` takes `YYYY-MM-DD` in ASCII digits only; tests in `test_registry_entry_safeguards.py` | One strict form of date |
+| M2 | Medium | "Mark as entered in error" is irreversible and took one click | **Fixed**, merged in #17 (`e0a9cbb`) | Before: `registry_entry.html` line 148, a single submit button. After: a ticked confirmation is required, by the same rule as second-factor approval; tests in `test_registry_entry_safeguards.py` | A ticked confirmation before the mark |
+| L1 | Low | A refusal got a bare "403 Forbidden" page | **Fixed**, merged in #17 (`e0a9cbb`) | Before: anonymous GET of `/registry/`, body `<h1>403 Forbidden</h1>`, no `Cache-Control`. After: `caipo/web/errors.py` and `web/403.html`; tests in `test_error_pages.py` | Sign-in link for an anonymous visitor; the second-factor requirement explained where it is what is missing; `no-store`; the refusal itself unchanged |
+| L2 | Low | Every refusal was logged twice, once with a traceback | **Fixed**, merged in #17 (`e0a9cbb`) | Before: the same request gave `access.denied` and a `django.request` WARNING with a traceback. After: `ExpectedRefusalFilter` removes the traceback of a `PermissionDenied` only; tests in `test_error_pages.py` | Keep the structured event and the summary line; drop the traceback of an expected refusal; keep the traceback of a server error |
+| L3 | Low | Per-institution forms lost what was typed when a change was refused | **Fixed**, merged in #17 (`e0a9cbb`) | Before: `_entry_page` rebuilt the three forms from stored values. After: the form a refused change came from is shown again as sent, with its field errors; tests in `test_registry_entry_safeguards.py` | Show the typed values again |
+| L5 | Low | Invisible direction controls were accepted in names | **Fixed**, merged in #17 (`e0a9cbb`) | Before: probe (§6), a name with U+202E accepted. After: the services refuse U+202A to U+202E and U+2066 to U+2069 in every name; tests in `test_direction_controls.py` and `test_registry_entry_safeguards.py` | Refuse the nine controls; allow every letter and the implicit marks U+200E, U+200F, U+061C |
+| L6 | Low | Dates were accepted with other digits and without zero padding | **Fixed**, merged in #17 (`e0a9cbb`) | Before: probe (§6), `１２３４-01-01` and `2020-1-1` accepted. After: `FullDateField` takes `YYYY-MM-DD` in ASCII digits only; tests in `test_registry_entry_safeguards.py` | One strict form of date |
 | L7 | Low | Protection of `main`: 0 approvals, status checks not strict | **Fixed in the ruleset** on 2026-10-21 (§15.5) | Ruleset 24416842: `strict_required_status_checks_policy` changed from `false` to `true`; every other parameter compared and unchanged | Strict checks on. 0 approvals kept, so that one maintainer can merge |
-| L8 | Low | No custom 404 or 500 pages | **Addressed in open #17** | After: `web/404.html` and `web/500.html` through `caipo/web/errors.py`; neither shows the path or the exception; tests in `test_error_pages.py` | Plain pages that disclose nothing, with `DEBUG` off (R1, §16) |
-| M3 | Medium | Documentation drift | **Fixed on this branch** (#16, open) | Below; fix in §9 | — |
-| M4 | Medium | The development guide advised deleting the database with no warning | **Fixed on this branch** (#16, open) | Below; fix in §9 | — |
+| L8 | Low | No custom 404 or 500 pages | **Fixed**, merged in #17 (`e0a9cbb`) | After: `web/404.html` and `web/500.html` through `caipo/web/errors.py`; neither shows the path or the exception; tests in `test_error_pages.py` | Plain pages that disclose nothing, with `DEBUG` off (R1, §16) |
+| M3 | Medium | Documentation drift | **Fixed**, merged in #16 (`ba8a89e`) | Below; fix in §9 | — |
+| M4 | Medium | The development guide advised deleting the database with no warning | **Fixed**, merged in #16 (`ba8a89e`) | Below; fix in §9 | — |
 
-Totals: 20 findings. **3 fixed**: 2 Medium on this branch (M3, M4) and 1 Low in the ruleset (L7). **7 addressed in open pull request #17**, not on `main` until it is merged: 1 Medium (M2) and 6 Low (L1, L2, L3, L5, L6, L8). **10 open**: 1 Medium (M1), 2 Low (L4, L9), and 7 Informational.
+Totals: 20 findings. **10 fixed**: 2 Medium merged in #16 (M3, M4); 1 Medium (M2) and 6 Low (L1, L2, L3, L5, L6, L8) merged in #17; and 1 Low in the ruleset (L7). **10 open**: 1 Medium (M1), 2 Low (L4, L9), and 7 Informational.
 
 ### Open findings
 
@@ -219,32 +221,32 @@ Totals: 20 findings. **3 fixed**: 2 Medium on this branch (M3, M4) and 1 Low in 
 - **I6. Older backups in `~/caipo-backups/` hold account data.** All are mode `600`. Keep them restricted, and delete those no longer needed. None was deleted by this audit.
 - **I7. Fourteen local branches of merged work remain.** Housekeeping only.
 
-### Fixed findings, and findings addressed in open #17
+### Fixed findings
 
-**M2. "Mark as entered in error" is irreversible and took one click. Addressed in open #17.**
+**M2. "Mark as entered in error" is irreversible and took one click. Fixed, merged in #17 (`e0a9cbb`).**
 - Evidence before: `registry_entry.html` posted the mark with a single button. Elsewhere, irreversible administrative actions needed a ticked confirmation (second-factor approval, recovery authorisation).
 - Fix: each mark form has a confirmation box, "I have checked that this name was entered by mistake. I understand that the mark cannot be undone." The view refuses the mark with 400, changes nothing, and says why unless the box was ticked. Only what a ticked box sends counts, as for the two existing confirmations. The service and its rules are unchanged.
 
-**L1. A refused request got a bare "403 Forbidden" page. Addressed in open #17.** The refusal is unchanged: the status is 403 whoever asks, and the access declarations and services decide as before. The page now says what the person can do. An anonymous visitor gets a link to sign in, which brings them back to the page they asked for by GET. An account that would hold the page's declared permission once signed in with a trusted second factor is told that, and given the two-step verification page. Any other account is told only that it has no access. The answer is `no-store`.
+**L1. A refused request got a bare "403 Forbidden" page. Fixed, merged in #17 (`e0a9cbb`).** The refusal is unchanged: the status is 403 whoever asks, and the access declarations and services decide as before. The page now says what the person can do. An anonymous visitor gets a link to sign in, which brings them back to the page they asked for by GET. An account that would hold the page's declared permission once signed in with a trusted second factor is told that, and given the two-step verification page. Any other account is told only that it has no access. The answer is `no-store`.
 
-**L2. Every refusal was logged twice, once with a full traceback. Addressed in open #17.** The structured event (`access.denied` or `authorization.denied`) stays, and so does Django's one-line summary of the 403. Only the traceback that Django attached to that summary is removed, and only for `PermissionDenied`. A server error keeps its traceback.
+**L2. Every refusal was logged twice, once with a full traceback. Fixed, merged in #17 (`e0a9cbb`).** The structured event (`access.denied` or `authorization.denied`) stays, and so does Django's one-line summary of the 403. Only the traceback that Django attached to that summary is removed, and only for `PermissionDenied`. A server error keeps its traceback.
 
-**L3. The per-institution forms lost typed input on refusal. Addressed in open #17.** A refused change of an institution, a new name, or new dates is shown again in the form it came from, as typed and with its field errors. The other forms still show what is stored.
+**L3. The per-institution forms lost typed input on refusal. Fixed, merged in #17 (`e0a9cbb`).** A refused change of an institution, a new name, or new dates is shown again in the form it came from, as typed and with its field errors. The other forms still show what is stored.
 
-**L5. Bidirectional control characters were accepted in names. Addressed in open #17.** The services refuse U+202A to U+202E and U+2066 to U+2069 in the English names of countries and languages and in the names of institutions. Every letter of every script is accepted, Cyrillic, Latin, and Turkmen and Uzbek letters among them, and so are the implicit marks U+200E, U+200F, and U+061C, which reorder nothing around them. The rule is held by the services, as the NUL rule is, and not by a database check. The development database holds no such character (§5).
+**L5. Bidirectional control characters were accepted in names. Fixed, merged in #17 (`e0a9cbb`).** The services refuse U+202A to U+202E and U+2066 to U+2069 in the English names of countries and languages and in the names of institutions. Every letter of every script is accepted, Cyrillic, Latin, and Turkmen and Uzbek letters among them, and so are the implicit marks U+200E, U+200F, and U+061C, which reorder nothing around them. The rule is held by the services, as the NUL rule is, and not by a database check. The development database holds no such character (§5).
 
-**L6. Dates were accepted with non-ASCII digits and without zero padding. Addressed in open #17.** Every date field of the entry page takes `YYYY-MM-DD` in ASCII digits with every part padded, or nothing. `2020-1-1`, full-width and Arabic-Indic digits, surrounding spaces, other separators, and impossible dates are refused before a service is called.
+**L6. Dates were accepted with non-ASCII digits and without zero padding. Fixed, merged in #17 (`e0a9cbb`).** Every date field of the entry page takes `YYYY-MM-DD` in ASCII digits with every part padded, or nothing. `2020-1-1`, full-width and Arabic-Indic digits, surrounding spaces, other separators, and impossible dates are refused before a service is called.
 
 **L7. The ruleset required 0 approvals and non-strict status checks. Fixed in the ruleset on 2026-10-21.** Strict status checks are now on, so a pull request must be up to date with `main`, and its checks must have passed on that, before it can be merged. 0 approvals is kept, because one maintainer could not otherwise merge. Details in §15.5.
 
-**L8. No custom 404 or 500 pages. Addressed in open #17.** Both are plain pages that show neither the path nor the exception. The 500 page is rendered without the request, so it depends on no session or database. They are what Django answers with `DEBUG` off, as in the testing and production settings. The development settings turn `DEBUG` on, and Django then shows its own diagnostic pages for 404 and 500, with the path, the URL patterns, and the traceback; that is intended for development and is not changed. The 403 page is the same either way (review finding R1, §16).
+**L8. No custom 404 or 500 pages. Fixed, merged in #17 (`e0a9cbb`).** Both are plain pages that show neither the path nor the exception. The 500 page is rendered without the request, so it depends on no session or database. They are what Django answers with `DEBUG` off, as in the testing and production settings. The development settings turn `DEBUG` on, and Django then shows its own diagnostic pages for 404 and 500, with the path, the URL patterns, and the traceback; that is intended for development and is not changed. The 403 page is the same either way (review finding R1, §16).
 
-**M3. Documentation drift. Fixed on this branch (#16).**
+**M3. Documentation drift. Fixed, merged in #16 (`ba8a89e`).**
 - Evidence: README's quick start told a new developer to set "the two passwords and DJANGO_SECRET_KEY", leaving out `TOTP_ENCRYPTION_KEY`. Without it every `manage.py` command stops (DEVELOPMENT.md, "First-time setup"). README's status and DEVELOPMENT.md did not mention the registry. DEVELOPMENT.md said the bootstrap creates "the only account the application can create so far" and that "no page uses" the authorization layer apart from the sign-in and second-factor pages. Both have been untrue since ADR-0015.
 - Fix: §9.
 
-**M4. The development guide advised deleting the database with no warning that its data is lost. Fixed on this branch (#16).**
-- Evidence: `docs/DEVELOPMENT.md` gave `docker compose down -v`, which deletes the database volume, as the remedy in three places: a changed `POSTGRES_PASSWORD`, starting again after the bootstrap, and a changed TOTP key. A fourth place said "Recreate that database". None said that the registry and the audit record go with it, or how to back up first. None of this was added by this branch; the text is on `main`.
+**M4. The development guide advised deleting the database with no warning that its data is lost. Fixed, merged in #16 (`ba8a89e`).**
+- Evidence: `docs/DEVELOPMENT.md` gave `docker compose down -v`, which deletes the database volume, as the remedy in three places: a changed `POSTGRES_PASSWORD`, starting again after the bootstrap, and a changed TOTP key. A fourth place said "Recreate that database". None said that the registry and the audit record go with it, or how to back up first. None of this was added by the audit branch; the text was on `main` `4bff508`.
 - Impact: the development database now holds the owner's research reference data and its audit trail. Following the guide would destroy them, with nothing to restore them from.
 - Fix: §9. The command stays in the command list, marked, because it is accurate. A new section, "Deleting the database", says what is lost, that the command never fixes a failing test, and how to back up and check the backup. Each remedy now points to that section instead of naming the command.
 - Validation: the backup commands of the new section were run as written, with the output sent to a scratch directory. They produced a mode-600 dump with all 21 table-data entries, and the scratch copy was deleted.
@@ -257,7 +259,7 @@ Totals: 20 findings. **3 fixed**: 2 Medium on this branch (M3, M4) and 1 Low in 
 | M3 | README status names the audit record and the registry. The quick start names `TOTP_ENCRYPTION_KEY` and points to DEVELOPMENT.md. DEVELOPMENT.md's summary names the registry. The bootstrap is "the first account", not "the only". The authorization section says which pages are public and that every other page declares a permission (checked against the probe's list). A new "The registry" section gives the 15 routes, their permissions, and how a fresh database is filled. | `README.md`, `docs/DEVELOPMENT.md` |
 | — | This report | `docs/reports/caipo-full-diagnostic-2026-10-20.md` |
 
-**On this branch (#16), no application code, test, migration, setting, or CI file was changed.** Only documentation changed, so no regression test applies here. The application fixes are in #17, below.
+**On the audit branch (#16), no application code, test, migration, setting, or CI file was changed.** Only documentation changed, so no regression test applies here. The application fixes are in #17, below.
 
 After the fixes, every gate was run again on the branch, three times: after the M3 fix (commit `867013e`), after M4 and the first corrections to this report (commit `67d2c68`), and on 2026-10-21 with the findings register added to this report.
 
@@ -270,11 +272,11 @@ After the fixes, every gate was run again on the branch, three times: after the 
 
 No test reads `README.md`, `docs/DEVELOPMENT.md`, or this report (checked by search), so the documentation changes cannot change a test result.
 
-The follow-up of 2026-10-21 changed only this report on this branch. Its checks are in pull request #16; the full suite on this branch is run there by CI.
+The follow-up of 2026-10-21 changed only this report on the audit branch. Its checks are in pull request #16, where CI ran the full suite.
 
 ### Fixes of 2026-10-21, in pull request #17
 
-On the branch `fix/audit-findings`, from `main` `4bff508`, commit `96f86ab`, followed on 2026-10-23 by `b5c3565` for the review findings R1 to R3 (§16). Not merged.
+On the branch `fix/audit-findings`, from `main` `4bff508`, commit `96f86ab`, followed on 2026-10-23 by `b5c3565` for the review findings R1 to R3 (§16). Merged into `main` on 2026-10-23 as `e0a9cbb` (§17).
 
 | Finding | Change | Files | Regression tests |
 |---|---|---|---|
@@ -350,17 +352,17 @@ No browser automation was available. These were not verified in a browser:
 3. A real sign-in with an authenticator application, and the 403 a password-only Administrator sees on the registry.
 4. Cookie behaviour over plain HTTP under the development settings.
 5. Entering the two names proposed in §15.2, signed in with your authenticator, and whether names in the national languages should be added (M1, L9).
-6. After #17 is merged: the new 403, 404, and 500 pages, and the confirmation box of "Mark as entered in error", in a browser. The 404 and 500 pages appear only with `DEBUG` off; under the development settings Django shows its diagnostic pages instead (R1, §16). The 403 page and the confirmation box can be checked under the development settings.
+6. The new 403, 404, and 500 pages, on `main` since #17 was merged (§17), and the confirmation box of "Mark as entered in error", in a browser. The 404 and 500 pages appear only with `DEBUG` off; under the development settings Django shows its diagnostic pages instead (R1, §16). The 403 page and the confirmation box can be checked under the development settings.
 
 ## 13. Outstanding decisions and next steps
 
-In the follow-up of 2026-10-21, as fixes from the findings of this audit: M2, L1, L2, L3, L5, L6, and L8 are addressed in pull request #17, which is open and not merged, and L7 is fixed in the ruleset. M3 and M4 are fixed on this branch. Proposed and not yet entered: the names of M1 and L9 (§15.2).
+As fixes from the findings of this audit: M2, L1, L2, L3, L5, L6, and L8 are fixed and merged in pull request #17 (`e0a9cbb`); M3 and M4 are fixed and merged in pull request #16 (`ba8a89e`); and L7 is fixed in the ruleset. Proposed and not yet entered: the names of M1 and L9 (§15.2).
 
 Still open, with what each needs, in §15.6: I3 (an ADR), a preferred name (an ADR), I4 (a later increment), I1, I2, and I5 (ADR-0008), L4 (a choice between the options of §15.4), a database check for L5 (a migration), and the "Update branch" button.
 
 Recommended order of next work:
 
-1. Merge #17. Then bring this branch up to date with `main`, record that merge in this report, add the ticked confirmation of the mark to the registry table of `docs/DEVELOPMENT.md` (§16.4), and merge #16 once its checks have passed on that commit (§15.5). Then enter the two names of §15.2.
+1. Enter the two names of §15.2. (The merges of #16 and #17, the record of them in this report, and the line on the ticked confirmation in `docs/DEVELOPMENT.md` are done: §17.)
 2. Close the researcher-owned Phase 2 blockers: B22, then B8 and B9, then B7 and B10. Nothing research-related can be built before them.
 3. Run the job-system and isolation spikes together (B4, B21), so that ADR-0004 and ADR-0011 can be decided.
 4. Before many institutions are entered: decide I3 and the question of a preferred name, and choose a fix for L4.
@@ -410,6 +412,8 @@ Recommended order of next work:
 Detailed logs are kept outside the repository, in the session scratchpad (`logs/`). They contain no secrets: pytest output is filtered for `password=`, and the log was searched for secret-looking strings.
 
 ## 15. Follow-up of 2026-10-21
+
+*A dated record: it keeps the state of 2026-10-21. Both pull requests named here were merged on 2026-10-23 (§17).*
 
 On 2026-10-21 the project owner asked for the confirmed findings to be fixed where an Accepted ADR allows it, for the names of the institutions to be brought in line with named official sources, and for every finding to carry its status, severity, evidence, and outcome. This section records what was done and what was not, and why.
 
@@ -497,6 +501,8 @@ Observed effect, and only that: neither pull request has a review, a review comm
 
 ## 16. Review of pull request #17, and corrections, 2026-10-23
 
+*A dated record: it keeps the state of 2026-10-23 before the merges. Both pull requests were merged later that day (§17).*
+
 ### 16.1 State
 
 Before any change on 2026-10-23: `main` at `4bff508`; #16 open at `92bf1bd`; #17 open at `96f86ab`. All four required checks had passed on each head commit; CI's test job reported 4169 passed on `92bf1bd` and 4452 passed on `96f86ab`. **Neither pull request is merged.**
@@ -524,4 +530,56 @@ One observation is not a defect and is left: a refused rename of a country or a 
 
 ### 16.4 What waits for the merge of #17
 
-The table of registry routes in `docs/DEVELOPMENT.md` says that marking a name as entered in error is refused for an institution's only unmarked name. It does not yet say that the mark needs the ticked confirmation, because that behaviour is not on `main` until #17 is merged, and this branch does not hold its code. The line is added when this branch is brought up to date with `main` after #17 is merged, together with the record of that merge in this report.
+The table of registry routes in `docs/DEVELOPMENT.md` says that marking a name as entered in error is refused for an institution's only unmarked name. It does not yet say that the mark needs the ticked confirmation, because that behaviour is not on `main` until #17 is merged, and this branch does not hold its code. The line is added when this branch is brought up to date with `main` after #17 is merged, together with the record of that merge in this report. *Done on 2026-10-23, after the merges (§17).*
+
+## 17. Merges of pull requests #16 and #17, 2026-10-23
+
+### 17.1 What was merged
+
+Both pull requests were merged by the project owner on 2026-10-23, read from GitHub after the merges:
+
+| Pull request | Final head | Merged (UTC) | Merge commit on `main` | Method |
+|---|---|---|---|---|
+| #16, the audit and the documentation fixes | `17a8d92544373c8e9251d39896467f6a02d5ea45` | 05:57:05 | `ba8a89ec01e104b58949b38d523d8e67e85dbb0f` | Squash |
+| #17, the application fixes | `f4a23b02667ef6ef17154fc2e0d3b4fb30be1884` | 06:11:39 | `e0a9cbbf24e3eec0575bafa24227a790225012ea` | Squash |
+
+#16 was merged first. #17 was then brought up to date with `main` by the merge commit `f4a23b0`, as the strict status checks require (§15.5). Compared with `b5c3565`, the head reviewed in §16, `f4a23b0` changes only the three files of #16: `README.md`, `docs/DEVELOPMENT.md`, and this report. The tree of `main` at `e0a9cbb` is the tree of `f4a23b0`.
+
+All four required checks passed on each of these commits:
+
+| Commit | Code quality | Django checks and tests | Dependency audit | Secret scan |
+|---|---|---|---|---|
+| `17a8d92` (#16 head) | Passed | Passed, 4169 tests | Passed | Passed |
+| `ba8a89e` (`main` after #16) | Passed | Passed, 4169 tests | Passed | Passed |
+| `f4a23b0` (#17 head) | Passed | Passed, 4454 tests | Passed | Passed |
+| `e0a9cbb` (`main` after #17) | Passed | Passed, 4454 tests | Passed | Passed |
+
+### 17.2 Status of the findings after the merges
+
+Rechecked against `main` `e0a9cbb`, finding by finding:
+
+| Group | Findings |
+|---|---|
+| Fixed, merged in #16 (`ba8a89e`) | M3, M4 |
+| Fixed, merged in #17 (`e0a9cbb`) | M2, L1, L2, L3, L5, L6, L8 |
+| Fixed in the ruleset, in force since 2026-10-21 | L7 |
+| Open | M1, L9 (the two names of §15.2, not entered); L4 (§15.4); I1, I2, I5 (ADR-0008); I3 (needs an ADR); I4 (deferred by ADR-0018); I6, I7 (housekeeping) |
+
+20 findings: 10 fixed and 10 open. No finding was added or withdrawn by the merges.
+
+### 17.3 Changes made after the merges
+
+- `docs/DEVELOPMENT.md`: the registry table says that marking a name as entered in error needs the ticked confirmation, and that without it the answer is 400 and nothing changes (§16.4).
+- This report: the statuses of §1, §8, §9, §12, and §13; the notes at the head of §15 and §16; and this section.
+
+Documentation only. No application code, test, migration, setting, or CI file changed.
+
+### 17.4 Registry data
+
+A read-only query of the development database on 2026-10-23, after both merges, in a session with `default_transaction_read_only` on, showed it as in §5, §15.2, and §16.1: 2 countries, 5 languages, 3 institutions, 3 names, and 16 audit events. **Neither name proposed in §15.2 has been entered.** They wait for an Administrator signed in with a trusted second factor at `/registry/entry/`, as §15.2 describes.
+
+### 17.5 What remains
+
+1. Enter the two names of §15.2.
+2. The browser checks of §12, the new pages of #17 among them.
+3. The decisions of §15.6, and the open findings above.
