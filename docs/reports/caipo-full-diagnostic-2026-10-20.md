@@ -2,7 +2,7 @@
 
 Technical, security, data, and research-readiness audit of the repository at `main` `4bff508` and of the local development database. Carried out by an AI agent (Claude Code) at the project owner's request, on the branch `audit/caipo-full-diagnostic`.
 
-**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15, §16, and §17 are dated follow-ups and keep the state of their own day, including statements that a pull request was open or that a name was not yet entered. The Status column of the register in §8 records the status after the merges of §17, on 2026-10-23. §18 records the entry of the two institution names on 2026-10-23. The current status of every finding is in §1 and §19, which records the L4 optimization proposed in open pull request #20 and the housekeeping of 2026-10-24.
+**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15, §16, and §17 are dated follow-ups and keep the state of their own day, including statements that a pull request was open or that a name was not yet entered. The Status column of the register in §8 records the status after the merges of §17, on 2026-10-23. §18 records the entry of the two institution names on 2026-10-23. §19 records the L4 optimization as it stood while pull request #20 was open, and the housekeeping of 2026-10-24. §20 records the merge of #20. The current status of every finding is in §1 and §20.3.
 
 ## 1. Executive summary
 
@@ -11,7 +11,7 @@ Technical, security, data, and research-readiness audit of the repository at `ma
 - Every quality gate that CI runs passes locally: 4169 tests, ruff, formatting, mypy (strict), both import contracts, Django checks, migration consistency, the dependency audit, and the full-history secret scan. The last six CI runs on `main` succeeded; the latest, on `4bff508`, passed all four jobs.
 - No Critical or High defect was found. An independent probe of all 40 routes for 8 kinds of actor found no route reachable without its declared permission, no CSRF gap, and no server error under hostile input.
 - The development database is intact. At the audit, its 2 countries, 5 languages, 3 institutions, and 3 names were consistent, and the audit record had exactly one `created` event for each, with no orphaned events. Nothing was written to it during the audit; that was checked afterwards (§5). On 2026-10-24 it holds 3 institutions, 5 names, and 18 audit events, after the two names of §15.2 were entered (§18).
-- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. Current status, 2026-10-24 (§19.4): **ten are fixed**: M3 and M4, documentation, merged in pull request #16 (`ba8a89e`); M2, L1, L2, L3, L5, L6, and L8, application, merged in pull request #17 (`e0a9cbb`); and L7, in the GitHub ruleset, which is in force. **Three are resolved**: M1 and L9 in the development registry, by the two English renderings proposed in §15.2, entered on 2026-10-23 by the Administrator through the entry page; and I7, by the removal of the merged local branches on 2026-10-24. **One is addressed in pull request #20, not yet merged**: L4. **Six are open**: I1, I2, and I5, deferred to ADR-0008; I3, which needs an ADR of its own; I4, deferred by ADR-0018; and I6, housekeeping. When #20 is merged, L4 is fixed and six findings remain open. The names do not resolve I3: the registry still records no source for a name. A database check for L5 is optional further hardening, not an open finding: L5 is fixed in the services (§19.4).
+- Twenty findings, all listed in the register of §8: 4 Medium, 9 Low, 7 Informational. Current status, 2026-10-24 (§20.3): **eleven are fixed**: M3 and M4, documentation, merged in pull request #16 (`ba8a89e`); M2, L1, L2, L3, L5, L6, and L8, application, merged in pull request #17 (`e0a9cbb`); L4, application, merged in pull request #20 (`188fbbb`, §20); and L7, in the GitHub ruleset, which is in force. **Three are resolved**: M1 and L9 in the development registry, by the two English renderings proposed in §15.2, entered on 2026-10-23 by the Administrator through the entry page; and I7, by the removal of the merged local branches on 2026-10-24. **None is waiting in an open pull request.** **Six are open**: I1, I2, and I5, deferred to ADR-0008; I3, which needs an ADR of its own; I4, deferred by ADR-0018; and I6, housekeeping. The names do not resolve I3: the registry still records no source for a name. A database check for L5 is optional further hardening, not an open finding: L5 is fixed in the services (§19.4).
 - Research readiness: the platform cannot yet hold a source, document, policy, indicator, claim, or citation. That is by design. Phase 2 and later are blocked by open research, rights, and isolation decisions (spec §10), most of them the researcher's to make.
 
 | Area | Assessment |
@@ -175,7 +175,7 @@ No Critical and no High finding.
 
 Every finding of the audit: the open ones first, then the fixed ones. The Finding and Evidence columns record what the audit found on `main` `4bff508` ("Before") and, for a fix, what changed ("After"). The Status column is the status on 2026-10-23, after the merges of §17. "Open" means that nothing has yet changed for it. "Fixed, merged in #16" or "#17" means that the fix is on `main`, in the merge commit named. "Fixed in the ruleset" means that the change is in force on GitHub. "Needs verification" names what the audit could not confirm itself. The evidence was checked again on 2026-10-21 against the code, the ruleset, the official sites, and an anonymous request (§14), and every status again on 2026-10-23 against the diffs of both pull requests and the settings on GitHub (§16), and after both merges against `main` `e0a9cbb` (§17). The last column says what was done, or is proposed, in the follow-up of 2026-10-21 (§15). The fixes are fixes from the findings of this audit.
 
-**This register is kept as it stood after the merges of §17.** Later on 2026-10-23, M1 and L9 were resolved in the development registry, when the two names it proposes were entered. The current status of every finding is in §19.4.
+**This register is kept as it stood after the merges of §17.** Later on 2026-10-23, M1 and L9 were resolved in the development registry, when the two names it proposes were entered. I7 was resolved on 2026-10-24 (§19.5), and L4 was fixed by the merge of pull request #20 (§20). The current status of every finding is in §20.3.
 
 | ID | Severity | Finding | Status | Evidence | Outcome |
 |---|---|---|---|---|---|
@@ -200,7 +200,7 @@ Every finding of the audit: the open ones first, then the fixed ones. The Findin
 | M3 | Medium | Documentation drift | **Fixed**, merged in #16 (`ba8a89e`) | Below; fix in §9 | — |
 | M4 | Medium | The development guide advised deleting the database with no warning | **Fixed**, merged in #16 (`ba8a89e`) | Below; fix in §9 | — |
 
-Totals after the merges of §17: 20 findings. **10 fixed**: 2 Medium merged in #16 (M3, M4); 1 Medium (M2) and 6 Low (L1, L2, L3, L5, L6, L8) merged in #17; and 1 Low in the ruleset (L7). **10 open**: 1 Medium (M1), 2 Low (L4, L9), and 7 Informational. Current totals, with M1 and L9 resolved: 10 fixed, 2 resolved, 8 open (§18.2).
+Totals after the merges of §17: 20 findings. **10 fixed**: 2 Medium merged in #16 (M3, M4); 1 Medium (M2) and 6 Low (L1, L2, L3, L5, L6, L8) merged in #17; and 1 Low in the ruleset (L7). **10 open**: 1 Medium (M1), 2 Low (L4, L9), and 7 Informational. Totals with M1 and L9 resolved: 10 fixed, 2 resolved, 8 open (§18.2). Current totals: 11 fixed, 3 resolved, 6 open (§20.3).
 
 ### Open findings
 
@@ -212,7 +212,7 @@ Totals after the merges of §17: 20 findings. **10 fixed**: 2 Medium merged in #
 - *Update: resolved on 2026-10-23 in the development registry. The Administrator entered the proposed form as a further English rendering (§18).*
 - Limitation of the registry: it cannot say which of several concurrent names of the same kind is the preferred one. A name's kind and text cannot be changed once it is saved (ADR-0018 point 19), and there is no field for preference or for a source. Both are recorded here, not in the model.
 
-**L4. The entry page grows with the square of the number of institutions.** Each institution has a change form whose parent and successor lists name every other institution. Measured in §15.4. Left open with a recommendation.
+**L4. The entry page grows with the square of the number of institutions.** Each institution has a change form whose parent and successor lists name every other institution. Measured in §15.4. Left open with a recommendation. *Update: fixed on `main` by pull request #20, merged as `188fbbb`. The entry page shows one institution's change form at a time (§19, §20).*
 
 **L9. The Ministry's English name is a shortened form.** "Ministry of Digital Technologies" against the site's "Ministry of Digital Technologies of the Republic of Uzbekistan". Proposed: add the full form as a further `english_rendering`, with no dates, and keep the short one, which is accurate. Its kind cannot be changed to show that it is the short form. Status: open. **Nothing has been entered** (§15.2). *Update: resolved on 2026-10-23 in the development registry. The Administrator entered the full form as a further English rendering (§18).*
 
@@ -356,18 +356,19 @@ No browser automation was available. These were not verified in a browser:
 4. Cookie behaviour over plain HTTP under the development settings.
 5. Whether names in the national languages should be added to the three institutions. (The two English names proposed in §15.2 were entered on 2026-10-23: §18.)
 6. The new 403, 404, and 500 pages, on `main` since #17 was merged (§17), and the confirmation box of "Mark as entered in error", in a browser. The 404 and 500 pages appear only with `DEBUG` off; under the development settings Django shows its diagnostic pages instead (R1, §16). The 403 page and the confirmation box can be checked under the development settings.
+7. The entry page as changed by pull request #20, on `main` since its merge (§20): the link that opens one institution's change form, the form opened by `?change=`, and a refused change coming back with its form open (§19.1).
 
 ## 13. Outstanding decisions and next steps
 
-As fixes from the findings of this audit: M2, L1, L2, L3, L5, L6, and L8 are fixed and merged in pull request #17 (`e0a9cbb`); M3 and M4 are fixed and merged in pull request #16 (`ba8a89e`); and L7 is fixed in the ruleset. M1 and L9 are resolved in the development registry: the two names of §15.2 were entered on 2026-10-23 (§18).
+As fixes from the findings of this audit: M2, L1, L2, L3, L5, L6, and L8 are fixed and merged in pull request #17 (`e0a9cbb`); L4 is fixed and merged in pull request #20 (`188fbbb`, §20); M3 and M4 are fixed and merged in pull request #16 (`ba8a89e`); and L7 is fixed in the ruleset. M1 and L9 are resolved in the development registry: the two names of §15.2 were entered on 2026-10-23 (§18).
 
-Still open, with what each needs, in §15.6: I3 (an ADR), a preferred name (an ADR), I4 (a later increment), I1, I2, and I5 (ADR-0008), and the "Update branch" button. L4 is addressed in pull request #20, not yet merged (§19). I6 needs the owner's choice of backups to delete (§19.5). A database check for L5 (a migration) is optional further hardening, not an open finding (§19.4).
+Still open, with what each needs, in §15.6: I3 (an ADR), a preferred name (an ADR), I4 (a later increment), I1, I2, and I5 (ADR-0008), and the "Update branch" button. I6 needs the owner's choice of backups to delete (§19.5). A database check for L5 (a migration) is optional further hardening, not an open finding (§19.4).
 
-Recommended order of next work (the merges of #16 and #17, their record in this report, the line on the ticked confirmation in `docs/DEVELOPMENT.md`, and the entry of the two names of §15.2 are done: §17, §18):
+Recommended order of next work (the merges of #16 and #17, their record in this report, the line on the ticked confirmation in `docs/DEVELOPMENT.md`, the entry of the two names of §15.2, and the merge of the fix for L4 are done: §17, §18, §20):
 
 1. Close the researcher-owned Phase 2 blockers: B22, then B8 and B9, then B7 and B10. Nothing research-related can be built before them.
 2. Run the job-system and isolation spikes together (B4, B21), so that ADR-0004 and ADR-0011 can be decided.
-3. Before many institutions are entered: decide I3 and the question of a preferred name, and merge the fix for L4 (pull request #20, §19).
+3. Before many institutions are entered: decide I3 and the question of a preferred name.
 
 ## 14. Commands run, and checks not performed
 
@@ -590,7 +591,7 @@ A read-only query of the development database on 2026-10-23, after both merges, 
 
 ## 18. Follow-up of 2026-10-24: the two institution names, and L4 measured again
 
-*A dated record: it keeps the state of 2026-10-24 before the work of §19, which proposed the L4 optimization in pull request #20 later that day.*
+*A dated record: it keeps the state of 2026-10-24 before the work of §19, which proposed the L4 optimization in pull request #20 later that day. #20 was merged afterwards (§20).*
 
 ### 18.1 The two names, as entered
 
@@ -679,7 +680,7 @@ Commands run: `gh pr view 18`; `git fetch`, `git status`, `git worktree list`; `
 
 ## 19. Follow-up of 2026-10-24: the L4 optimization proposed in open pull request #20, a verified backup, and housekeeping
 
-*A dated record: it keeps the state of 2026-10-24. Pull request #20 is open and not merged.*
+*A dated record: it keeps the state of 2026-10-24. Pull request #20 is open and not merged. #20 was merged afterwards (§20).*
 
 ### 19.1 L4: one change form at a time
 
@@ -800,3 +801,69 @@ The seven that may be deleted later are older states that the two backups to kee
 - `git archive` of `b43b997` and `d9ddb75` into a scratch directory, and the measurement test run in each with its own database.
 - The new tests run against `b43b997`.
 - `ruff`, `mypy`, and focused and full `pytest` runs.
+
+## 20. Follow-up of 2026-10-24: the merge of pull request #20
+
+*A dated record: it keeps the state of 2026-10-24, after the merge of pull request #20.*
+
+### 20.1 What was merged
+
+Pull request #20 was merged by the project owner, read from GitHub after the merge with `gh pr view 20`:
+
+| Pull request | Final head | Merged (UTC) | Merge commit on `main` | Method |
+|---|---|---|---|---|
+| #20, L4: one change form at a time | `8fff2358e4434aed4b8ed16414807543147b945f` | 2026-10-23 21:49:23 | `188fbbbd408f5ecedec11e36af538cd1617cf69d` | Squash |
+
+The merge time is 02:49 on 2026-10-24 at UTC+5, the offset of the merge commit's own timestamp. `188fbbb` has one parent, `b43b997`, which was the base of #20, so the branch did not need to be brought up to date before the merge. The pull request has no review and no comment.
+
+**The merged code is the code of §19.** `git diff 8fff235 188fbbb` is empty: the tree of `main` is the tree of the head of #20, whose four commits are `d9ddb75` and `619fa1d` (the code, its tests, and one sentence each in `docs/DEVELOPMENT.md` and `SECURITY.md`), and `6ecaee4` and `8fff235` (this report). On `main`, `caipo/web/registry.py` reads the selection from `?change=`, `caipo/web/templates/web/_institution_attributes.html` exists, and `caipo/web/tests/test_registry_entry_selection.py` collects 40 tests. `origin/main` is at `188fbbb`.
+
+### 20.2 Checks on the merged code
+
+All four required checks passed on the head of #20 and on `main` after the merge. The test counts are pytest's own summary lines in the CI logs:
+
+| Commit | CI run | Code quality | Django checks and tests | Dependency audit | Secret scan |
+|---|---|---|---|---|---|
+| `8fff235` (#20 head) | 40026640319, pull request | Passed, 19 s | Passed, 9 min 27 s; 4494 passed | Passed, 11 s | Passed, 11 s |
+| `188fbbb` (`main` after #20) | 40029512865, push | Passed, 22 s | Passed, 7 min 59 s; 4494 passed | Passed, 11 s | Passed, 9 s |
+
+4494 is the count of §19.3: 4454 before #20 plus its 40 new tests. The last local full run is the one of §19.3, on `6ecaee4`. `8fff235` changed this report only (`git diff --stat 6ecaee4 8fff235`).
+
+**No manual browser check was made** of the entry page as changed by #20. It is added to §12 as item 7.
+
+### 20.3 Status of the findings, 2026-10-24
+
+| Group | Findings | Count |
+|---|---|---|
+| Fixed, merged in #16 (`ba8a89e`) | M3, M4 | 2 |
+| Fixed, merged in #17 (`e0a9cbb`) | M2, L1, L2, L3, L5, L6, L8 | 7 |
+| Fixed, merged in #20 (`188fbbb`) | L4 | 1 |
+| Fixed in the ruleset, in force since 2026-10-21 | L7 | 1 |
+| Resolved | M1, L9 in the development registry on 2026-10-23 (§18); I7 by the housekeeping of 2026-10-24 (§19.5) | 3 |
+| Addressed in an open pull request | None | 0 |
+| Open | I1, I2, I5 (ADR-0008); I3 (needs an ADR); I4 (deferred by ADR-0018); I6 (housekeeping, §19.5) | 6 |
+
+20 findings: 11 fixed, 3 resolved, 0 addressed in an open pull request, and 6 open. Since §19.4, only L4 has changed, from addressed in an open pull request to fixed. No finding was added or withdrawn.
+
+Each other status was rechecked on 2026-10-24:
+
+- **The fixes of #16 and #17**: of the files that carry them, #20 changed `caipo/web/registry.py` and `registry_entry.html` (M2, L3), and added one sentence on the `?change=` parameter to the registry section of `docs/DEVELOPMENT.md`, which M3's fix added, and one to the registry section of `SECURITY.md`; no earlier sentence of either was changed. The whole suite, the tests of those fixes among them, passed in CI on `188fbbb`.
+- **L7**: ruleset 24416842 is active, with `strict_required_status_checks_policy` `true`, the four checks required, and 0 approvals required, as in §15.5.
+- **M1 and L9**: a read-only query of the development database, in a session with `default_transaction_read_only` on, showed 2 countries, 5 languages, 3 institutions, 5 names, none marked as entered in error, 18 audit events, and 3 change records, as in §19.5. Both names of §15.2 are present and not marked. Nothing was written to the database.
+- **I7**: the local branches are `main` and the branch of #20, as §19.5 left them. The branch of #20 is now merged work as well; it is kept, because this follow-up deletes no branch.
+- **I6**: the nine backups of §19.5 are still in `~/caipo-backups/`, all mode `600`. None was deleted.
+- **I1, I2, I5**: ADR-0008 is still Proposed. **I3**: there is no ADR after ADR-0019. **I4**: on `main`, no selector and no view reads the audit record; in `caipo/web`, only tests name `AuditEvent`.
+
+### 20.4 A discrepancy in §19
+
+§19.2 says that the measurement after the change ran on an exported copy of `619fa1d`. §19.6 lists `git archive` of `d9ddb75`. Which commit was exported cannot be settled from the repository, and no log of that session remains. The two commits differ in one line of `registry.html`, the browse page's template (`git show 619fa1d`), so the entry-page figures of §19.2 are the same for either. §19 is left as written.
+
+### 20.5 Changes and checks
+
+This report only: the note at its head, §1, the note above the register, the totals, and the L4 entry in §8, §12 item 7, §13, the notes at the head of §18 and §19, and this section. No application code, test, migration, setting, CI file, or database row changed.
+
+Commands run: `git fetch --prune origin`; `gh pr view 20`; `gh pr checks 20`; `gh run list` and `gh run view`; `gh api` for the logs of the two test jobs and for ruleset 24416842; `git rev-list --parents`, `git diff`, `git show`, `git ls-tree`, and `git grep` on `origin/main`; `pytest --collect-only` of the new module; `ls -l ~/caipo-backups/`; `git branch -vv`, `git worktree list`; and `psql` in a session with `default_transaction_read_only` on.
+
+Checks on this branch, all exit 0: `uv lock --check`, `ruff check`, `ruff format --check` (190 files), `mypy .` (154 files), `lint-imports` (2 contracts kept), `manage.py check`, and `makemigrations --check --dry-run`. The secret scan (gitleaks v8.30.1, full history) is run after the commit, and its result is in the pull request: a report cannot hold the result for the commit that contains it.
+
+**Not rerun:** the full test suite, because only this report changed and no test reads it; its last results are those of §20.2. The dependency audit was not run locally, because the lockfile is unchanged; CI runs it on the pull request. No browser check was made (§12, item 7).
