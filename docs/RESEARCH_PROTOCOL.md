@@ -300,6 +300,10 @@ The project owner approved the working model, not every detail of it. These deci
 
 A provisional default (§3.7) does not meet condition 1. The pilot of condition 3 is set out in §3.8, and condition 3 is met only when that pilot has been run and reported. If a point is later decided differently from its provisional default, in a way that could change a pilot decision, the affected pilot decisions are re-checked (§12). The researcher then records whether condition 3 still holds, or whether a further validation round is needed.
 
+Condition 1 includes O-4, which cannot be decided until B20 is answered. The specification places B20 at a later phase than B22. What must be decided before B22 can close is set out in F-15.
+
+These conditions are DRAFT. The project owner has not approved them as binding, and the gate table in the specification does not include them (F-9). Their DRAFT status is not a reason to close B22 on fewer conditions, and the shorter wording of the gate table is not a ground for closing B22 without them. B22 is not marked closed until the project owner has explicitly confirmed the closure gate: which conditions must hold, and that they hold.
+
 ### 3.6 Points for other documents
 
 These points follow from §3.1 to §3.8 and belong to other documents. This protocol does not change those documents. Each point is settled in its own reviewed change.
@@ -314,13 +318,13 @@ These points follow from §3.1 to §3.8 and belong to other documents. This prot
 | F-6 | A publication date that differs from the date of issue has no field | DATA_MODEL §3.3 | O-6 |
 | F-7 | Assigning each indicator to one layer needs a place to record it. Indicator has a category whose values are not defined. | DATA_MODEL §3.5 | B12 |
 | F-8 | LIMITATIONS §2.4 says both concepts are not yet defined. When B22 closes, it should state the adopted definitions and the known weakness of the explicit-naming test (§3.1.3). It should also state the boundary effects of the final rules for O-2 and O-3: material outside the core boundary is not visible in core results, and its absence there says nothing about a country's policy. | LIMITATIONS | Closure of B22 |
-| F-9 | The gate table describes B22 as two undefined concepts. Its "Needed" column asks only that the researcher define both and revise the research questions, and it does not refer to the conditions in §3.5. It is updated when B22 closes. Until then the conditions in §3.5 govern. | PROJECT_SPECIFICATION §10 | Closure of B22 |
+| F-9 | The gate table describes B22 as two undefined concepts. Its "Needed" column asks only that the researcher define both and revise the research questions, and it does not refer to the conditions in §3.5. Those conditions are DRAFT, and the project owner has not approved them as binding. Neither document therefore yet states a confirmed closure gate for B22. Before B22 is marked closed, the project owner explicitly confirms the closure gate (§3.5), and the row is updated in the change that records the closure (condition 6). Until then B22 stays open, and the shorter wording of the row is not a ground for closing it. | PROJECT_SPECIFICATION §10 | Owner confirmation of the closure gate; closure of B22 |
 | F-10 | Comparisons by sector, instrument type, institution, and time (FR-40) must show AI-focused instruments and instruments with AI-related provisions separately, and keep contextual material out of core results | PROJECT_SPECIFICATION §4 | Phase 6 |
 | F-11 | No field records whether an instrument is binding or not binding. The separation that O-1 requires (§3.7) can therefore be neither recorded nor shown. | DATA_MODEL §3.3, §3.6 | O-1 |
 | F-12 | A Policy carries one country, and a PolicyRelation links two policies. An international instrument therefore cannot be a Policy or the target of an `implements` relation. A covered country's signature, accession, ratification, or endorsement of one has no record except a claim. | DATA_MODEL §3.6 | O-3 |
 | F-13 | Nothing records that a Document is contextual material. A contextual document, if ingested (O-8), would be eligible for retrieval like any approved document (AI_ARCHITECTURE §4.1), and comparisons could not keep it out of core results (F-10). | DATA_MODEL §3.3; AI_ARCHITECTURE §4.1 | O-8, before any contextual document is ingested |
 | F-14 | No field holds the terminology list versions a SearchRun used (§3.1.3, §3.4 rule 4), and the data model holds no terminology list or version | DATA_MODEL §3.7 | O-5, O-10 |
-| F-15 | O-4 depends on B20, and the specification lists B20 as a Phase 4 blocker. B22 blocks Phase 2 and cannot close while O-4 is undecided. B20 must therefore be answered before Phase 2 can open, or B22 stays open. | PROJECT_SPECIFICATION §10 | Owner decision on when B20 is answered |
+| F-15 | The specification lists B22 under "Blocks Phase 2" and B20 under "Blocks Phase 4". O-4 depends on B20 (§3.7), and condition 1 of §3.5 needs O-4 decided. As the documents stand, B22 cannot close, and Phase 2 cannot open, until B20 is answered, which the gate table does not require before Phase 4. Before B22 can close, the project owner decides when B20 is answered. If it is to be answered before B22 closes, the gate table records that in a separately reviewed change to the specification. Any other resolution also needs its own reviewed change, approved by the owner, and may not bypass, narrow, or redefine B20. This protocol does not move B20 to another phase. Until then, O-4 and B20 stay open, and the material of O-4 stays out of the pilot (§3.7). | PROJECT_SPECIFICATION §10 | Owner decision on when B20 is answered, before B22 can close |
 | F-16 | CONTRIBUTING says research records, recorded searches among them, are made through the application. The pilot records of §3.8 are kept outside it because the application cannot hold them yet. They are not research records of the study, and nothing is entered into the application from them without a separate reviewed decision. | CONTRIBUTING, "Research content contributions" | O-10 |
 
 ### 3.7 Provisional defaults for the pilot (PROVISIONAL, approved by the project owner on 2026-10-26)
@@ -335,7 +339,7 @@ In this section, "recorded as excluded", "escalated", and "recorded" refer to th
 - Each pilot decision records the legal status as binding, not binding, or uncertain, with the place in the text where it was established. An uncertain status is escalated.
 - Binding and non-binding instruments are kept apart in every pilot count and comparison, as AI-focused instruments and instruments with AI-related provisions are (§3.1.2). They are never added into one total without that breakdown.
 - Drafts, proposals, and instruments never adopted do not qualify (§3.1.1, condition 3). They are recorded as excluded, with the reason. Whether they can be contextual material stays OPEN and is not tested in the pilot.
-- A document behind a paywall, or one whose storage rights are unresolved, is flagged for review under B7. The pilot decides no rights question.
+- A document behind a paywall, or one whose right to be obtained or retained is unresolved, is flagged for review under B7. It is not downloaded or retained for the pilot (§3.8, point 2). The pilot decides no rights question.
 - The final list of eligible forms and legal-status categories needs the researcher's verification and any necessary rights review. The data model cannot yet record every form or the legal status (F-5, F-11).
 
 **O-2. Issuing authorities (PROVISIONAL).**
@@ -357,7 +361,7 @@ In this section, "recorded as excluded", "escalated", and "recorded" refer to th
 **O-4. Security, defence, surveillance, and law enforcement (OPEN, pending B20).**
 
 - No provisional default. The point stays OPEN until the researcher has confirmed whether institutional ethics review applies (B20, §11) and the project owner has decided the point.
-- This material is not selected for the pilot. A selected document found to contain it is withdrawn from the pilot as soon as that is found. The withdrawal and its reason are recorded, the material is not assessed further, and the document is not counted in agreement results. Where possible it is replaced by another candidate with the same selection label.
+- This material is not selected for the pilot. It stays out of the pilot until the researcher has confirmed whether institutional ethics review applies, any review that applies has given its approval, and the project owner has decided O-4. A selected document found to contain it is withdrawn from the pilot as soon as that is found. The withdrawal and its reason are recorded, the material is not assessed further, and the document is not counted in agreement results. Where possible it is replaced by another candidate with the same selection label.
 - Nothing in this protocol bypasses, narrows, or redefines B20. When B20 must be answered is F-15.
 
 **O-5. Terminology lists (PROVISIONAL workflow; no list exists).**
@@ -448,21 +452,27 @@ The questions in §2 are not revised here. The revised questions must satisfy th
 - the location of the pilot records (§3.7, O-10);
 - the intended size of each sample, with a reason.
 
-**2. Candidates.** The researcher supplies the candidate documents, or verifies each candidate before it can be selected. For each candidate the researcher records how it was found (where, when, and with which queries in which language and list version) and how it was obtained (address or description, date, and method), and keeps the exact bytes obtained (point 9). Candidates that fall under O-4 are not selected (§3.7).
+**2. Candidates.** The researcher supplies the candidate documents, or verifies each candidate before it can be selected. For each candidate the researcher records how it was found (where, when, and with which queries in which language and list version). Candidates that fall under O-4 are not selected (§3.7).
+
+B7 is open, and a document being publicly available does not by itself establish that it may be downloaded, retained, or copied. Therefore:
+
+- The exact bytes of a candidate are obtained and retained for the pilot only after the right to obtain and retain them has been checked and recorded: what the check relied on, who made it, and when. The check serves the pilot only. It is not a rights determination ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md) §2), it decides no part of B7, and it permits no other use. Where the bytes are retained, the record states how they were obtained (address or description, date, and method), and they are kept as point 9 sets out.
+- Where that right is unresolved, the file is not downloaded or retained for the pilot. The candidate is flagged for review under B7, and only the discovery metadata that is safe and permitted to record is recorded. Where it is uncertain whether an item of discovery metadata may be recorded, that item is not recorded, and the candidate stays unresolved until it has been reviewed.
+- Only candidates whose bytes are retained under this point are read for the content classification of points 4 to 7, since each reader decision records the hash of the bytes read (point 5). A candidate whose text cannot lawfully be retained is not used for that work, and the need to fill a sample stratum is never a reason to use it.
 
 **3. Selection and coverage.**
 
 - The researcher draws two disjoint samples from the candidates, one for the calibration round and one for the validation round. No document is in both.
 - Each sample is stratified by country, by language and script, and by the outcome the selector expects. It includes the cases the rules name as hard: mixed-subject titles, AI named among several technologies, instruments without binding force, issuers of unclear level, domestic acts concerning international commitments, amended instruments, incomplete formal dates, and documents available only in translation.
 - The expected outcome is a selection label only. Readers do not see it. Where possible, the person who selects is not a reader.
-- Coverage is assessed for each language and script actually used: how many documents of each expected outcome and each hard case each sample holds. A language, script, outcome, or hard case for which no candidate could be found or obtained is recorded as a coverage limitation of the pilot. It is never read as evidence that a country lacks such a policy.
+- Coverage is assessed for each language and script actually used: how many documents of each expected outcome and each hard case each sample holds. A language, script, outcome, or hard case for which no candidate could be found, obtained, or lawfully retained (point 2) is recorded as a coverage limitation of the pilot. It is never read as evidence that a country lacks such a policy, or lacks AI policy at all.
 
 **4. Rounds.**
 
 - **Calibration.** Readers apply the rules to the calibration sample. Disagreements, escalations, and term gaps lead to revised rules and new list versions, each with its date and reason.
 - **Validation.** Before it starts, the protocol version, the list versions, and the acceptance thresholds (point 7) are fixed and recorded. Readers apply them to the validation sample. Nothing found in this round changes the rules applied in it: changes are recorded for the next version. If a threshold is not met, the rules are revised and a new validation round is run on documents not used before.
 
-**5. What each reader records.** Each reader completes their record before seeing any other reader's record or the selection label. Every value is read from the document itself, or, for provenance, from the record of how it was obtained. A value the document does not state is left empty, not inferred. For each document:
+**5. What each reader records.** A document that is compared (points 6 and 7) has two independent records. With two readers, each reader makes one. With one reader, the two records are the first reading and the blind re-check of point 7, made by the same person. Each record is completed without seeing the other record of the same document or the selection label. For the re-check, this means the reader does not consult the first record until the re-check record is complete. Every value is read from the document itself, or, for provenance, from the record of how it was obtained. A value the document does not state is left empty, not inferred. For each document:
 
 - **Version and provenance:** the document version and its text state (as adopted, or consolidated as amended to a date); whether it was read in the original, an official translation, an unofficial translation, or machine translation (§3.4); the SHA-256 of the bytes read; how they were obtained (point 2).
 - **Document level:** the outcome, one of the five of §3.1.6; the row of §3.1.4 applied; the reason.
@@ -472,14 +482,14 @@ The questions in §2 are not revised here. The revised questions must satisfy th
 - **Dates:** each formal date found, with its locator; the date relied on; where and when the dates were checked; where applicable, the statement that no expiry or repeal was found (§3.7, O-6).
 - **Contextual category,** if the outcome is contextual.
 - **Escalation** reason and kind, if the outcome is escalated.
-- The reader, the date, the protocol version, and each list version used.
+- The reader, the date, the protocol version, and each list version used; with one reader, whether the record is the first reading or the re-check.
 
 **6. Disagreements, escalations, and term gaps.**
 
-- Once both records exist, they are compared on: the outcome; the set of AI-related provisions; the legal status; the issuer's level; the date relied on; and the contextual category.
+- Once both records of a document exist, whether they come from two readers or from one reader's first reading and re-check (point 5), they are compared on: the outcome; the set of AI-related provisions; the legal status; the issuer's level; the date relied on; and the contextual category.
 - Each difference receives a reconciliation record: what differed, its cause (unclear rule, missing or ambiguous term, reading error, translation, open point, or another cause, described), the resolution, and any rule or list change it led to.
 - Each escalation is given a kind, so that every recurring kind receives one written resolution (§3.1.6). An unresolved escalation stays listed with its reason.
-- The term-gap log records false hits and missed terms (§3.7, O-5, step 7). In each sample, the readers read part of the documents in full, not only where the list matches, to find terms the list misses. That part is chosen before reading.
+- The term-gap log records false hits and missed terms (§3.7, O-5, step 7). In each sample, the reader or readers read part of the documents in full, not only where the list matches, to find terms the list misses. That part is chosen before reading.
 - Withdrawals under §3.7, O-4, are recorded with their reason.
 
 **7. Agreement, re-check, and acceptance thresholds.**
@@ -502,16 +512,16 @@ The report contains no quotation and no text of any document. Whether it may nam
 
 **9. Texts and records.**
 
-- Full texts and the exact bytes obtained are kept outside this public repository unless a separate rights and handling decision permits otherwise ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md)). They are external content and are treated as untrusted ([SECURITY.md](../SECURITY.md)).
-- No text of a pilot document is sent to an external AI or translation service unless its rights allow it. Until B7 is decided, none is ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md) §2).
+- Full texts and exact bytes are retained only as point 2 allows. They are kept outside this public repository unless a separate rights and handling decision permits otherwise ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md)). They are external content and are treated as untrusted ([SECURITY.md](../SECURITY.md)).
+- No text of a pilot document, in full or in part, is sent to an external AI or translation provider while the B7 decision on transmission to a provider is unresolved. This includes machine translation by an external service. After that decision, text is sent only where its rights allow it ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md) §2).
 - Eligibility decisions in the pilot are made by the readers. As with policy coding (§10), no AI tool makes or suggests them.
 - Pilot records are metadata only and are kept under version control in the location of §3.7, O-10. They hold no quotation, no full text, and no credential. They use these record types:
 
 | Record | Holds |
 |---|---|
 | Pilot setup | The items of point 1, and the thresholds of point 7 once fixed, with the date they were fixed |
-| Candidate | A record identifier; the country; the title as written, in its language and script; the issuing authority as named; the form; the official identifier and date of issue where the text states them; how it was found and obtained (point 2); the SHA-256; where the bytes are kept; any flag for review under B7 |
-| Reader decision | The items of point 5, one record for each reader and document |
+| Candidate | A record identifier; the country; the title as written, in its language and script; the issuing authority as named; the form; the official identifier and date of issue where the text states them; how it was found (point 2); the check of the right to obtain and retain its bytes, or that the right is unresolved; where the bytes are retained, how they were obtained, the SHA-256, and where they are kept; any flag for review under B7. Only fields that are safe and permitted to record are filled (point 2). |
+| Reader decision | The items of point 5, one record for each reading of a document: one for each reader, or, with one reader, one for the first reading and one for the re-check |
 | Reconciliation | The items of point 6 for one difference |
 | Escalation | The document; the reason; the kind; the resolution and its date, or "unresolved" |
 | Term gap | The list and its version; the term as written; the locator; false hit or missed term; the decision; the resulting version |
@@ -715,4 +725,4 @@ The protocol is versioned in the repository. Changes that affect how claims are 
 Change record:
 
 - **2026-10-26.** §3.1 and §3.2 rewritten to record the working model for B22 that the project owner approved, with DRAFT operational rules and OPEN decisions. §3.4 to §3.6 added. The introduction, §2, §3.3, §4.2, §6, §7, §8, and this section aligned with them. Reason: the owner's approval of the working model. B22 remains open (§3.5). No claim, eligibility decision, or indicator exists yet, so nothing needed re-checking.
-- **2026-10-26.** §3.7 and §3.8 added. §3.7 records the provisional pilot defaults that the project owner approved on 2026-10-26 for O-1 to O-3 and O-5 to O-10. O-4 stays open pending B20, and O-11 pending B8, with the constraints the revised questions must meet. §3.8 sets out the pilot of the eligibility rules and the format of its records. A PROVISIONAL mark was added. The status of each open point was added to §3.5, with a note on how provisional defaults relate to the closure conditions. F-5, F-8, and F-9 were made more specific, and F-11 to F-16 added. The introduction, §2, §3.1, §3.1.4, and §3.3 now refer to the new sections. Reason: the owner's approval of the defaults as the working basis for preparing the pilot. No OPEN point is decided, no closure condition is changed, and B22 remains open. No pilot has been run and no eligibility decision exists, so nothing needed re-checking.
+- **2026-10-26.** §3.7 and §3.8 added. §3.7 records the provisional pilot defaults that the project owner approved on 2026-10-26 for O-1 to O-3 and O-5 to O-10. O-4 stays open pending B20, and O-11 pending B8, with the constraints the revised questions must meet. §3.8 sets out the pilot of the eligibility rules and the format of its records. A PROVISIONAL mark was added. The status of each open point was added to §3.5, with a note on how provisional defaults relate to the closure conditions. F-5, F-8, and F-9 were made more specific, and F-11 to F-16 added. The introduction, §2, §3.1, §3.1.4, and §3.3 now refer to the new sections. §3.8 retains document bytes only after the right to obtain and retain them has been checked and recorded, and sends no document text to an AI or translation provider while B7's decision on transmission is open. Its comparison of two records covers both two readers and one reader's blind re-check. §3.5, F-9, and F-15 state that the closure conditions are DRAFT and need the owner's explicit confirmation, and what must be decided about B20 before B22 can close. Reason: the owner's approval of the defaults as the working basis for preparing the pilot. No OPEN point is decided, no closure condition is changed, and B22 remains open. No pilot has been run and no eligibility decision exists, so nothing needed re-checking.
