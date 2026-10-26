@@ -4,7 +4,7 @@ Status: Draft for researcher review · Last updated: 2026-10-26
 
 Research title: **"AI Policy and Economic Transformation in Central Asia: A Comparative Analysis of Turkmenistan and Uzbekistan"**
 
-This protocol defines how research is conducted in CAIPO. The software enforces parts of it; the rest is researcher discipline. It was drafted during the architecture phase by the engineering side. **Sections marked DRAFT or OPEN contain proposals or undecided points that the responsible researcher must confirm, replace, or decide.** Text marked APPROVED records a decision of the project owner (§3). Nothing in this document is a research finding.
+This protocol defines how research is conducted in CAIPO. The software enforces parts of it; the rest is researcher discipline. It was drafted during the architecture phase by the engineering side. **Sections marked DRAFT or OPEN contain proposals or undecided points that the responsible researcher must confirm, replace, or decide.** Text marked APPROVED records a decision of the project owner (§3). Text marked PROVISIONAL records a default that the project owner approved for preparing and running the pilot only (§3.7). It decides nothing for the study. Nothing in this document is a research finding.
 
 ## 1. Principles
 
@@ -18,7 +18,7 @@ This protocol defines how research is conducted in CAIPO. The software enforces 
 
 ## 2. Research questions (DRAFT)
 
-The questions below are proposals consistent with the research title. They are descriptive and comparative by design. Their wording depends on the two definitions in §3.1 and §3.2. A working model for both, approved by the project owner, is recorded there, but some of its points are still open (§3.5), and the questions have not yet been revised against it. They must be revised before B22 is closed (§3.5, O-11, with B8).
+The questions below are proposals consistent with the research title. They are descriptive and comparative by design. Their wording depends on the two definitions in §3.1 and §3.2. A working model for both, approved by the project owner, is recorded there, but some of its points are still open (§3.5), and the questions have not yet been revised against it. They must be revised before B22 is closed (§3.5, O-11, with B8). The constraints the revised questions must meet are recorded in §3.7 (O-11). They do not revise the questions.
 
 - **RQ1.** What policies within the project's policy domain have Turkmenistan and Uzbekistan formally adopted, and how do they compare in objectives, instruments, responsible institutions, and target sectors?
 - **RQ2.** What documented evidence exists that these policies have been implemented, and how does that evidence differ in availability and kind between the two countries?
@@ -34,10 +34,11 @@ RQ4 is exploratory. It can produce observations of association and a structured 
 
 A **covered country** is one the study includes; at present, the two above.
 
-§3.1 to §3.5 contain three kinds of text, each marked:
+§3.1 to §3.8 contain four kinds of text, each marked:
 
 - **APPROVED** text records the working model for blocker B22 that the project owner approved. It was recorded here on 2026-10-26.
 - **DRAFT** text is an operational rule written to carry out that model. The responsible researcher confirms or replaces it.
+- **PROVISIONAL** text records a default that the project owner approved on 2026-10-26 for preparing and running the pilot (§3.7, §3.8). It applies only to the pilot. It does not decide an OPEN point, and it does not count towards the conditions for closing B22 (§3.5).
 - **OPEN** points are undecided. They are listed in §3.5 and are not answered in this protocol.
 
 The specification names the researcher as the person who defines both concepts ([PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10, B22). Where the project owner and the responsible researcher are different people, the researcher confirms the approved working model as well. **B22 remains open** until the conditions in §3.5 are met.
@@ -53,7 +54,7 @@ The two layers hold public instruments. The document corpus also holds documents
 
 This protocol does not define artificial intelligence as a technology and introduces no classification of AI techniques. Whether a provision concerns AI is decided by the test in §3.1.2 and the terminology lists in §3.1.3.
 
-Until the OPEN points in §3.5 are decided, no document is placed in either layer, or excluded from both, on a ground that depends on an open point. Such a document is escalated (§3.1.6).
+Until the OPEN points in §3.5 are decided, no document is placed in either layer, or excluded from both, on a ground that depends on an open point. Such a document is escalated (§3.1.6). A pilot record made under the provisional defaults of §3.7 does not place a document in either layer or exclude it from the study. It is a pilot record (§3.8).
 
 #### 3.1.1 Eligible public policy instrument (DRAFT, with OPEN points)
 
@@ -119,6 +120,8 @@ Whether a provision or a title names AI is decided against a **terminology list*
 #### 3.1.4 Inclusion and exclusion rules (DRAFT)
 
 The rules are the same for every country and every language. Each row applies the test of §3.1.2. The name of a category never qualifies or disqualifies a document by itself.
+
+In the pilot, the rows that depend on O-1, O-2, O-3, or O-7 are read with the provisional default for that point (§3.7). Outside the pilot, every row stays as written here. The row on security, defence, surveillance, and law enforcement has no provisional default: that material is not in the pilot (§3.7, O-4).
 
 | Material | Enters the core corpus when | What is coded | Otherwise | Where judgement cannot be avoided |
 |---|---|---|---|---|
@@ -249,7 +252,7 @@ An escalated document is in neither layer and is not excluded. It is listed with
 
 ### 3.3 Study period (OPEN, blocker B8)
 
-To be set by the researcher, with a stated reason for the start year. Which formal dates place an instrument inside the period, and whether an instrument adopted before the period but in force during it qualifies, are OPEN (O-6).
+To be set by the researcher, with a stated reason for the start year. Which formal dates place an instrument inside the period, and whether an instrument adopted before the period but in force during it qualifies, are OPEN (O-6). The provisional pilot rule for O-6 is in §3.7. It cannot be applied to any instrument until the period is set.
 
 ### 3.4 Language, translation, and time in eligibility decisions (DRAFT)
 
@@ -270,21 +273,21 @@ To be set by the researcher, with a stated reason for the start year. Which form
 
 ### 3.5 Open decisions and conditions for closing B22
 
-The project owner approved the working model, not every detail of it. These decisions are open, and this protocol does not answer them.
+The project owner approved the working model, not every detail of it. These decisions are open, and this protocol does not answer them. For most of them the owner approved a provisional default for the pilot on 2026-10-26 (§3.7). A provisional default is not a decision of its point: every point below stays OPEN until it is decided and written into this section.
 
-| # | Decision | Linked to |
-|---|---|---|
-| O-1 | The complete set of eligible instrument forms and legal-status categories, including instruments without binding force. Whether drafts and never-adopted instruments can be contextual material. | F-5 |
-| O-2 | The scope of issuing authorities: national bodies only, or subnational and special-status bodies too | F-5 |
-| O-3 | The treatment of international commitments that a covered country signed, joined, or endorsed | — |
-| O-4 | The treatment of security, defence, surveillance, and law-enforcement instruments and provisions | B20 (§11) |
-| O-5 | The verified terminology lists: who compiles and verifies each, whether a second reader is required, how inflected and derived forms are matched, and the rules for reviewing ambiguous cases. No list exists yet. | — |
-| O-6 | Whether an instrument adopted before the study period and in force during it qualifies, and which formal dates place an instrument inside the period | B8, F-6 |
-| O-7 | Which categories of broader policy, beyond the four the approved model names (digital economy, data governance, telecommunications, and education), are contextual. In particular, whether sector policy and general research policy without AI-related provisions are contextual or excluded. | — |
-| O-8 | Whether a contextual document may ever be ingested in full, and on what condition. Until decided, none is. | B7 |
-| O-9 | Confirmation or replacement of the DRAFT rules in §3.1 to §3.4, including the test for an AI-focused instrument and the one-layer rule for indicators | — |
-| O-10 | Where eligibility decisions and contextual entries are recorded before SearchRun exists, and in what structured form | F-1, F-2, F-3 |
-| O-11 | The revision of RQ1 to RQ4 against the definitions | B8 |
+| # | Decision | Linked to | Status on 2026-10-26 |
+|---|---|---|---|
+| O-1 | The complete set of eligible instrument forms and legal-status categories, including instruments without binding force. Whether drafts and never-adopted instruments can be contextual material. | F-5, F-11, B7 | OPEN. Provisional pilot default (§3.7). |
+| O-2 | The scope of issuing authorities: national bodies only, or subnational and special-status bodies too | F-5 | OPEN. Provisional pilot default (§3.7). |
+| O-3 | The treatment of international commitments that a covered country signed, joined, or endorsed | F-12 | OPEN. Provisional pilot default (§3.7). |
+| O-4 | The treatment of security, defence, surveillance, and law-enforcement instruments and provisions | B20 (§11), F-15 | OPEN. No pilot default; the material is not in the pilot. |
+| O-5 | The verified terminology lists: who compiles and verifies each, whether a second reader is required, how inflected and derived forms are matched, and the rules for reviewing ambiguous cases. No list exists yet. | F-14 | OPEN. Provisional workflow for the pilot (§3.7). No list exists. |
+| O-6 | Whether an instrument adopted before the study period and in force during it qualifies, and which formal dates place an instrument inside the period | B8, F-6 | OPEN. Provisional pilot rule (§3.7); it cannot be applied until B8 sets the period. |
+| O-7 | Which categories of broader policy, beyond the four the approved model names (digital economy, data governance, telecommunications, and education), are contextual. In particular, whether sector policy and general research policy without AI-related provisions are contextual or excluded. | — | OPEN. Provisional pilot default (§3.7). |
+| O-8 | Whether a contextual document may ever be ingested in full, and on what condition. Until decided, none is. | B7, F-13 | OPEN. Provisional pilot default: metadata only (§3.7). |
+| O-9 | Confirmation or replacement of the DRAFT rules in §3.1 to §3.4, including the test for an AI-focused instrument and the one-layer rule for indicators | — | OPEN. The five outcomes are kept for the pilot; two further rules are DRAFT, to be tested (§3.7). |
+| O-10 | Where eligibility decisions and contextual entries are recorded before SearchRun exists, and in what structured form | F-1, F-2, F-3, F-16 | OPEN. Provisional format for pilot records (§3.8). Publication of actual pilot records, and recording in Phase 2, are undecided. |
+| O-11 | The revision of RQ1 to RQ4 against the definitions | B8 | OPEN, pending B8. Constraints recorded (§3.7). |
 
 **Conditions for closing B22 (DRAFT).** B22 remains a Phase 2 blocker ([PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10). It can be closed only when all of the following hold:
 
@@ -295,9 +298,11 @@ The project owner approved the working model, not every detail of it. These deci
 5. O-10 is decided, so that Phase 2 can record eligibility decisions.
 6. The researcher records the closure here with its date, and the gate table in the specification is updated in the same change.
 
+A provisional default (§3.7) does not meet condition 1. The pilot of condition 3 is set out in §3.8, and condition 3 is met only when that pilot has been run and reported. If a point is later decided differently from its provisional default, in a way that could change a pilot decision, the affected pilot decisions are re-checked (§12). The researcher then records whether condition 3 still holds, or whether a further validation round is needed.
+
 ### 3.6 Points for other documents
 
-These points follow from §3.1 and §3.2 and belong to other documents. This revision does not change those documents. Each point is settled in its own reviewed change.
+These points follow from §3.1 to §3.8 and belong to other documents. This protocol does not change those documents. Each point is settled in its own reviewed change.
 
 | # | Point | Document | Settled with |
 |---|---|---|---|
@@ -305,12 +310,215 @@ These points follow from §3.1 and §3.2 and belong to other documents. This rev
 | F-2 | SearchRun is built in Phase 4, but eligibility decisions and exclusions start with ingestion in Phase 2 (§4.2) | PROJECT_SPECIFICATION §7; DATA_MODEL | O-10 |
 | F-3 | A SearchRun's sources examined has no structured fields for an item and no stable identifier per item, so contextual entries cannot be listed across searches (§3.1.5) | DATA_MODEL §3.7 | O-10 |
 | F-4 | AnalysisRun inputs are series, releases, and PolicyEvents, so contextual entries cannot be an input to a recorded sensitivity analysis | DATA_MODEL §3.7 | When a sensitivity analysis is first planned |
-| F-5 | The document types and the eight institution kinds may not include every eligible form (O-1) or issuing authority (O-2). The data model requires such a list to be extended first. | DATA_MODEL §3.2, §3.3 | O-1, O-2 |
+| F-5 | The document types and the eight institution kinds may not include every eligible form (O-1) or issuing authority (O-2). The data model requires such a list to be extended first. The document types have no value for a guideline, a code, or a standard, and recording one as `other` would lose its form. The institution kinds have none for a head-of-state office, a government acting as a collective body, a subnational administration, or a special-status body. Whether a given body fits an existing kind is read from the instrument that founds or mandates it and is recorded with the reason. It is never mapped to the nearest kind (DATA_MODEL §3.2). | DATA_MODEL §3.2, §3.3 | O-1, O-2 |
 | F-6 | A publication date that differs from the date of issue has no field | DATA_MODEL §3.3 | O-6 |
 | F-7 | Assigning each indicator to one layer needs a place to record it. Indicator has a category whose values are not defined. | DATA_MODEL §3.5 | B12 |
-| F-8 | LIMITATIONS §2.4 says both concepts are not yet defined. When B22 closes, it should state the adopted definitions and the known weakness of the explicit-naming test (§3.1.3). | LIMITATIONS | Closure of B22 |
-| F-9 | The gate table describes B22 as two undefined concepts. It is updated when B22 closes. | PROJECT_SPECIFICATION §10 | Closure of B22 |
+| F-8 | LIMITATIONS §2.4 says both concepts are not yet defined. When B22 closes, it should state the adopted definitions and the known weakness of the explicit-naming test (§3.1.3). It should also state the boundary effects of the final rules for O-2 and O-3: material outside the core boundary is not visible in core results, and its absence there says nothing about a country's policy. | LIMITATIONS | Closure of B22 |
+| F-9 | The gate table describes B22 as two undefined concepts. Its "Needed" column asks only that the researcher define both and revise the research questions, and it does not refer to the conditions in §3.5. It is updated when B22 closes. Until then the conditions in §3.5 govern. | PROJECT_SPECIFICATION §10 | Closure of B22 |
 | F-10 | Comparisons by sector, instrument type, institution, and time (FR-40) must show AI-focused instruments and instruments with AI-related provisions separately, and keep contextual material out of core results | PROJECT_SPECIFICATION §4 | Phase 6 |
+| F-11 | No field records whether an instrument is binding or not binding. The separation that O-1 requires (§3.7) can therefore be neither recorded nor shown. | DATA_MODEL §3.3, §3.6 | O-1 |
+| F-12 | A Policy carries one country, and a PolicyRelation links two policies. An international instrument therefore cannot be a Policy or the target of an `implements` relation. A covered country's signature, accession, ratification, or endorsement of one has no record except a claim. | DATA_MODEL §3.6 | O-3 |
+| F-13 | Nothing records that a Document is contextual material. A contextual document, if ingested (O-8), would be eligible for retrieval like any approved document (AI_ARCHITECTURE §4.1), and comparisons could not keep it out of core results (F-10). | DATA_MODEL §3.3; AI_ARCHITECTURE §4.1 | O-8, before any contextual document is ingested |
+| F-14 | No field holds the terminology list versions a SearchRun used (§3.1.3, §3.4 rule 4), and the data model holds no terminology list or version | DATA_MODEL §3.7 | O-5, O-10 |
+| F-15 | O-4 depends on B20, and the specification lists B20 as a Phase 4 blocker. B22 blocks Phase 2 and cannot close while O-4 is undecided. B20 must therefore be answered before Phase 2 can open, or B22 stays open. | PROJECT_SPECIFICATION §10 | Owner decision on when B20 is answered |
+| F-16 | CONTRIBUTING says research records, recorded searches among them, are made through the application. The pilot records of §3.8 are kept outside it because the application cannot hold them yet. They are not research records of the study, and nothing is entered into the application from them without a separate reviewed decision. | CONTRIBUTING, "Research content contributions" | O-10 |
+
+### 3.7 Provisional defaults for the pilot (PROVISIONAL, approved by the project owner on 2026-10-26)
+
+The project owner approved the defaults below on 2026-10-26 as the working basis for preparing and running the pilot (§3.8). They are not research findings, and they are not decisions of the OPEN points. They apply only to pilot records. They change nothing in §3.1 to §3.4 for the study, and **B22 stays open** (§3.5). Each point is decided later by the researcher, with the project owner's approval where it changes the scope of the approved model, and the decision is written into §3.5. A default may then be confirmed, changed, or replaced.
+
+In this section, "recorded as excluded", "escalated", and "recorded" refer to the pilot record (§3.8).
+
+**O-1. Instrument forms and legal status (PROVISIONAL).**
+
+- The pilot considers formally adopted binding instruments, and officially issued instruments without binding force, such as strategies, programmes, guidelines, codes, and standards, when §3.1.1 and §3.1.2 are met. An instrument without binding force also needs a formal text that establishes that the authority issued it (§3.1.1, condition 3).
+- Each pilot decision records the legal status as binding, not binding, or uncertain, with the place in the text where it was established. An uncertain status is escalated.
+- Binding and non-binding instruments are kept apart in every pilot count and comparison, as AI-focused instruments and instruments with AI-related provisions are (§3.1.2). They are never added into one total without that breakdown.
+- Drafts, proposals, and instruments never adopted do not qualify (§3.1.1, condition 3). They are recorded as excluded, with the reason. Whether they can be contextual material stays OPEN and is not tested in the pilot.
+- A document behind a paywall, or one whose storage rights are unresolved, is flagged for review under B7. The pilot decides no rights question.
+- The final list of eligible forms and legal-status categories needs the researcher's verification and any necessary rights review. The data model cannot yet record every form or the legal status (F-5, F-11).
+
+**O-2. Issuing authorities (PROVISIONAL).**
+
+- The core boundary for the pilot is national-level public authorities of a covered country.
+- An instrument issued by a subnational or special-status authority is not core under this default. It is recorded as excluded, with the issuer's level and the reason. A national instrument that establishes or governs a subnational or special-status body or regime is a national instrument, and the ordinary test applies to it.
+- An issuer whose level is ambiguous is escalated.
+- An exclusion under this default marks a boundary of the study. It is never presented as evidence that a country has no AI policy, at any level of government.
+- Each pilot decision states whether the issuer fits one of the eight institution kinds ([DATA_MODEL.md](DATA_MODEL.md) §3.2), as read from the instrument that founds or mandates it. An issuer that fits none is recorded as fitting none. It is never mapped to an inaccurate kind. The kinds known to be missing are listed in F-5.
+
+**O-3. International commitments (PROVISIONAL).**
+
+- An international instrument is outside the domestic core corpus and is in neither layer.
+- A covered country's relation to an international instrument is recorded only where a source establishes it. The kinds of relation are kept distinct: signature, accession, ratification, endorsement, and implementation by a named domestic instrument. In the study these are documented-fact claims with their evidence (§5). In the pilot they are noted in the record with the source that establishes them. One status is never inferred from another, and no obligation of a country is stated unless a source establishes it.
+- A domestic instrument that ratifies or implements a commitment is assessed under the ordinary rules (§3.1.1, §3.1.2).
+- A domestic instrument whose only relevant content is an incorporated international text is escalated where the rules do not settle the case.
+- The data model cannot record an international instrument as a Policy or as the target of a relation (F-12).
+
+**O-4. Security, defence, surveillance, and law enforcement (OPEN, pending B20).**
+
+- No provisional default. The point stays OPEN until the researcher has confirmed whether institutional ethics review applies (B20, §11) and the project owner has decided the point.
+- This material is not selected for the pilot. A selected document found to contain it is withdrawn from the pilot as soon as that is found. The withdrawal and its reason are recorded, the material is not assessed further, and the document is not counted in agreement results. Where possible it is replaced by another candidate with the same selection label.
+- Nothing in this protocol bypasses, narrows, or redefines B20. When B20 must be answered is F-15.
+
+**O-5. Terminology lists (PROVISIONAL workflow; no list exists).**
+
+1. The researcher confirms in writing each language and script in which instruments will be read or searched for. Each matches a Language record. No language or script is assumed, including the script or scripts of Turkmen, which §3 does not state.
+2. For each language and script, the researcher names a compiler and records their reading competence in it.
+3. The compiler collects candidate terms from named references: official texts, terminology standards, dictionaries, or others. Each entry records the fields of §3.1.3: the term as written, in NFC; its language and script; the sense in which it names AI or an AI technique; the forms it matches, either listed or given by a written matching rule; its provenance; the verifier and their competence; and the date of review.
+4. Preferably, a second competent reader checks every entry independently and records agreement or disagreement with its sense and its forms or matching rule. Each disagreement is resolved and recorded. A term still in doubt is marked ambiguous.
+5. Where no second reader is available, the compiler checks every entry again after an interval, without consulting the earlier check. The researcher chooses the interval and records it before the first check. The limitation is stated with the list.
+6. An ambiguous term stays on the list, marked ambiguous. Every match of it is escalated, and each resolution is kept (§3.1.6).
+7. False hits (a match that does not name AI where it occurs) and missed terms (a term that names AI but is not on the list) are entered in the term-gap log (§3.8), each with its locator, the decision taken, and any list version that resulted.
+8. Each change makes a new version with a dated reason (§3.1.3). The calibration round may change a list. The validation round uses one fixed version of each list (§3.8). The version confirmed after validation is the first verified version that condition 2 of §3.5 requires.
+9. Pilot versions of a list are kept with the pilot records, because their provenance may name real documents. A list is committed to this repository, as §3.1.3 requires, only once publication of its provenance has been confirmed (O-10 below).
+
+This protocol proposes no term in any language.
+
+**O-6. Instruments adopted before the study period (PROVISIONAL rule; applying it depends on B8).**
+
+- An instrument meets the time condition when its formal validity overlaps the study period. A formal text must establish that it was adopted or entered into force on or before the last day of the period. No formal text may establish that it expired or was repealed before the first day.
+- The evidence is recorded: the formal dates found, with their locators; the date the decision relies on (§3.4 rule 8); where the dates were checked; and the date of that check.
+- When no expiry or repeal is found, the record says so: "no expiry or repeal was found in [where checked] as of [date]". This is never recorded as proof that the instrument remained in force.
+- An unknown or ambiguous date is escalated. No date is inferred from a publication date or a later report (§3.4 rule 8).
+- Until B8 sets the period, the pilot records the dates and their evidence, and records that the time condition cannot yet be applied. It decides for no instrument whether it falls inside the period.
+- **Effect on RQ4.** An instrument adopted before the period is part of the setting in which every indicator value in the period is observed. A temporal comparison around its adoption would rest on observations from before the period, and whether the study uses any is part of B8. In a temporal comparison around a later event, such instruments are among the alternative explanations that an interpretation has to consider (§5, rule 5). Nothing about them is stated as an effect (§8).
+
+**O-7. Contextual categories (PROVISIONAL).**
+
+The initial contextual taxonomy for the pilot has four categories:
+
+1. Digital economy and e-government.
+2. Data governance, including relevant personal-data, data-localisation, and cybersecurity material.
+3. Telecommunications, connectivity, and computing infrastructure.
+4. Education, skills, curricula, and research institutions.
+
+- A document is contextual only if it falls in one of these categories and has no explicitly AI-related provision (§3.1.5). A category never makes a document eligible for the core corpus. A document with an explicitly AI-related provision is assessed under §3.1.2, whatever its category.
+- In the pilot, the reference to O-7 in the education and research row of §3.1.4 is read with category 4. General research policy that does not concern research institutions fits none of the four categories and is escalated, with that reason.
+- General sector policy without an AI-related provision is not contextual under this default. It is recorded as excluded, with the reason. A reader who judges it relevant context says so in the record, as evidence for a possible further category.
+- A further category is added only by a dated revision of this protocol, reviewed like any change to §3.1 (§12).
+
+**O-8. Full ingestion of contextual material (PROVISIONAL).**
+
+- Contextual material is recorded as metadata only (§3.1.5, §3.8). No contextual document is ingested in full, and none is made available in full text to AI retrieval.
+- A later exception may be considered only when all of the following hold:
+  - a defined research claim or sensitivity analysis requires the content;
+  - the reason is recorded before ingestion;
+  - the applicable rights determination under B7 permits storage;
+  - the contextual status stays explicit, and the material is not counted as core AI policy;
+  - the AI architecture has explicit rules for distinguishing and handling contextual evidence (F-13).
+- The exception is not adopted, and nothing in this protocol implements it. It needs its own decision of O-8 and the follow-ups it names.
+
+**O-9. Operational eligibility rules (five outcomes kept; two rules DRAFT).**
+
+- The pilot keeps the five outcomes of §3.1.6: core corpus, AI-focused; core corpus, instrument with AI-related provisions; contextual; excluded; escalated.
+- §3.1.2 is kept unchanged. A mention of automation, digitalisation, algorithms, or automated decision-making makes a provision AI-related only if the provision names AI by a term on the verified list and provides for something about AI.
+- Two further rules are DRAFT. They are tested in the pilot, and the researcher confirms, changes, or drops them afterwards:
+  - **Mixed-subject title (DRAFT).** An instrument whose title or stated purpose names AI together with other subjects is treated as an instrument with AI-related provisions, unless its stated purpose makes AI the primary subject. Reason: placing it wrongly as AI-focused would code provisions that are not about AI as AI policy, while this placement still codes every AI-related provision.
+  - **Several technologies (DRAFT).** A provision that names AI among several technologies is AI-related when its objective, measure, or rule applies to AI. The decision record marks it as applying to several technologies. A provision that names AI only as an example, or where it is unclear whether the objective, measure, or rule applies to AI, is escalated.
+- During the pilot, a reader applies the rule to every case it covers and also records the case for escalation review. Agreement between readers (§3.8, point 7) is measured on the outcome the rule gives. The record also keeps the resolution of the review, so that the pilot shows how often the rule and the resolution agree.
+
+**O-10. Records made before the application can hold them (PROVISIONAL format; publication and Phase 2 OPEN).**
+
+- Pilot records use the metadata-only, version-controlled format of §3.8, point 9. This protocol creates no actual record and no source list.
+- Whether actual pilot metadata may be published in this public repository is undecided. That includes document titles, identifiers, source addresses, and hashes. Being metadata does not make them publishable. Publishing them needs the project owner's explicit confirmation under the applicable publication and rights policy (B7). Until then, actual pilot records are kept under version control outside this public repository, in a location the project owner designates.
+- How eligibility decisions are recorded in Phase 2 and later is undecided. Any application or data-model work for it (F-1, F-2, F-3, F-14) needs a separate reviewed decision before Phase 2 is implemented.
+
+**O-11. Research questions (OPEN, pending B8).**
+
+The questions in §2 are not revised here. The revised questions must satisfy these constraints:
+
+- RQ1 and RQ2 distinguish AI-focused instruments from instruments with AI-related provisions.
+- Contextual material does not enter core-policy counts, lists, or comparisons silently. As drafted, RQ1 refers to "policies within the project's policy domain", and under §3.1 that domain has two layers. The revision states that RQ1 concerns the core corpus, or how contextual material enters it as a labelled sensitivity analysis (§3.1.5).
+- RQ3 keeps the three layers of §3.2 separate, and reports coverage and missing data for each layer and country.
+- RQ4 remains exploratory and presupposes no causation (§8). It states how instruments adopted before the period are treated (O-6).
+- The final wording and the study period are the researcher's decision (B8).
+
+### 3.8 Pilot of the eligibility rules (DRAFT; record format PROVISIONAL)
+
+**Purpose.** The pilot tests whether the rules of §3.1 to §3.4, read with the provisional defaults of §3.7 and the pilot versions of the terminology lists, give reproducible decisions in each language and script. Run as set out here, it is the pilot that condition 3 of §3.5 requires. It does not settle the seed source list (B9). It builds no corpus and ingests nothing.
+
+**Status of results.** No pilot record or result is a research finding. A pilot decision places no document in either layer for the study. It is never cited as evidence, entered as a claim, or used as a test fixture, and nothing is carried into the application from it without a separate decision (F-16). When ingestion exists, each document receives a new eligibility decision under the protocol then in force. A pilot in which nothing was found for a category is not a negative finding (§5).
+
+**1. Before the pilot.** The following are recorded before any candidate is read:
+
+- the languages and scripts confirmed under §3.7, O-5, step 1;
+- for each of them, the readers and their reading competence, and whether two readers are available or the blind re-check is used;
+- the pilot version of each terminology list;
+- the protocol version, given as the commit of this file;
+- the location of the pilot records (§3.7, O-10);
+- the intended size of each sample, with a reason.
+
+**2. Candidates.** The researcher supplies the candidate documents, or verifies each candidate before it can be selected. For each candidate the researcher records how it was found (where, when, and with which queries in which language and list version) and how it was obtained (address or description, date, and method), and keeps the exact bytes obtained (point 9). Candidates that fall under O-4 are not selected (§3.7).
+
+**3. Selection and coverage.**
+
+- The researcher draws two disjoint samples from the candidates, one for the calibration round and one for the validation round. No document is in both.
+- Each sample is stratified by country, by language and script, and by the outcome the selector expects. It includes the cases the rules name as hard: mixed-subject titles, AI named among several technologies, instruments without binding force, issuers of unclear level, domestic acts concerning international commitments, amended instruments, incomplete formal dates, and documents available only in translation.
+- The expected outcome is a selection label only. Readers do not see it. Where possible, the person who selects is not a reader.
+- Coverage is assessed for each language and script actually used: how many documents of each expected outcome and each hard case each sample holds. A language, script, outcome, or hard case for which no candidate could be found or obtained is recorded as a coverage limitation of the pilot. It is never read as evidence that a country lacks such a policy.
+
+**4. Rounds.**
+
+- **Calibration.** Readers apply the rules to the calibration sample. Disagreements, escalations, and term gaps lead to revised rules and new list versions, each with its date and reason.
+- **Validation.** Before it starts, the protocol version, the list versions, and the acceptance thresholds (point 7) are fixed and recorded. Readers apply them to the validation sample. Nothing found in this round changes the rules applied in it: changes are recorded for the next version. If a threshold is not met, the rules are revised and a new validation round is run on documents not used before.
+
+**5. What each reader records.** Each reader completes their record before seeing any other reader's record or the selection label. Every value is read from the document itself, or, for provenance, from the record of how it was obtained. A value the document does not state is left empty, not inferred. For each document:
+
+- **Version and provenance:** the document version and its text state (as adopted, or consolidated as amended to a date); whether it was read in the original, an official translation, an unofficial translation, or machine translation (§3.4); the SHA-256 of the bytes read; how they were obtained (point 2).
+- **Document level:** the outcome, one of the five of §3.1.6; the row of §3.1.4 applied; the reason.
+- **Provision level:** for an instrument with AI-related provisions, each AI-related provision by locator; mentions noted; which provisions a DRAFT rule of §3.7, O-9, decided.
+- **Legal status:** binding, not binding, or uncertain, and where in the text it was established.
+- **Issuing authority:** as named in the text; its level (national, subnational, special-status, or unclear); whether it fits an institution kind (§3.7, O-2).
+- **Dates:** each formal date found, with its locator; the date relied on; where and when the dates were checked; where applicable, the statement that no expiry or repeal was found (§3.7, O-6).
+- **Contextual category,** if the outcome is contextual.
+- **Escalation** reason and kind, if the outcome is escalated.
+- The reader, the date, the protocol version, and each list version used.
+
+**6. Disagreements, escalations, and term gaps.**
+
+- Once both records exist, they are compared on: the outcome; the set of AI-related provisions; the legal status; the issuer's level; the date relied on; and the contextual category.
+- Each difference receives a reconciliation record: what differed, its cause (unclear rule, missing or ambiguous term, reading error, translation, open point, or another cause, described), the resolution, and any rule or list change it led to.
+- Each escalation is given a kind, so that every recurring kind receives one written resolution (§3.1.6). An unresolved escalation stays listed with its reason.
+- The term-gap log records false hits and missed terms (§3.7, O-5, step 7). In each sample, the readers read part of the documents in full, not only where the list matches, to find terms the list misses. That part is chosen before reading.
+- Withdrawals under §3.7, O-4, are recorded with their reason.
+
+**7. Agreement, re-check, and acceptance thresholds.**
+
+- With two readers, agreement is reported for each comparison of point 6, for each language and script and overall. The report gives the number of documents, the raw agreement, the full table of agreements and disagreements, and any chance-corrected coefficient chosen in advance. With few documents, such a coefficient is unstable, so the table is always reported with it.
+- With one reader, the reader classifies the validation sample again, blind to the first reading, after an interval that the researcher chose and recorded before the first reading. The same comparisons are reported as agreement with the first reading, and the limitation is stated (§3.1.6).
+- **The acceptance thresholds are a pre-validation decision of the researcher.** Before the validation round starts, the researcher records which measures are used, the statistic for each, its minimum value, and what follows if a minimum is not met. They are not changed after any validation result has been seen. This protocol sets no numerical threshold.
+
+**8. Pilot report.** The researcher writes a report that states:
+
+- the protocol and list versions;
+- the sample design and the coverage achieved for each language and script;
+- the coverage limitations;
+- the agreement or re-check results against the recorded thresholds;
+- the escalation kinds and their resolutions, and the term-gap results;
+- every rule and list revision, with its date and reason;
+- whether condition 3 of §3.5 is met.
+
+The report contains no quotation and no text of any document. Whether it may name documents publicly depends on the confirmation in §3.7, O-10.
+
+**9. Texts and records.**
+
+- Full texts and the exact bytes obtained are kept outside this public repository unless a separate rights and handling decision permits otherwise ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md)). They are external content and are treated as untrusted ([SECURITY.md](../SECURITY.md)).
+- No text of a pilot document is sent to an external AI or translation service unless its rights allow it. Until B7 is decided, none is ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md) §2).
+- Eligibility decisions in the pilot are made by the readers. As with policy coding (§10), no AI tool makes or suggests them.
+- Pilot records are metadata only and are kept under version control in the location of §3.7, O-10. They hold no quotation, no full text, and no credential. They use these record types:
+
+| Record | Holds |
+|---|---|
+| Pilot setup | The items of point 1, and the thresholds of point 7 once fixed, with the date they were fixed |
+| Candidate | A record identifier; the country; the title as written, in its language and script; the issuing authority as named; the form; the official identifier and date of issue where the text states them; how it was found and obtained (point 2); the SHA-256; where the bytes are kept; any flag for review under B7 |
+| Reader decision | The items of point 5, one record for each reader and document |
+| Reconciliation | The items of point 6 for one difference |
+| Escalation | The document; the reason; the kind; the resolution and its date, or "unresolved" |
+| Term gap | The list and its version; the term as written; the locator; false hit or missed term; the decision; the resulting version |
+| Contextual entry | The items that §3.1.5 requires for contextual material |
+| Withdrawal | The document; the reason; the date |
+
+Record identifiers are local to the pilot records and carry no meaning. The format is fixed in detail when the first record is written, and it is versioned with the records. Its fields inform the record that Phase 2 will need (F-1), which is decided separately (§3.7, O-10).
 
 ## 4. Sources
 
@@ -507,3 +715,4 @@ The protocol is versioned in the repository. Changes that affect how claims are 
 Change record:
 
 - **2026-10-26.** §3.1 and §3.2 rewritten to record the working model for B22 that the project owner approved, with DRAFT operational rules and OPEN decisions. §3.4 to §3.6 added. The introduction, §2, §3.3, §4.2, §6, §7, §8, and this section aligned with them. Reason: the owner's approval of the working model. B22 remains open (§3.5). No claim, eligibility decision, or indicator exists yet, so nothing needed re-checking.
+- **2026-10-26.** §3.7 and §3.8 added. §3.7 records the provisional pilot defaults that the project owner approved on 2026-10-26 for O-1 to O-3 and O-5 to O-10. O-4 stays open pending B20, and O-11 pending B8, with the constraints the revised questions must meet. §3.8 sets out the pilot of the eligibility rules and the format of its records. A PROVISIONAL mark was added. The status of each open point was added to §3.5, with a note on how provisional defaults relate to the closure conditions. F-5, F-8, and F-9 were made more specific, and F-11 to F-16 added. The introduction, §2, §3.1, §3.1.4, and §3.3 now refer to the new sections. Reason: the owner's approval of the defaults as the working basis for preparing the pilot. No OPEN point is decided, no closure condition is changed, and B22 remains open. No pilot has been run and no eligibility decision exists, so nothing needed re-checking.
