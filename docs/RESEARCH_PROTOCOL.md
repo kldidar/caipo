@@ -1,6 +1,6 @@
 # Research Protocol
 
-Status: Draft for researcher review · Last updated: 2026-10-26
+Status: Draft for researcher review · Last updated: 2026-10-27
 
 Research title: **"AI Policy and Economic Transformation in Central Asia: A Comparative Analysis of Turkmenistan and Uzbekistan"**
 
@@ -447,6 +447,7 @@ The questions in §2 are not revised here. The revised questions must satisfy th
 
 - the languages and scripts confirmed under §3.7, O-5, step 1;
 - for each of them, the readers and their reading competence, and whether two readers are available or the blind re-check is used;
+- where the blind re-check is used, the interval between a document's first reading and its re-check (point 7). The researcher chooses it, and this protocol sets none;
 - the pilot version of each terminology list;
 - the protocol version, given as the commit of this file;
 - the location of the pilot records (§3.7, O-10);
@@ -469,12 +470,12 @@ B7 is open, and a document being publicly available does not by itself establish
 
 **4. Rounds.**
 
-- **Calibration.** Readers apply the rules to the calibration sample. Disagreements, escalations, and term gaps lead to revised rules and new list versions, each with its date and reason.
+- **Calibration.** Readers apply the rules to the calibration sample. What the round records under point 6 leads to revised rules and new list versions, each with its date and reason. With two readers, that is the disagreements between them and their reconciliation records, the escalations and their resolutions, and the term gaps. With one reader, the calibration sample is read once. The blind re-check of point 7 applies to the validation sample only, so no calibration document has two records, no disagreement between readers exists, and none is recorded. A revision then rests on the recorded escalations and their resolutions (§3.1.6) and on the term-gap log.
 - **Validation.** Before it starts, the protocol version, the list versions, and the acceptance thresholds (point 7) are fixed and recorded. Readers apply them to the validation sample. Nothing found in this round changes the rules applied in it: changes are recorded for the next version. If a threshold is not met, the rules are revised and a new validation round is run on documents not used before.
 
-**5. What each reader records.** A document that is compared (points 6 and 7) has two independent records. With two readers, each reader makes one. With one reader, the two records are the first reading and the blind re-check of point 7, made by the same person. Each record is completed without seeing the other record of the same document or the selection label. For the re-check, this means the reader does not consult the first record until the re-check record is complete. Every value is read from the document itself, or, for provenance, from the record of how it was obtained. A value the document does not state is left empty, not inferred. For each document:
+**5. What each reader records.** A document that is compared (points 6 and 7) has two independent records. With two readers, each reader makes one. With one reader, the two records are the first reading and the blind re-check of point 7, made by the same person. A document that is not compared, such as a calibration document read by one reader (point 4), has one record. Each record is completed without seeing the other record of the same document or the selection label. For the re-check, this means the reader does not consult the first record until the re-check record is complete. Every value is read from the document itself, or, for provenance, from the record of how it was obtained. A value the document does not state is left empty, not inferred. For each document:
 
-- **Version and provenance:** the document version and its text state (as adopted, or consolidated as amended to a date); whether it was read in the original, an official translation, an unofficial translation, or machine translation (§3.4); the SHA-256 of the bytes read; how they were obtained (point 2).
+- **Version and provenance:** the document version and its text state (as adopted, or consolidated as amended to a date); whether it was read in the original, an official translation, an unofficial translation, or machine translation (§3.4; point 9); the SHA-256 of the bytes read; how they were obtained (point 2).
 - **Document level:** the outcome, one of the five of §3.1.6; the row of §3.1.4 applied; the reason.
 - **Provision level:** for an instrument with AI-related provisions, each AI-related provision by locator; mentions noted; which provisions a DRAFT rule of §3.7, O-9, decided.
 - **Legal status:** binding, not binding, or uncertain, and where in the text it was established.
@@ -513,7 +514,7 @@ The report contains no quotation and no text of any document. Whether it may nam
 **9. Texts and records.**
 
 - Full texts and exact bytes are retained only as point 2 allows. They are kept outside this public repository unless a separate rights and handling decision permits otherwise ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md)). They are external content and are treated as untrusted ([SECURITY.md](../SECURITY.md)).
-- No text of a pilot document, in full or in part, is sent to an external AI or translation provider while the B7 decision on transmission to a provider is unresolved. This includes machine translation by an external service. After that decision, text is sent only where its rights allow it ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md) §2).
+- No text of a pilot document, in full or in part, is sent to an external AI or translation provider, or to any other outside service that would process it, while the B7 decision on transmission to a provider is unresolved. This includes machine translation by an external service. Until that decision, a reader uses machine translation as a reading aid (§3.4, rule 2) only with a tool that runs locally and sends no text outside. Where that cannot be assured, the reader works from the original-language text, and no pilot decision relies on machine translation. This protocol names, provides, and requires no translation tool. After that decision, text is sent only where its rights allow it ([RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md) §2).
 - Eligibility decisions in the pilot are made by the readers. As with policy coding (§10), no AI tool makes or suggests them.
 - Pilot records are metadata only and are kept under version control in the location of §3.7, O-10. They hold no quotation, no full text, and no credential. They use these record types:
 
@@ -521,7 +522,7 @@ The report contains no quotation and no text of any document. Whether it may nam
 |---|---|
 | Pilot setup | The items of point 1, and the thresholds of point 7 once fixed, with the date they were fixed |
 | Candidate | A record identifier; the country; the title as written, in its language and script; the issuing authority as named; the form; the official identifier and date of issue where the text states them; how it was found (point 2); the check of the right to obtain and retain its bytes, or that the right is unresolved; where the bytes are retained, how they were obtained, the SHA-256, and where they are kept; any flag for review under B7. Only fields that are safe and permitted to record are filled (point 2). |
-| Reader decision | The items of point 5, one record for each reading of a document: one for each reader, or, with one reader, one for the first reading and one for the re-check |
+| Reader decision | The items of point 5, one record for each reading of a document: one for each reader, or, with one reader, one for the first reading and, for a validation document, one for the re-check |
 | Reconciliation | The items of point 6 for one difference |
 | Escalation | The document; the reason; the kind; the resolution and its date, or "unresolved" |
 | Term gap | The list and its version; the term as written; the locator; false hit or missed term; the decision; the resulting version |
@@ -726,3 +727,4 @@ Change record:
 
 - **2026-10-26.** §3.1 and §3.2 rewritten to record the working model for B22 that the project owner approved, with DRAFT operational rules and OPEN decisions. §3.4 to §3.6 added. The introduction, §2, §3.3, §4.2, §6, §7, §8, and this section aligned with them. Reason: the owner's approval of the working model. B22 remains open (§3.5). No claim, eligibility decision, or indicator exists yet, so nothing needed re-checking.
 - **2026-10-26.** §3.7 and §3.8 added. §3.7 records the provisional pilot defaults that the project owner approved on 2026-10-26 for O-1 to O-3 and O-5 to O-10. O-4 stays open pending B20, and O-11 pending B8, with the constraints the revised questions must meet. §3.8 sets out the pilot of the eligibility rules and the format of its records. A PROVISIONAL mark was added. The status of each open point was added to §3.5, with a note on how provisional defaults relate to the closure conditions. F-5, F-8, and F-9 were made more specific, and F-11 to F-16 added. The introduction, §2, §3.1, §3.1.4, and §3.3 now refer to the new sections. §3.8 retains document bytes only after the right to obtain and retain them has been checked and recorded, and sends no document text to an AI or translation provider while B7's decision on transmission is open. Its comparison of two records covers both two readers and one reader's blind re-check. §3.5, F-9, and F-15 state that the closure conditions are DRAFT and need the owner's explicit confirmation, and what must be decided about B20 before B22 can close. Reason: the owner's approval of the defaults as the working basis for preparing the pilot. No OPEN point is decided, no closure condition is changed, and B22 remains open. No pilot has been run and no eligibility decision exists, so nothing needed re-checking.
+- **2026-10-27.** §3.8 clarified on three points found in review. Point 4 now states that, with one reader, the calibration sample is read once and not re-checked, so calibration revisions rest on the recorded escalations, their resolutions, and the term-gap log, and no disagreement between readers is recorded. Point 5 and the reader decision record of point 9 now give the number of records to match. Point 1 now records the re-check interval before any candidate is read, and sets no interval. Point 9 now extends the bar on sending text to any outside service that would process it, permits machine translation only with a tool that runs locally and sends no text outside while B7's decision on transmission is open, and otherwise requires reading the original-language text. Reason: to remove ambiguities in §3.8. No OPEN point is decided, no closure condition or blocker status is changed, and B22 remains open. No pilot has been run, so nothing needed re-checking.
