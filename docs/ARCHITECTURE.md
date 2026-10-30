@@ -1,6 +1,6 @@
 # Architecture
 
-Status: Draft for owner review · Last updated: 2026-10-02
+Status: Draft for owner review · Last updated: 2026-10-30
 
 This document describes the target architecture. Only the Phase 1 skeleton is implemented: the Django project; the User foundation, role events, the authorization policy with its assurance levels, sign-in with its throttling and records, TOTP second factors and the approval of their enrolment, the first-Administrator bootstrap, the account lifecycle with its activation tokens and events, and password reset by email with its tokens, throttling, and events in `accounts`; the access-declaration rule, the sign-in, verification, sign-out, second-factor, enrolment-approval, account-creation, activation, and password-reset pages, and health endpoints in `web`; and correlation IDs, JSON log formatting, and the email boundary in `core`. The readiness endpoint checks the database only. Decisions are recorded in [adr/](adr/README.md). ADR-0001, 0002, 0005, 0007, 0009, 0010, 0012, 0013, 0014, 0015, 0016, 0017, and 0018 are Accepted; the others are Proposed and must not be built on. Where this document and an Accepted ADR differ, the ADR governs.
 
@@ -81,7 +81,7 @@ Twelve apps is the upper bound of what is justified. If two apps turn out to cha
 | `models.py` | Data and database constraints. No workflow logic. |
 | `services.py` | Operations that change state. The only public write interface. |
 | `selectors.py` | Read queries. The only public read interface. |
-| `tasks.py` | Thin Celery wrappers that call services |
+| `tasks.py` | Thin task wrappers that call services. None exists yet: the job system is chosen at the Phase 2 gate (ADR-0004, Proposed) |
 | `tests/` | Tests for the app |
 
 Rules:
@@ -100,7 +100,7 @@ Rules:
 | Fetch worker | **Isolated** | Outbound fetches of documents and dataset files only |
 | Parse worker | **Isolated** | Type detection and parsing of all untrusted files, documents and datasets alike |
 | PostgreSQL | Data | System of record, full-text search, vector search |
-| Redis | Data | Celery broker; short-lived request-throttling counters |
+| Redis | Data | Broker for the job system, if the one chosen under ADR-0004 uses Redis; short-lived request-throttling counters |
 | Artifact store | Data | Content-addressed raw files |
 
 All Python components run from the same image and codebase with different commands and different privileges.

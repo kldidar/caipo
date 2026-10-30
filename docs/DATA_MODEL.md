@@ -1,6 +1,6 @@
 # Data Model
 
-Status: Draft for owner and researcher review · Last updated: 2026-10-02
+Status: Draft for owner and researcher review · Last updated: 2026-10-23
 
 This is a conceptual domain model. Field lists name what must be captured; exact columns, types, and indexes are settled during implementation and reviewed with each migration. Decision record: [ADR-0005](adr/0005-evidence-and-provenance-model.md) (Accepted).
 

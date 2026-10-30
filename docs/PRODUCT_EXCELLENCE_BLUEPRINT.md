@@ -1,6 +1,6 @@
 # Product Excellence Blueprint
 
-Status: Proposal for owner and researcher review · Last updated: 2026-10-25
+Status: Proposal for owner and researcher review · Last updated: 2026-10-30
 
 This document proposes the product CAIPO should become: who it serves, what they can do with it, how it looks and behaves, how it earns trust, and in what order it should be built. **It is a proposal. It authorises no implementation, decides no blocker, accepts no ADR, and changes no requirement.** Where it recommends something that would change an existing document or decision, it says so and lists the change in the owner decision register (§9) instead of making it.
 
@@ -869,3 +869,17 @@ All open. None is assumed by any other section.
 | Open diagnostic findings | I1, I2, I5 (wait for ADR-0008), I3 (needs an ADR), I4 (deferred by ADR-0018), I6 (housekeeping) ([diagnostic report](reports/caipo-full-diagnostic-2026-10-20.md) §20.3) |
 
 This document changed no other file, decision, ADR status, or blocker.
+
+### 11.1 Recheck of 2026-10-30
+
+**[Fact]** The table above is the state of 2026-10-25 and is kept as written. Rechecked on 2026-10-30 against `origin/main` at `e90ea1c215e11a4ccf95cd725a5d60df548ba100` ("docs: clarify single-reader calibration, re-check interval, and machine translation in the pilot (#26)").
+
+Implemented and merged:
+
+| Item | State on 2026-10-30 |
+|---|---|
+| Registry entry page (diagnostic finding L4) | Fixed on 2026-10-24 in #20 (`188fbbb`), before this proposal was written; the table above did not record it. Only the institution named by `?change=` has its change form; every other institution is shown as stored, with a link that opens its form ([diagnostic report](reports/caipo-full-diagnostic-2026-10-20.md) §19.1, §20.3) |
+| Changes since the base commit | Five pull requests, all documentation: this proposal (#22), its link from the README (#23), and three changes to [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) (#24 to #26). No application code, migration, dependency, ADR, or CI workflow changed |
+| Other rows of the table | Unchanged: the architecture gate, the ADRs, the domain code, the pages, the styling, the prohibited-wording list, and the open diagnostic findings |
+
+Proposed and not implemented: everything this document recommends. Its recommendations (**[Rec]**) and the owner decisions of §9 remain open, and no ADR has been added after ADR-0019.

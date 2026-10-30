@@ -17,15 +17,15 @@ The toolchain is deliberately small. Versions are pinned in `pyproject.toml` and
 | Python and dependency management | `uv` | Lockfile committed |
 | Lint and format | `ruff` | Includes the security (`S`) rule set |
 | Type checking | `mypy` with `django-stubs` | Strict mode |
-| Tests | `pytest`, `pytest-django` | Coverage reported; no numeric target is a substitute for testing failure paths |
+| Tests | `pytest`, `pytest-django` | Coverage is not measured: no coverage tool is set up. No numeric target is a substitute for testing failure paths |
 | Module boundaries | `import-linter` | Enforces the app layering, and that `registry` uses `accounts` only through its services and selectors |
 | Dependency vulnerabilities | `pip-audit` | Run in CI through `uvx`, at a pinned version, against the lockfile |
 | Secret scanning | `gitleaks` | Run in CI from its container image, pinned by digest. Not yet a pre-commit hook. |
-| Container image scanning | `trivy` | CI, on built images |
-| Git hooks | `pre-commit` | Runs ruff and gitleaks locally |
+| Container image scanning | `trivy` | Planned, not set up. Would scan built images in CI; no image is built, and image build and scan wait for ADR-0008 |
+| Git hooks | `pre-commit` | Planned, not set up. Would run ruff and gitleaks locally; no git hook is installed |
 | CI | GitHub Actions | Approved by the project owner on 2026-10-02 as Phase 1 engineering tooling. Defined in `.github/workflows/ci.yml`. |
 
-**Installed and locked:** `uv`, `ruff`, `mypy`, `django-stubs`, `pytest`, `pytest-django`, and `import-linter`. **Run in CI without being installed in the project:** `pip-audit` and `gitleaks`. **Not yet set up:** `trivy` and `pre-commit`. Each is checked against the pinned Python version when added (blocker B4).
+**Installed and locked:** `uv`, `ruff`, `mypy`, `django-stubs`, `pytest`, `pytest-django`, and `import-linter`. **Run in CI without being installed in the project:** `pip-audit` and `gitleaks`. **Not yet set up:** `trivy`, `pre-commit`, and any coverage tool. Each is checked against the pinned Python version when added (blocker B4).
 
 ### Continuous integration
 
@@ -66,7 +66,16 @@ No task runner (`make`, `just`) is adopted. Commands are run through `uv run` an
 
 ### Bootstrap exception
 
-The repository starts empty, so the first commits cannot arrive by pull request. The foundation documents, and the minimal setup needed to make pull requests and CI possible (repository creation, CI configuration), may be committed directly to `main` by the project owner. This exception ends when CI is running. Each direct commit states in its message that it is a bootstrap commit. The first two commits, the foundation documents and the development environment, were made under this exception; their messages do not say so, and this note records it instead.
+The repository starts empty, so the first commits cannot arrive by pull request. The foundation documents, and the minimal setup needed to make pull requests and CI possible (repository creation, CI configuration), may be committed directly to `main` by the project owner. This exception ends when CI is running. Each direct commit states in its message that it is a bootstrap commit.
+
+#### History of direct commits to `main`
+
+This records what happened; the history itself is not rewritten. Checked on 2026-10-30 against `git log --first-parent main`, the CI run history, and the repository's ruleset.
+
+- Nine commits were made directly to `main`, from `9ea0e61` (2026-10-01) to `bd7b50a` (2026-10-03). None of their messages says that it is a bootstrap commit; this note records them instead.
+- Six came before CI was running: the foundation documents (`9ea0e61`), the development environment (`30e0374`), two documentation updates (`1280634`, `466baa3`), the Django application foundation (`6a92e8e`), and the CI workflow (`e8b7622`). CI first ran on `e8b7622`, on 2026-10-02. The application foundation is application code, which the exception does not name.
+- Three came after CI was running, and so outside the exception as written: the identity and authorization foundation (`88dcc0c`), the authentication core (`875c934`), and TOTP multi-factor authentication (`bd7b50a`). CI ran on each push and passed.
+- Every change since has reached `main` through a pull request, starting with #1, merged on 2026-10-03. The ruleset that protects `main`, created the same day after #1 was merged, requires a pull request and the four CI checks, and allows no bypass.
 
 ### Solo operation
 
@@ -90,7 +99,7 @@ A feature is not complete unless every applicable item holds:
 - Lint and format checks pass
 - Type checking passes
 - Import-layer check passes
-- Security checks pass (dependency audit, secret scan, and image scan when images change)
+- Security checks pass (dependency audit and secret scan; an image scan is added once images are built, under ADR-0008)
 - Database changes are reviewed (see below)
 - Documentation is updated
 - Error handling is addressed

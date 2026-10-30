@@ -1,6 +1,6 @@
 # Project Specification
 
-Status: Draft for owner review · Last updated: 2026-10-07
+Status: Draft for owner review · Last updated: 2026-10-30
 
 ## 1. Purpose
 
@@ -260,7 +260,7 @@ The service checks were run with a temporary environment file holding generated 
 - **Dependencies not yet locked:** the pgvector client and every document-parsing library.
 - **Tools not yet set up:** `pre-commit` and `trivy`.
 - **CI on GitHub.** The workflow's commands were run locally on 2026-10-02 in a fresh clone and passed, and the workflow file passes `actionlint` 1.7.12. A run on GitHub's own runners had not been observed when this was written.
-- **Secret scanning before a commit.** gitleaks 8.30.1 runs in CI over the committed history. Nothing scans a change before it is committed.
+- **Secret scanning before a commit.** Nothing scans a change before it is committed: no pre-commit hook is set up. What does run, checked on 2026-10-30: the CI job "Secret scan" runs gitleaks 8.30.1, from its container image pinned by digest, over every commit in the checkout, on every pull request against `main` and every push to `main`. It is one of the four status checks that the ruleset protecting `main` requires, with strict status checks, a pull request required, and no bypass, so a change reaches `main` only after the scan passes on its pull request.
 - **GPU access from inside containers** has not been tested.
 - **Local model feasibility** has not been assessed. A GPU with 12227 MiB is present and the WSL memory allocation is adjustable, so no hardware limitation is asserted. The production server is not yet specified. This is part of blocker B14.
 - **Mermaid diagrams** have not been rendered locally (no Node toolchain). Their syntax was checked by script only.
