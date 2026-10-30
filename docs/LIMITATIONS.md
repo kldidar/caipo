@@ -79,7 +79,7 @@ Classifying instruments, sectors, and objectives involves judgement. With few co
 
 ### 2.9 Review independence
 
-If the project has one researcher, claims are self-reviewed. This is labelled on each claim.
+The project has one researcher: on 2026-10-30 the project owner stated that they are the sole owner, operator, and researcher, with no second reader. Claims are therefore self-reviewed, and this is labelled on each claim. Where the protocol allows one reader, a blind re-check after a recorded interval replaces a second reader; it reduces some errors of a single reading but is not independent review, and agreement between readers cannot be measured.
 
 ## 3. Empirical working assumptions (all unverified)
 
@@ -136,6 +136,16 @@ Each item needs a source, a date, and a claim record before use.
 - External data providers revise their data. The project preserves the releases it imported but cannot guarantee a provider still serves them.
 - Documents under copyright may not be redistributable, so an external party may need to obtain them independently, using the recorded hashes to confirm they have the same file.
 - Content removed under the redaction procedure is no longer available for checking. Its former existence, hash, and the reason for removal remain on record.
+
+### 4.5 The demonstrator
+
+The software demonstrator built for the delivery sprint ([ADR-0020](adr/0020-demonstrator-track.md)) is not a research result.
+
+- Records classed **demonstration** are synthetic. They belong only to synthetic countries and say nothing about any real country.
+- Records classed **reference** are real public metadata and openly licensed indicator values. They are a small sample found by a bounded search, not a complete or verified seed list (B9), and an absent record does not show that a policy or value does not exist.
+- Legal and policy texts are registered as metadata only; their text is not held, so provisions cannot be checked against a stored text.
+- Whether a document is core AI policy or contextual, and which layer an indicator belongs to, are provisional working assignments, not the eligibility decisions or indicator selection the protocol requires (B22, B12).
+- Analysis runs are descriptive. They make no correlation, causal, or interpretive statement.
 
 ## 5. How limitations are surfaced
 
