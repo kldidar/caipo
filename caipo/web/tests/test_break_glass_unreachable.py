@@ -65,8 +65,9 @@ def test_no_route_is_a_break_glass_route() -> None:
     # are the registry's: its two pages and its eight changes to countries
     # and languages (ADR-0019 Increment 2), and its five changes to
     # institutions and their names (Increment 3). None has anything to do
-    # with a second factor.
-    assert len(routes) == 40
+    # with a second factor. One more is the home page, which only reads
+    # (Day 3 of the execution tracker).
+    assert len(routes) == 41
     for route in routes:
         described = f"{route.name} {route.pattern} {route.callback.__module__}"
         assert "break" not in described.lower()

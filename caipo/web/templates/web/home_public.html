@@ -1,0 +1,77 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Central Asia AI Policy Observatory" %}{% endblock %}
+{% block main_class %}{% endblock %}
+
+{% block content %}
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero__inner">
+      <p class="eyebrow">{% translate "Research platform" %}</p>
+      <h1 id="hero-title">{% translate "Evidence on AI policy and economic transformation in Central Asia" %}</h1>
+      <p class="lede">{% translate "CAIPO records public policy sources with their provenance, keeps the core AI policy corpus apart from broader contextual policy, and compares countries on economic indicators in three separate layers, with every gap in the data left visible." %}</p>
+      <div class="actions">
+        <a class="button" href="{% url 'login' %}">{% translate "Sign in to the workspace" %}</a>
+        <a class="button button--secondary" href="#principles">{% translate "How CAIPO treats evidence" %}</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="page">
+    <section class="section" aria-labelledby="study-title">
+      <div class="grid grid--2">
+        <div>
+          <p class="eyebrow">{% translate "The study" %}</p>
+          <h2 id="study-title" class="flush-top">{% translate "AI Policy and Economic Transformation in Central Asia" %}</h2>
+          <p>{% translate "A comparative analysis of Turkmenistan and Uzbekistan. The platform is designed so that further Central Asian countries can be added as data, without changing the software." %}</p>
+          <p class="muted">{% translate "CAIPO describes what sources say and what indicators measure. It does not claim that a policy caused an economic outcome." %}</p>
+        </div>
+        <div class="layers" aria-label="{% translate 'The three layers of economic transformation' %}">
+          <div class="layer">
+            <span class="layer__key" aria-hidden="true">A</span>
+            <div>
+              <h3>{% translate "Structural economic change" %}</h3>
+              <p>{% translate "The composition of output, employment, and trade." %}</p>
+            </div>
+          </div>
+          <div class="layer">
+            <span class="layer__key" aria-hidden="true">B</span>
+            <div>
+              <h3>{% translate "Digital transformation" %}</h3>
+              <p>{% translate "Adoption and spread of digital technologies. Digital adoption is not AI adoption." %}</p>
+            </div>
+          </div>
+          <div class="layer">
+            <span class="layer__key" aria-hidden="true">C</span>
+            <div>
+              <h3>{% translate "AI-specific outcomes" %}</h3>
+              <p>{% translate "Measured values specifically related to AI, only where reliable and comparable evidence exists." %}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="principles" aria-labelledby="principles-title">
+      <p class="eyebrow">{% translate "Principles" %}</p>
+      <h2 id="principles-title" class="flush-top">{% translate "How CAIPO treats evidence" %}</h2>
+      <div class="grid grid--3 pillars">
+        <article class="card pillar">
+          <span class="pillar__number" aria-hidden="true"></span>
+          <h3>{% translate "Traceable" %}</h3>
+          <p class="card__body">{% translate "Every source is recorded with its publisher, address, access date, and terms of use, so that any statement can be followed back to where it came from." %}</p>
+        </article>
+        <article class="card pillar">
+          <span class="pillar__number" aria-hidden="true"></span>
+          <h3>{% translate "Honest about gaps" %}</h3>
+          <p class="card__body">{% translate "Missing values stay missing. Coverage is shown for every country and layer, and the absence of a record is never read as proof that something does not exist." %}</p>
+        </article>
+        <article class="card pillar">
+          <span class="pillar__number" aria-hidden="true"></span>
+          <h3>{% translate "Reproducible" %}</h3>
+          <p class="card__body">{% translate "Analyses record their method, inputs, and code version, so that a result can be run again and checked." %}</p>
+        </article>
+      </div>
+    </section>
+  </div>
+{% endblock %}

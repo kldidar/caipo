@@ -1,0 +1,17 @@
+{% extends "web/base.html" %}
+{% comment %}
+  A page about signing in, activating an account, or resetting a password.
+  It shows the same thing whoever asks, signed in or not, so it carries no
+  navigation and no script but its own.
+{% endcomment %}
+{% block navigation_assets %}{% endblock %}
+{% block navigation %}{% endblock %}
+{% block main_class %}auth{% endblock %}
+{% block content %}
+  {% include "web/includes/auth_aside.html" %}
+  <div class="auth__main">
+    <div class="auth__card">
+      {% block card %}{% endblock %}
+    </div>
+  </div>
+{% endblock %}
