@@ -1,6 +1,6 @@
 # AI Architecture
 
-Status: Draft for owner review · Last updated: 2026-10-01
+Status: Draft for owner review · Last updated: 2026-10-02
 
 Design of the evidence-grounded assistant. Not implemented. Provider and model choices are open ([ADR-0006](adr/0006-ai-provider-abstraction.md), [ADR-0003](adr/0003-vector-search.md)). Entity and state names are those of [DATA_MODEL.md](DATA_MODEL.md).
 
