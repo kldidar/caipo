@@ -4,7 +4,10 @@
 {% block title %}{% translate "Accounts" %}{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Accounts" %}</h1>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Administration" %}</p>
+    <h1>{% translate "Accounts" %}</h1>
+  </header>
   {% if error %}
     <p role="alert">{{ error }}</p>
   {% elif created %}
@@ -13,7 +16,10 @@
     <p role="status">{% translate "The verification message was sent again. The earlier one no longer works." %}</p>
   {% endif %}
 
-  <h2>{% translate "Create an account" %}</h2>
+  <div class="grid grid--2">
+  <section class="panel" aria-labelledby="create-title">
+  <div class="panel__header"><h2 id="create-title">{% translate "Create an account" %}</h2></div>
+  <div class="panel__body">
   <p>{% translate "The person receives a message at this address with a link that works once. They confirm the address and choose their own password; you never set or see it. The account can do nothing until then. A Reviewer or Administrator account must also turn on two-step verification, with an Administrator's approval, before that role gives it anything." %}</p>
   <form method="post" action="{% url 'account-create' %}" novalidate>
     {% csrf_token %}
@@ -26,8 +32,12 @@
     {% endfor %}
     <button type="submit">{% translate "Create the account" %}</button>
   </form>
+  </div>
+  </section>
 
-  <h2>{% translate "Awaiting verification" %}</h2>
+  <section class="panel" aria-labelledby="pending-title">
+  <div class="panel__header"><h2 id="pending-title">{% translate "Awaiting verification" %}</h2></div>
+  <div class="panel__body">
   {% for account in pending %}
     <p>
       {{ account.email }}:
@@ -39,10 +49,13 @@
     </p>
     <form method="post" action="{% url 'account-send-verification' account.user_id %}">
       {% csrf_token %}
-      <button type="submit">{% translate "Send the message again" %}</button>
+      <button type="submit" class="button--secondary button--small">{% translate "Send the message again" %}</button>
     </form>
   {% empty %}
     <p>{% translate "No account awaits verification." %}</p>
   {% endfor %}
-  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+  </div>
+  </section>
+  </div>
+  <p class="actions"><a class="button button--ghost" href="{% url 'login' %}">← {% translate "Back" %}</a></p>
 {% endblock %}

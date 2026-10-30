@@ -234,6 +234,8 @@ Decided in [ADR-0007](adr/0007-authentication.md) and [ADR-0010](adr/0010-web-in
 
 All three are served by the same Django application through server-rendered templates, with HTMX for interactive components. There is no separate frontend application and no API at launch. The interface launches in English with Django's internationalisation infrastructure enabled.
 
+The look of every page comes from one design system in `caipo/web/static/web/caipo.css`: colour, type, and spacing tokens with a dark variant, and components for the shell, cards, tables, forms, notices, and badges. It has no build step. Its fonts (Inter, Source Serif 4, JetBrains Mono, under the SIL Open Font License) are served by the application, so no page makes a request to a third party. The navigation is built by the context processor `caipo.web.navigation`, which shows an item only to an account whose permissions the item's view declares; pages about signing in, activation, and password reset carry no navigation, so they look the same to anyone who asks. A small script collapses the navigation behind a menu button on narrow screens, and without it the navigation is shown in full.
+
 ### 5.4 Privilege
 
 - Each component **that connects to the database** has its own role with the minimum rights it needs. The fetch worker and parse worker do not connect.

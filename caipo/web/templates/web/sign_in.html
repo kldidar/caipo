@@ -1,58 +1,78 @@
 {% extends "web/base.html" %}
 {% load i18n %}
 
-{% block title %}{% translate "Sign in" %}{% endblock %}
+{% block title %}{% if user.is_authenticated %}{% translate "Signed in" %}{% else %}{% translate "Sign in" %}{% endif %}{% endblock %}
+
+{% block main_class %}{% if user.is_authenticated %}page page--medium{% else %}auth{% endif %}{% endblock %}
 
 {% block content %}
   {% if user.is_authenticated %}
-    <h1>{% translate "Signed in" %}</h1>
-    <p>{% blocktranslate with email=user.email %}You are signed in as {{ email }}.{% endblocktranslate %}</p>
+    <header class="page-header">
+      <p class="eyebrow">{% translate "Your account" %}</p>
+      <h1>{% translate "Signed in" %}</h1>
+      <p class="lede">{% blocktranslate with email=user.email %}You are signed in as {{ email }}.{% endblocktranslate %}</p>
+    </header>
     {% if last_recovery %}
       <p role="status">{% blocktranslate with recovered_at=last_recovery|date:"c" %}The two-step verification of your account was revoked through recovery at {{ recovered_at }}. If you did not ask for that, tell an Administrator yourself, and not through this site.{% endblocktranslate %} <a href="{% url 'second-factor-history' %}">{% translate "Recovery history" %}</a></p>
     {% endif %}
-    {% if can_manage_second_factor %}
-      <p><a href="{% url 'second-factor' %}">{% translate "Two-step verification" %}</a></p>
-    {% endif %}
-    {% if can_create_accounts %}
-      <p><a href="{% url 'accounts' %}">{% translate "Accounts" %}</a></p>
-    {% endif %}
-    {% if can_approve_enrollments %}
-      <p><a href="{% url 'second-factor-requests' %}">{% translate "Two-step verification requests" %}</a></p>
-    {% endif %}
-    {% if can_see_recoveries %}
-      <p><a href="{% url 'recoveries' %}">{% translate "Recoveries" %}</a></p>
-    {% endif %}
-    {% if can_read_registry %}
-      <p><a href="{% url 'registry' %}">{% translate "Registry" %}</a></p>
-    {% endif %}
-    {% if can_enter_registry %}
-      <p><a href="{% url 'registry-entry' %}">{% translate "Registry entry" %}</a></p>
-    {% endif %}
-    <form method="post" action="{% url 'logout' %}">
+    <nav class="panel" aria-label="{% translate 'What your account can open' %}">
+      <div class="panel__header"><h2>{% translate "What your account can open" %}</h2></div>
+      <div class="panel__body">
+        <ul class="link-list">
+          <li><a href="{% url 'home' %}">{% translate "Overview" %}</a></li>
+          {% if can_manage_second_factor %}
+            <li><a href="{% url 'second-factor' %}">{% translate "Two-step verification" %}</a></li>
+          {% endif %}
+          {% if can_create_accounts %}
+            <li><a href="{% url 'accounts' %}">{% translate "Accounts" %}</a></li>
+          {% endif %}
+          {% if can_approve_enrollments %}
+            <li><a href="{% url 'second-factor-requests' %}">{% translate "Two-step verification requests" %}</a></li>
+          {% endif %}
+          {% if can_see_recoveries %}
+            <li><a href="{% url 'recoveries' %}">{% translate "Recoveries" %}</a></li>
+          {% endif %}
+          {% if can_read_registry %}
+            <li><a href="{% url 'registry' %}">{% translate "Registry" %}</a></li>
+          {% endif %}
+          {% if can_enter_registry %}
+            <li><a href="{% url 'registry-entry' %}">{% translate "Registry entry" %}</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </nav>
+    <form method="post" action="{% url 'logout' %}" class="actions">
       {% csrf_token %}
-      <button type="submit">{% translate "Sign out" %}</button>
+      <button type="submit" class="button--secondary">{% translate "Sign out" %}</button>
     </form>
   {% else %}
-    <h1>{% translate "Sign in" %}</h1>
-    {% if error %}
-      <p role="alert">{{ error }}</p>
-    {% elif activated %}
-      <p role="status">{% translate "Your account is active. Sign in with your email address and the password you chose." %}</p>
-    {% elif password_reset %}
-      <p role="status">{% translate "Your password has been changed. Sign in with your email address and the new password." %}</p>
-    {% endif %}
-    <form method="post" action="{% url 'login' %}" novalidate>
-      {% csrf_token %}
-      {% if next %}<input type="hidden" name="{{ next_field }}" value="{{ next }}">{% endif %}
-      {% for field in form %}
-        <p>
-          {{ field.label_tag }}
-          {{ field }}
-          {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-        </p>
-      {% endfor %}
-      <button type="submit">{% translate "Sign in" %}</button>
-    </form>
-    <p><a href="{% url 'password-reset' %}">{% translate "Forgotten your password?" %}</a></p>
+    {% include "web/includes/auth_aside.html" %}
+    <div class="auth__main">
+      <div class="auth__card">
+        <p class="eyebrow">{% translate "Research workspace" %}</p>
+        <h1>{% translate "Sign in" %}</h1>
+        {% if error %}
+          <p role="alert">{{ error }}</p>
+        {% elif activated %}
+          <p role="status">{% translate "Your account is active. Sign in with your email address and the password you chose." %}</p>
+        {% elif password_reset %}
+          <p role="status">{% translate "Your password has been changed. Sign in with your email address and the new password." %}</p>
+        {% endif %}
+        <form method="post" action="{% url 'login' %}" novalidate>
+          {% csrf_token %}
+          {% if next %}<input type="hidden" name="{{ next_field }}" value="{{ next }}">{% endif %}
+          {% for field in form %}
+            <p>
+              {{ field.label_tag }}
+              {{ field }}
+              {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+            </p>
+          {% endfor %}
+          <button type="submit">{% translate "Sign in" %}</button>
+        </form>
+        <p class="auth__links"><a href="{% url 'password-reset' %}">{% translate "Forgotten your password?" %}</a></p>
+        <p class="muted"><small>{% translate "Accounts are created by an Administrator. There is no public registration." %}</small></p>
+      </div>
+    </div>
   {% endif %}
 {% endblock %}

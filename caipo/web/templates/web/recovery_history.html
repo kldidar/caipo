@@ -4,14 +4,18 @@
 {% block title %}{% if every_account %}{% translate "Recoveries" %}{% else %}{% translate "Recovery history" %}{% endif %}{% endblock %}
 
 {% block content %}
+  <header class="page-header">
   {% if every_account %}
+    <p class="eyebrow">{% translate "Administration" %}</p>
     <h1>{% translate "Recoveries" %}</h1>
     <p>{% translate "Every request to recover a lost authenticator application, every decision on one, and every recovery performed at the server, for every account. The latest is first. This page changes nothing." %}</p>
   {% else %}
+    <p class="eyebrow">{% translate "Your account" %}</p>
     <h1>{% translate "Recovery history" %}</h1>
     <p>{% translate "What happened to the two-step verification of your account through recovery. The latest is first. If something here was not asked for by you, tell an Administrator yourself, and not through this site." %}</p>
   {% endif %}
-  <ul>
+  </header>
+  <ul class="timeline">
     {% for entry in history.entries %}
       <li>
         <time datetime="{{ entry.occurred_at|date:"c" }}">{{ entry.occurred_at|date:"c" }}</time>:
@@ -25,10 +29,10 @@
     {% endfor %}
   </ul>
   {% if history.has_previous %}
-    <p><a href="?{{ page_parameter }}={{ history.number|add:"-1" }}" rel="prev">{% translate "Later" %}</a></p>
+    <p class="pager"><a href="?{{ page_parameter }}={{ history.number|add:"-1" }}" rel="prev" class="button button--secondary button--small">{% translate "Later" %}</a></p>
   {% endif %}
   {% if history.has_next %}
-    <p><a href="?{{ page_parameter }}={{ history.number|add:"1" }}" rel="next">{% translate "Earlier" %}</a></p>
+    <p class="pager"><a href="?{{ page_parameter }}={{ history.number|add:"1" }}" rel="next" class="button button--secondary button--small">{% translate "Earlier" %}</a></p>
   {% endif %}
-  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+  <p class="actions"><a class="button button--ghost" href="{% url 'login' %}">← {% translate "Back" %}</a></p>
 {% endblock %}

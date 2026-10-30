@@ -4,14 +4,17 @@
 {% block title %}{% translate "Registry entry" %}{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Registry entry" %}</h1>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Registry" %}</p>
+    <h1>{% translate "Registry entry" %}</h1>
+    <p class="lede">{% translate "Nothing here can be deleted, and every change is recorded with the account that made it." %}</p>
+  </header>
   {% if error %}
     <p role="alert">{{ error }}</p>
   {% elif saved %}
     <p role="status">{% translate "The change was saved and recorded." %}</p>
   {% endif %}
 
-  <p>{% translate "Nothing here can be deleted, and every change is recorded with the account that made it." %}</p>
 
   {% if may_manage_reference %}
     <p>{% translate "A code cannot be changed once it is saved. A country or a language that should no longer be referred to is deactivated." %}</p>
@@ -32,6 +35,7 @@
 
     <h2>{% translate "Countries" %}</h2>
     {% for country in countries %}
+      <article class="card entity">
       <h3>{{ country.alpha2 }} · {{ country.alpha3 }} · {{ country.name_en }}{% if not country.is_active %} · {% translate "Deactivated" %}{% endif %}</h3>
       <form method="post" action="{% url 'registry-country-rename' country.public_id %}{{ selection }}" novalidate>
         {% csrf_token %}
@@ -39,19 +43,20 @@
           <label for="country-name-{{ country.public_id }}">{{ name_form.name_en.label }}</label>
           <input type="text" name="{{ name_form.name_en.html_name }}" id="country-name-{{ country.public_id }}" value="{{ country.name_en }}" autocomplete="off" required>
         </p>
-        <button type="submit">{% translate "Change the name" %}</button>
+        <button type="submit" class="button--secondary">{% translate "Change the name" %}</button>
       </form>
       {% if country.is_active %}
         <form method="post" action="{% url 'registry-country-deactivate' country.public_id %}{{ selection }}">
           {% csrf_token %}
-          <button type="submit">{% translate "Deactivate" %}</button>
+          <button type="submit" class="button--secondary">{% translate "Deactivate" %}</button>
         </form>
       {% else %}
         <form method="post" action="{% url 'registry-country-reactivate' country.public_id %}{{ selection }}">
           {% csrf_token %}
-          <button type="submit">{% translate "Reactivate" %}</button>
+          <button type="submit" class="button--secondary">{% translate "Reactivate" %}</button>
         </form>
       {% endif %}
+      </article>
     {% empty %}
       <p>{% translate "No country has been entered." %}</p>
     {% endfor %}
@@ -72,6 +77,7 @@
 
     <h2>{% translate "Languages" %}</h2>
     {% for language in languages %}
+      <article class="card entity">
       <h3>{{ language.code }} · {{ language.script_code }} · {{ language.name_en }}{% if not language.is_active %} · {% translate "Deactivated" %}{% endif %}</h3>
       <form method="post" action="{% url 'registry-language-rename' language.public_id %}{{ selection }}" novalidate>
         {% csrf_token %}
@@ -79,19 +85,20 @@
           <label for="language-name-{{ language.public_id }}">{{ name_form.name_en.label }}</label>
           <input type="text" name="{{ name_form.name_en.html_name }}" id="language-name-{{ language.public_id }}" value="{{ language.name_en }}" autocomplete="off" required>
         </p>
-        <button type="submit">{% translate "Change the name" %}</button>
+        <button type="submit" class="button--secondary">{% translate "Change the name" %}</button>
       </form>
       {% if language.is_active %}
         <form method="post" action="{% url 'registry-language-deactivate' language.public_id %}{{ selection }}">
           {% csrf_token %}
-          <button type="submit">{% translate "Deactivate" %}</button>
+          <button type="submit" class="button--secondary">{% translate "Deactivate" %}</button>
         </form>
       {% else %}
         <form method="post" action="{% url 'registry-language-reactivate' language.public_id %}{{ selection }}">
           {% csrf_token %}
-          <button type="submit">{% translate "Reactivate" %}</button>
+          <button type="submit" class="button--secondary">{% translate "Reactivate" %}</button>
         </form>
       {% endif %}
+      </article>
     {% empty %}
       <p>{% translate "No language has been entered." %}</p>
     {% endfor %}
@@ -124,6 +131,7 @@
   <p>{% translate "A name cannot be changed once it is saved, except for its dates. A name entered by mistake is marked as entered in error, which cannot be undone; the right name is added first." %}</p>
   <p>{% translate "The kind, country, parent, successor, and dates of one institution at a time are changed: open its form with the link below its name." %}</p>
   {% for section in institutions %}
+    <div class="card entity">
     <section id="institution-{{ section.institution.public_id }}">
     <h3>{{ section.institution.label }}</h3>
     {% if section.change_form %}
@@ -156,13 +164,13 @@
             {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
           </p>
         {% endfor %}
-        <button type="submit">{% translate "Change the dates" %}</button>
+        <button type="submit" class="button--secondary">{% translate "Change the dates" %}</button>
       </form>
       {% if section.names|length > 1 %}
         <form method="post" action="{% url 'registry-institution-name-mark' entry.name.public_id %}{{ selection }}" novalidate>
           {% csrf_token %}
           <p><label>{{ entry.mark_form.confirmed }} {{ entry.mark_form.confirmed.label }}</label></p>
-          <button type="submit">{% translate "Mark as entered in error" %}</button>
+          <button type="submit" class="button--danger">{% translate "Mark as entered in error" %}</button>
         </form>
       {% endif %}
     {% endfor %}
@@ -188,10 +196,10 @@
       <button type="submit">{% translate "Add the name" %}</button>
     </form>
     </section>
+    </div>
   {% empty %}
     <p>{% translate "No institution has been entered." %}</p>
   {% endfor %}
 
-  <p><a href="{% url 'registry' %}">{% translate "Registry" %}</a></p>
-  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+  <p class="actions"><a class="button button--secondary" href="{% url 'registry' %}">{% translate "Registry" %}</a> <a class="button button--ghost" href="{% url 'login' %}">← {% translate "Back" %}</a></p>
 {% endblock %}

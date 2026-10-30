@@ -4,12 +4,16 @@
 {% block title %}{% translate "Two-step verification requests" %}{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Two-step verification requests" %}</h1>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Administration" %}</p>
+    <h1>{% translate "Two-step verification requests" %}</h1>
+  </header>
   {% if error %}
     <p role="alert">{{ error }}</p>
   {% endif %}
   <p>{% translate "A Reviewer or Administrator account cannot turn on two-step verification by itself. Before you approve a request, ask the person, by a means other than this site, for the request number they were shown. Approve only the request with that number: a request with another number was made by someone else who knows the password." %}</p>
   {% for item in requests %}
+    <article class="card entity">
     <h2>{% blocktranslate with number=item.number %}Request {{ number }}{% endblocktranslate %}</h2>
     <p>{% blocktranslate with email=item.email requested_at=item.requested_at|date:"c" %}Account {{ email }}, requested at {{ requested_at }}.{% endblocktranslate %}</p>
     <form method="post" action="{% url 'second-factor-request-approve' item.number %}" novalidate>
@@ -19,10 +23,11 @@
     </form>
     <form method="post" action="{% url 'second-factor-request-reject' item.number %}">
       {% csrf_token %}
-      <button type="submit">{% translate "Reject" %}</button>
+      <button type="submit" class="button--secondary">{% translate "Reject" %}</button>
     </form>
+    </article>
   {% empty %}
-    <p>{% translate "No request awaits a decision." %}</p>
+    <div class="empty"><p class="empty__title">{% translate "No request awaits a decision." %}</p></div>
   {% endfor %}
-  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+  <p class="actions"><a class="button button--ghost" href="{% url 'login' %}">← {% translate "Back" %}</a></p>
 {% endblock %}

@@ -1,0 +1,76 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Overview" %}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Workspace" %}</p>
+    <h1>{% translate "Overview" %}</h1>
+    <p class="lede">{% translate "What this workspace holds, and where to go next." %}</p>
+  </header>
+
+  {% if registry %}
+    <section class="section" aria-labelledby="registry-title">
+      <div class="section-header">
+        <h2 id="registry-title">{% translate "Registry" %}</h2>
+        <a href="{% url 'registry' %}">{% translate "Open the registry" %}</a>
+      </div>
+      <div class="grid grid--4">
+        <div class="card stat">
+          <span class="stat__value">{{ registry.countries }}</span>
+          <span class="stat__label">{% translate "Countries" %}</span>
+        </div>
+        <div class="card stat">
+          <span class="stat__value">{{ registry.languages }}</span>
+          <span class="stat__label">{% translate "Languages and scripts" %}</span>
+        </div>
+        <div class="card stat">
+          <span class="stat__value">{{ registry.institutions }}</span>
+          <span class="stat__label">{% translate "Institutions" %}</span>
+        </div>
+        <div class="card stat">
+          <span class="stat__value">{{ registry.names }}</span>
+          <span class="stat__label">{% translate "Institution names" %}</span>
+          <span class="stat__note">{% translate "Names over time, in each language" %}</span>
+        </div>
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="section" aria-labelledby="shortcuts-title">
+    <h2 id="shortcuts-title">{% translate "Go to" %}</h2>
+    <div class="grid grid--3">
+      {% if registry %}
+        <a class="card card--link" href="{% url 'registry' %}">
+          <span class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg></span>
+          <span class="card__title">{% translate "Registry" %}</span>
+          <span class="card__body">{% translate "Countries, languages and scripts, and institutions with their names over time." %}</span>
+          <span class="card__arrow">{% translate "Browse" %} →</span>
+        </a>
+      {% endif %}
+      {% if may_enter_registry %}
+        <a class="card card--link" href="{% url 'registry-entry' %}">
+          <span class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+          <span class="card__title">{% translate "Registry entry" %}</span>
+          <span class="card__body">{% translate "Record an institution, add a name, or correct one entered in error. Every change is audited." %}</span>
+          <span class="card__arrow">{% translate "Enter" %} →</span>
+        </a>
+      {% endif %}
+      {% if may_administer %}
+        <a class="card card--link" href="{% url 'accounts' %}">
+          <span class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M17 11h5M19.5 8.5v5"/></svg></span>
+          <span class="card__title">{% translate "Accounts" %}</span>
+          <span class="card__body">{% translate "Create accounts with one role. There is no public self-registration." %}</span>
+          <span class="card__arrow">{% translate "Manage" %} →</span>
+        </a>
+      {% endif %}
+      <a class="card card--link" href="{% url 'login' %}">
+        <span class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="card__title">{% translate "Your account" %}</span>
+        <span class="card__body">{% translate "Who you are signed in as, and the security of your sign-in." %}</span>
+        <span class="card__arrow">{% translate "Open" %} →</span>
+      </a>
+    </div>
+  </section>
+{% endblock %}

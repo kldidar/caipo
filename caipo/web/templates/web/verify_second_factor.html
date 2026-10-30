@@ -1,9 +1,9 @@
-{% extends "web/base.html" %}
+{% extends "web/focused.html" %}
 {% load i18n %}
 
 {% block title %}{% translate "Two-step verification" %}{% endblock %}
 
-{% block content %}
+{% block card %}
   <h1>{% translate "Two-step verification" %}</h1>
   <p>{% translate "Enter the current code from your authenticator application." %}</p>
   {% if error %}
@@ -22,12 +22,12 @@
   </form>
   <form method="post" action="{% url 'logout' %}">
     {% csrf_token %}
-    <button type="submit">{% translate "Cancel and start again" %}</button>
+    <button type="submit" class="button--secondary">{% translate "Cancel and start again" %}</button>
   </form>
   <h2>{% translate "Lost your authenticator?" %}</h2>
   <p>{% translate "If you can no longer use the device, you can ask for it to be recovered. You will be given a request number to pass to an Administrator. Asking ends this sign-in." %}</p>
   <form method="post" action="{% url 'login-recover' %}">
     {% csrf_token %}
-    <button type="submit">{% translate "Request recovery" %}</button>
+    <button type="submit" class="button--secondary">{% translate "Request recovery" %}</button>
   </form>
 {% endblock %}

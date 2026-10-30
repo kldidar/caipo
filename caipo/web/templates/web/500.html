@@ -3,7 +3,12 @@
 
 {% block title %}{% translate "Something went wrong" %}{% endblock %}
 
+{% block main_class %}status-page{% endblock %}
+
 {% block content %}
+  <div class="page--medium">
+  <p class="status-page__code" aria-hidden="true">500</p>
   <h1>{% translate "Something went wrong" %}</h1>
   <p>{% translate "The request could not be completed. Nothing about it is shown here. If it keeps happening, tell an Administrator when it happened." %}</p>
+  </div>
 {% endblock %}

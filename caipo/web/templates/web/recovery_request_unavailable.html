@@ -4,7 +4,10 @@
 {% block title %}{% translate "Recovery requests" %}{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Recovery requests" %}</h1>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Administration" %}</p>
+    <h1>{% translate "Recovery requests" %}</h1>
+  </header>
   <p role="alert">{{ error }}</p>
   <p><a href="{% url 'recovery-requests' %}">{% translate "Back to the recovery requests" %}</a></p>
 {% endblock %}
