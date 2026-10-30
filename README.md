@@ -31,6 +31,7 @@ The architecture gate is **READY for Phase 1** (project skeleton, authentication
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What this research and system cannot support |
 | [docs/adr/](docs/adr/README.md) | Architecture decision records |
 | [docs/PRODUCT_EXCELLENCE_BLUEPRINT.md](docs/PRODUCT_EXCELLENCE_BLUEPRINT.md) | Product proposal: user journeys, design direction, roadmap, and open owner decisions. Not authorisation to implement: the architecture gate and the binding documents govern |
+| [docs/EXECUTION_TRACKER.md](docs/EXECUTION_TRACKER.md) | Progress of the master roadmap: work done, execution Days, pending owner decisions. A progress record only: the documents above govern |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Local development environment |
 | [docs/RIGHTS_AND_LICENSING.md](docs/RIGHTS_AND_LICENSING.md) | Software license, and the separate rights in documents and data |
 | [CLAUDE.md](CLAUDE.md) | Binding rules for AI implementation agents |

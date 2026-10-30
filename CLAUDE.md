@@ -152,6 +152,18 @@ Report what was run and what the result was. If a check could not be run, say so
 - Adding boilerplate, scaffolding, or abstractions "for later"
 - Committing, pushing, or changing shared configuration without being asked
 
+## Execution workflow
+
+Progress on the approved master roadmap is recorded in `docs/EXECUTION_TRACKER.md`, the only progress tracker. It records progress and decides nothing: where it disagrees with the documents named in this file, they govern and the tracker is corrected.
+
+- **Days.** Work is done in execution Days, counted from Day 1 on 2026-10-30. A Day has one coherent deliverable and written acceptance criteria. Its number is fixed when it starts; planned Days are numbered provisionally and renumbered when the queue changes. Work done before 2026-10-30 has no Day number.
+- **Completion.** A Day is DONE only when its acceptance criteria hold and its pull request's merge is verified on `origin/main`, with the four required checks passing on the merge commit. Until then it is AWAITING OWNER MERGE, or BLOCKED with the prerequisite named. A completed Day is recorded in the tracker by the next pull request that changes the tracker.
+- **Commands.** "Continue" or "Продолжай": fetch `origin/main`; inspect the working tree, open pull requests, and the tracker; verify any merge (its SHA and the CI on it); update progress; select the next planned Day whose prerequisites hold; show its checklist; start it. "Start Day N": run that Day only if its prerequisites and approvals hold, and otherwise say which are missing. "Status": a short progress summary, changing nothing. "Show plan": the remaining roadmap and the Day queue.
+- **Standing instruction.** Within a Day whose prerequisites and approvals hold, the project owner's instruction of 2026-10-30 asks for the whole cycle: investigate, implement, test, commit, push a branch, open a pull request, read its existing CI and the actual pytest summary, and update the tracker. That is the request the last item of "Prohibited shortcuts" requires for commits and pushes. It never covers merging, starting a CI run when one already exists for the head, or changing shared configuration (CI workflows, the ruleset, repository settings, this file), each of which needs the owner's explicit approval for that change.
+- **Isolation.** Each Day works in a separate git worktree on its own branch, so the owner's checkout is untouched. One implementation pull request is active at a time, unless independent work has a stated reason to run in parallel; work that depends on an unmerged pull request waits for its merge.
+- **Owner decisions.** A decision this file reserves, or that a document lists as unresolved, is recorded in the tracker with why it matters, a recommended default, alternatives, and consequences. Only decisions that block the next Day are asked; answered decisions are not asked again; independent authorised work continues meanwhile.
+- **Report.** Each Day ends with the exact head SHA, the changed files, the result of each of the four required checks, and the pytest summary read from the job log.
+
 ## `.claude/` structure
 
 The planned structure and the rule for adding automation are in `.claude/README.md`. No agent, skill, or hook is added until a recurring need has been demonstrated.
