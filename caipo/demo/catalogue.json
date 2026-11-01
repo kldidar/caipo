@@ -1224,5 +1224,74 @@
       "11.0",
       "estimated"
     ]
+  ],
+  "analyses": [
+    {
+      "title": "Structural change in Turkmenistan and Uzbekistan, 2010–2024",
+      "data_class": "reference",
+      "layer": "A",
+      "start_year": 2010,
+      "end_year": 2024
+    },
+    {
+      "title": "Digital adoption in Turkmenistan and Uzbekistan, 2015–2024",
+      "data_class": "reference",
+      "layer": "B",
+      "start_year": 2015,
+      "end_year": 2024
+    },
+    {
+      "title": "DEMO AI-specific outcomes in Northland and Southland, 2019–2025",
+      "data_class": "demonstration",
+      "layer": "C",
+      "start_year": 2019,
+      "end_year": 2025
+    }
+  ],
+  "searches": [
+    {
+      "data_class": "reference",
+      "title": "Formally adopted AI-focused instrument of Turkmenistan",
+      "layer": "core",
+      "countries": "TM",
+      "searched_on": "2026-10-30",
+      "queries": "English: \"Turkmenistan artificial intelligence concept resolution President 2025 official\"",
+      "source_universe": "General web search results, including official Turkmen government websites and international organisations' pages that the search returned.",
+      "inclusion_criteria": "A public instrument of Turkmenistan, formally adopted, that focuses primarily on artificial intelligence (RESEARCH_PROTOCOL.md §3.1, working model).",
+      "exclusion_criteria": "Drafts, strategies in preparation, announcements, and broader digital-economy instruments without an identified AI focus.",
+      "sources_examined": "oilgas.gov.tm, news item of 2 February 2026: reports a presidential resolution approving the State Program for the Development of the Digital Economy for 2026–2028. A broader digital-economy instrument; recorded in the contextual registry; its text was not examined.\nundp.org, press release on support to Turkmenistan's National Artificial Intelligence Strategy: reports a validation workshop in May 2026 for a strategy still being finalised. Not adopted; excluded.",
+      "method": "One web search in English on 2026-10-30 and the reading of two of its results on 2026-10-30 and 2026-11-02, performed by Claude Code under the project owner's delegation (ADR-0020 point 10). Turkmen- and Russian-language sources and the official legal gazette were not searched.",
+      "outcome": "no_qualifying_source_found",
+      "summary": "No formally adopted AI-focused instrument of Turkmenistan was found in the sources examined. One source reports that a national AI strategy is being prepared; preparation is not adoption. This finding is bounded by one English-language web search and two pages read, and is not evidence that no such instrument exists."
+    },
+    {
+      "data_class": "reference",
+      "title": "Formally adopted AI-focused instrument of Uzbekistan",
+      "layer": "core",
+      "countries": "UZ",
+      "searched_on": "2026-10-30",
+      "queries": "English: \"Uzbekistan presidential resolution artificial intelligence strategy 2030 lex.uz\"",
+      "source_universe": "General web search results, and the national database of legislation lex.uz.",
+      "inclusion_criteria": "A public instrument of Uzbekistan, formally adopted, that focuses primarily on artificial intelligence (RESEARCH_PROTOCOL.md §3.1, working model).",
+      "exclusion_criteria": "Drafts, announcements, and news reports where the official record could be read instead.",
+      "sources_examined": "lex.uz, record 7159258: Resolution of the President RP-358 of 14.10.2024 approving the Strategy for the Development of Artificial Intelligence Technologies until 2030; in force from 17.10.2024. Metadata read; no text kept.\ngov.uz, Ministry of Digital Technologies news item announcing the decree. Secondary; the official record was used instead.",
+      "method": "One web search in English on 2026-10-30, and the reading of the lex.uz record's metadata on 2026-11-02, performed by Claude Code under the project owner's delegation (ADR-0020 point 10). Earlier or other AI-related acts were not searched for.",
+      "outcome": "qualifying_sources_found",
+      "summary": "One formally adopted AI-focused instrument was found and registered by its metadata: resolution RP-358 of 14.10.2024. Its assignment to the core corpus is provisional. The search was not exhaustive: other AI-related acts of Uzbekistan may exist."
+    },
+    {
+      "data_class": "demonstration",
+      "title": "DEMO AI-related provisions in Southland's education law",
+      "layer": "core",
+      "countries": "XB",
+      "searched_on": "2026-11-02",
+      "queries": "DEMO: \"artificial intelligence\" in the DEMO Southland Official Gazette",
+      "source_universe": "DEMO Southland Official Gazette (synthetic).",
+      "inclusion_criteria": "Synthetic example of an inclusion rule.",
+      "sources_examined": "DEMO Law on Education: one ambiguous mention of \"intelligent systems\"; escalated rather than decided.",
+      "method": "Synthetic example of a recorded method.",
+      "outcome": "inconclusive",
+      "summary": "Synthetic example of an inconclusive outcome: an ambiguous mention was escalated and not decided."
+    }
   ]
 }

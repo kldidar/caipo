@@ -1,0 +1,36 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Searches" %}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Research workspace" %}</p>
+    <h1>{% translate "Searches" %}</h1>
+    <p class="lede">{% translate "Recorded searches for sources: what was searched, where, how, and what was found. This is how the absence of a source is recorded — as the outcome of a search bounded by what was examined, never as a document." %}</p>
+  </header>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  <div class="detail-grid">
+    <div class="detail-grid__main">
+      {% for run in runs %}
+        <a class="card card--link" href="{% url 'search' run.public_id %}">
+          <span class="policy-card__meta">{% include "web/includes/data_class.html" with data_class=run.data_class %} <span>{{ run.layer_label }}</span> <span>{{ run.countries }}</span> <span>{{ run.searched_on|date:"Y-m-d" }}</span></span>
+          <span class="card__title">{{ run.title }}</span>
+          <span class="policy-card__facts"><span class="badge {% if run.outcome == 'no_qualifying_source_found' %}badge--warn{% elif run.outcome == 'qualifying_sources_found' %}badge--ok{% endif %}">{{ run.outcome_label }}</span></span>
+        </a>
+      {% empty %}
+        <div class="empty"><p class="empty__title">{% translate "No search has been recorded yet." %}</p></div>
+      {% endfor %}
+    </div>
+    {% if form %}
+      <aside class="detail-grid__side">
+        <details class="disclosure"{% if form.errors %} open{% endif %}>
+          <summary>{% translate "Record a search" %}</summary>
+          <div class="disclosure__body">
+            <form method="post" action="{% url 'searches' %}" novalidate>{% csrf_token %}{% include "web/includes/fields.html" %}<button type="submit">{% translate "Record the search" %}</button></form>
+          </div>
+        </details>
+      </aside>
+    {% endif %}
+  </div>
+{% endblock %}

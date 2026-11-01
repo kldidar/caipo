@@ -1,0 +1,58 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Analysis" %}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Research workspace" %}</p>
+    <h1>{% translate "Analysis" %}</h1>
+    <p class="lede">{% translate "Reproducible, descriptive analyses of stored indicator values. Each run records its method, its parameters, every value it used with the release it came from, and a fingerprint of its inputs and its result, so that it can be run again and checked." %}</p>
+  </header>
+  <p class="notice notice--warning"><span><strong>{% translate "Descriptive only." %}</strong> {% translate "Runs report values and their change between two years. They state no correlation, no cause, and no interpretation." %}</span></p>
+
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+
+  <div class="detail-grid">
+    <div class="detail-grid__main">
+      {% if runs %}
+        <div class="policy-list">
+          {% for run in runs %}
+            <a class="card card--link" href="{% url 'analysis' run.public_id %}">
+              <span class="policy-card__meta">{% include "web/includes/data_class.html" with data_class=run.data_class %} <span>{{ run.method_label }}, v{{ run.method_version }}</span> <span>{{ run.parameters.start_year }}–{{ run.parameters.end_year }}</span></span>
+              <span class="card__title">{{ run.title }}</span>
+              <span class="policy-card__facts"><span>{% blocktranslate count n=run.result|length %}{{ n }} result row{% plural %}{{ n }} result rows{% endblocktranslate %}</span><span class="mono">{{ run.result_fingerprint|slice:":12" }}…</span><span>{{ run.created_at|date:"Y-m-d H:i" }}</span></span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty"><p class="empty__title">{% translate "No analysis has been run yet." %}</p></div>
+      {% endif %}
+    </div>
+    {% if form %}
+      <aside class="detail-grid__side">
+        <section class="panel" aria-labelledby="run-title">
+          <div class="panel__header"><h2 id="run-title">{% translate "Run an analysis" %}</h2></div>
+          <div class="panel__body">
+            <nav class="tabs" aria-label="{% translate 'Data class' %}">
+              <a href="?class=reference" {% if data_class == "reference" %}aria-current="page"{% endif %}>{% translate "Reference" %}</a>
+              <a href="?class=demonstration" {% if data_class == "demonstration" %}aria-current="page"{% endif %}>{% translate "Demonstration" %}</a>
+            </nav>
+            <form method="post" action="{% url 'analyses' %}" novalidate>
+              {% csrf_token %}
+              <input type="hidden" name="data_class" value="{{ data_class }}">
+              {% for field in form %}{% if field.name != "data_class" %}
+                <div class="field{% if field.errors %} field--error{% endif %}">
+                  {{ field.label_tag }}{{ field }}
+                  {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+                </div>
+              {% endif %}{% endfor %}
+              <button type="submit">{% translate "Run and record" %}</button>
+            </form>
+            <p class="muted"><small>{% translate "A run uses values of one data class only. Reference and demonstration data are never mixed." %}</small></p>
+          </div>
+        </section>
+      </aside>
+    {% endif %}
+  </div>
+{% endblock %}

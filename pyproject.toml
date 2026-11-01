@@ -89,6 +89,7 @@ layers = [
     "config",
     "demo",
     "web",
+    "research",
     # Siblings of layer 5: neither imports the other.
     "policies | indicators",
     "sources",
@@ -128,7 +129,7 @@ ignore_imports = [
 [[tool.importlinter.contracts]]
 name = "Demonstrator boundary (ADR-0020 point 2): sources and policies use lower apps only through their services and selectors"
 type = "forbidden"
-source_modules = ["caipo.sources", "caipo.policies", "caipo.indicators"]
+source_modules = ["caipo.sources", "caipo.policies", "caipo.indicators", "caipo.research"]
 forbidden_modules = [
     "caipo.accounts.apps",
     "caipo.accounts.authentication",

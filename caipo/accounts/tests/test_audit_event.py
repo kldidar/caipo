@@ -44,6 +44,8 @@ TARGET_TYPES = [
     "policies.policy_provision",
     "indicators.indicator",
     "indicators.dataset_release",
+    "research.analysis_run",
+    "research.search_run",
 ]
 FIELDS = [
     "name_en",
