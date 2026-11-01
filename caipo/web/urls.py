@@ -7,12 +7,14 @@ from caipo.web import (
     health,
     home,
     password_reset,
+    policies,
     recovery,
     recovery_history,
     recovery_requests,
     registry,
     second_factor,
     second_factor_requests,
+    sources,
 )
 
 urlpatterns = [
@@ -135,4 +137,27 @@ urlpatterns = [
         registry.mark_institution_name_entered_in_error,
         name="registry-institution-name-mark",
     ),
+    path("sources/", sources.browse, name="sources"),
+    path("sources/new/", sources.create, name="source-create"),
+    path("sources/<uuid:public_id>/", sources.detail, name="source"),
+    path(
+        "sources/<uuid:public_id>/documents/new/",
+        sources.create_document,
+        name="source-document-create",
+    ),
+    path("policies/", policies.browse, name="policies"),
+    path("policies/new/", policies.create, name="policy-create"),
+    path("policies/<uuid:public_id>/", policies.detail, name="policy"),
+    path(
+        "policies/<uuid:public_id>/documents/link/",
+        policies.link_document,
+        name="policy-document-link",
+    ),
+    path("policies/<uuid:public_id>/events/add/", policies.record_event, name="policy-event-add"),
+    path(
+        "policies/<uuid:public_id>/provisions/add/",
+        policies.add_provision,
+        name="policy-provision-add",
+    ),
+    path("policies/<uuid:public_id>/assignment/", policies.reassign, name="policy-reassign"),
 ]

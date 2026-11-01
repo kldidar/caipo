@@ -30,7 +30,16 @@ __all__ = [
     "InstitutionNameKind",
     "InstitutionReference",
     "LanguageEntry",
+    "CountryReference",
+    "InstitutionKey",
+    "LanguageReference",
     "countries",
+    "country_choices",
+    "country_reference",
+    "institution_choices",
+    "institution_key",
+    "language_choices",
+    "language_reference",
     "institutions",
     "languages",
 ]
@@ -238,3 +247,98 @@ def institutions(context: AuthenticationContext | None) -> list[InstitutionEntry
         )
         for row in rows
     ]
+
+
+# --- References for the services of higher apps -------------------------------------------------
+#
+# A service of a higher app (ADR-0020) names a registry record by its public
+# identifier and needs to know that it exists, whether it is active, and what
+# its key is, to point at it. These read one row and check no permission: the
+# calling service has checked its own first, and a reference reveals nothing
+# that its caller was not given.
+
+
+@dataclass(frozen=True)
+class CountryReference:
+    pk: int
+    public_id: uuid.UUID
+    alpha2: str
+    name_en: str
+    is_active: bool
+
+
+@dataclass(frozen=True)
+class LanguageReference:
+    pk: int
+    public_id: uuid.UUID
+    is_active: bool
+
+
+@dataclass(frozen=True)
+class InstitutionKey:
+    pk: int
+    public_id: uuid.UUID
+
+
+def country_reference(public_id: uuid.UUID) -> CountryReference | None:
+    """Return the country with this public identifier, or None. Reads only."""
+    row = (
+        Country.objects.filter(public_id=public_id)
+        .values_list("pk", "public_id", "alpha2", "name_en", "is_active")
+        .first()
+    )
+    return CountryReference(*row) if row else None
+
+
+def language_reference(public_id: uuid.UUID) -> LanguageReference | None:
+    """Return the language with this public identifier, or None. Reads only."""
+    row = (
+        Language.objects.filter(public_id=public_id)
+        .values_list("pk", "public_id", "is_active")
+        .first()
+    )
+    return LanguageReference(*row) if row else None
+
+
+def institution_key(public_id: uuid.UUID) -> InstitutionKey | None:
+    """Return the key of the institution with this public identifier, or None. Reads only."""
+    row = Institution.objects.filter(public_id=public_id).values_list("pk", "public_id").first()
+    return InstitutionKey(*row) if row else None
+
+
+def country_choices() -> list[CountryReference]:
+    """Return every active country, ordered by English name, for a form of a higher app."""
+    return [
+        CountryReference(*row)
+        for row in Country.objects.filter(is_active=True)
+        .order_by("name_en")
+        .values_list("pk", "public_id", "alpha2", "name_en", "is_active")
+    ]
+
+
+def language_choices() -> list[tuple[uuid.UUID, str]]:
+    """Return every active language as (public identifier, label), for a form of a higher app."""
+    return [
+        (public_id, f"{name_en} ({code}-{script})")
+        for public_id, name_en, code, script in Language.objects.filter(is_active=True)
+        .order_by("name_en", "script_code")
+        .values_list("public_id", "name_en", "code", "script_code")
+    ]
+
+
+def institution_choices() -> list[tuple[uuid.UUID, str]]:
+    """Return every institution as (public identifier, first name), for a form of a higher app."""
+    first_names: dict[int, str] = {}
+    for institution_id, text in (
+        InstitutionName.objects.filter(entered_in_error=False)
+        .order_by("id")
+        .values_list("institution_id", "text")
+    ):
+        first_names.setdefault(institution_id, text)
+    return sorted(
+        (
+            (public_id, first_names.get(pk, str(public_id)))
+            for pk, public_id in Institution.objects.values_list("pk", "public_id")
+        ),
+        key=lambda item: item[1],
+    )

@@ -1,0 +1,73 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ detail.source.name }}{% endblock %}
+
+{% block content %}
+  {% with source=detail.source %}
+  {% translate "Not recorded" as not_recorded %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'sources' %}">{% translate "Sources" %}</a></nav>
+  <header class="page-header">
+    <p class="policy-card__meta"><span class="code-chip" title="{{ source.tier_label }}">{% translate "Tier" %} {{ source.source_tier }}</span> {% include "web/includes/data_class.html" with data_class=source.data_class %}</p>
+    <div class="section-header">
+      <h1 class="flush-bottom">{{ source.name }}</h1>
+      {% if may_contribute %}<a class="button" href="{% url 'source-document-create' source.public_id %}">{% translate "Register a document" %}</a>{% endif %}
+    </div>
+    <p class="lede">{{ source.publisher }}</p>
+  </header>
+  {% if source.data_class == "demonstration" %}{% include "web/includes/demo_notice.html" %}{% endif %}
+
+  <div class="grid grid--2">
+    <section class="panel" aria-labelledby="provenance-title">
+      <div class="panel__header"><h2 id="provenance-title">{% translate "Provenance and terms" %}</h2></div>
+      <div class="panel__body">
+        <dl>
+          <dt>{% translate "Address" %}</dt><dd><a href="{{ source.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ source.url }}</a></dd>
+          <dt>{% translate "Accessed on" %}</dt><dd>{{ source.accessed_on|date:"Y-m-d" }}</dd>
+          <dt>{% translate "Country" %}</dt><dd>{{ source.country_name|default:_("Several or none") }}</dd>
+          <dt>{% translate "Source tier" %}</dt><dd>{{ source.tier_label }}</dd>
+          <dt>{% translate "Licence or terms" %}</dt><dd>{{ source.licence|default:not_recorded }} {% if source.licence_verified %}<span class="badge badge--ok">{% translate "Verified" %}</span>{% else %}<span class="badge badge--warn">{% translate "Not verified" %}</span>{% endif %}</dd>
+          <dt>{% translate "Permitted use" %}</dt><dd>{{ source.permitted_use_label }}</dd>
+        </dl>
+      </div>
+    </section>
+    <section class="panel" aria-labelledby="coverage-title">
+      <div class="panel__header"><h2 id="coverage-title">{% translate "Coverage and limitations" %}</h2></div>
+      <div class="panel__body">
+        <h3 class="flush-top">{% translate "Coverage" %}</h3>
+        <p>{{ source.coverage|default:not_recorded|linebreaksbr }}</p>
+        <h3>{% translate "Known limitations" %}</h3>
+        <p>{{ source.limitations|default:not_recorded|linebreaksbr }}</p>
+      </div>
+    </section>
+  </div>
+
+  <section class="section" aria-labelledby="documents-title">
+    <h2 id="documents-title">{% translate "Documents registered from this source" %}</h2>
+    {% if detail.documents %}
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th scope="col">{% translate "Title" %}</th>
+          <th scope="col">{% translate "Form" %}</th>
+          <th scope="col">{% translate "Identifier" %}</th>
+          <th scope="col">{% translate "Date of issue" %}</th>
+          <th scope="col">{% translate "Country" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for document in detail.documents %}
+            <tr>
+              <th scope="row">{{ document.display_title }}{% if document.title_en and document.title_en != document.title %}<br><small class="muted">{{ document.title }}</small>{% endif %}{% if document.official_url %}<br><small><a href="{{ document.official_url }}" rel="noopener noreferrer nofollow" target="_blank">{% translate "Official address" %}</a></small>{% endif %}</th>
+              <td>{{ document.type_label }}</td>
+              <td>{{ document.official_identifier|default:not_recorded }}</td>
+              <td>{{ document.date_of_issue|date:"Y-m-d"|default:not_recorded }}</td>
+              <td><span class="code-chip">{{ document.country_alpha2 }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+    {% else %}
+      <div class="empty"><p class="empty__title">{% translate "No document is registered from this source yet." %}</p></div>
+    {% endif %}
+  </section>
+  {% endwith %}
+{% endblock %}

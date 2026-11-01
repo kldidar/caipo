@@ -1,0 +1,20 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Add a policy" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'policies' %}">{% translate "Policies" %}</a></nav>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Policies" %}</p>
+    <h1>{% translate "Add a policy" %}</h1>
+    <p class="lede">{% translate "Demonstration data belongs only to synthetic countries; reference data only to real ones. The assignment to the core corpus or the contextual registry is provisional and needs a reason." %}</p>
+  </header>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{% url 'policy-create' %}" class="card" novalidate>
+    {% csrf_token %}
+    {% include "web/includes/fields.html" %}
+    <div class="actions"><button type="submit">{% translate "Add the policy" %}</button> <a class="button button--ghost" href="{% url 'policies' %}">{% translate "Cancel" %}</a></div>
+  </form>
+{% endblock %}

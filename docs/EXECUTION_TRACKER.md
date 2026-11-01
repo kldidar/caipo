@@ -1,6 +1,6 @@
 # Execution Tracker
 
-Status: Progress record, updated with every execution Day · Last updated: 2026-10-30
+Status: Progress record, updated with every execution Day · Last updated: 2026-11-02
 
 This file records progress: what is done, what is waiting, and what comes next. **It decides nothing.** Requirements, phases, gates, blocker status, research rules, and architecture decisions are set by [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md), the Accepted ADRs, [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md), and the other documents listed in [CLAUDE.md](../CLAUDE.md). Where this file disagrees with them, they govern and this file is corrected. The rules for working with it are in [CLAUDE.md](../CLAUDE.md), "Execution workflow". It is the only progress tracker.
 
@@ -19,25 +19,27 @@ Sprint days are calendar milestones. Execution Days (§5) keep their own sequent
 
 | Sprint day | Date | Milestone | Execution Days |
 |---|---|---|---|
-| 1 | Fri 2026-10-30 | Mandate and plan recorded; design system and application shell | 2, 3 |
-| 2 | Sat 2026-10-31 | Core data architecture: sources and policies, permissions, audit, seed data | 4 |
-| 3 | Sun 2026-11-01 | Policy research experience: core corpus and contextual registry, provenance | 5 |
-| 4 | Mon 2026-11-02 | Indicators in three layers, country comparison, charts, coverage | 6 |
-| 5 | Tue 2026-11-03 | Research workspace: reproducible analysis runs, search runs, exports | 7 |
-| 6 | Wed 2026-11-04 | Polish, accessibility, responsive layout, journey tests, defects | 8 |
-| 7 | Thu 2026-11-05 to Fri 2026-11-06 | Clean-setup verification, README with screenshots, demonstration script, final limitations | 9 |
+| 1 | Fri 2026-10-30 | Mandate and plan recorded; design system and application shell | 2, 3 (DONE) |
+| 2, 3 | Sat 2026-10-31, Sun 2026-11-01 | No execution Day ran: the work waited for the merges of #29 and #30, made on 2026-11-01 | — |
+| 4 | Mon 2026-11-02 | Sources and policies, backend and pages together: core corpus and contextual registry, provenance, seed data | 4 |
+| 5 | Tue 2026-11-03 | Indicators in three layers, country comparison, charts, coverage | 5 |
+| 6 | Wed 2026-11-04 | Research workspace: reproducible analysis runs, search runs, exports | 6 |
+| 7 | Thu 2026-11-05 | Polish, accessibility, responsive layout, journey tests, defects | 7 |
+| — | Fri 2026-11-06 | Clean-setup verification, README with screenshots, demonstration script, final limitations | 8 |
+
+**Re-plan of 2026-11-02.** Two calendar days passed without a merge, so the plan was compressed: the backend and the pages of sources and policies are one Day (former Days 4 and 5), and every later Day moves up by one. The delivery Day runs on the deadline day itself, so it has no buffer; each Day's pull request may be stacked on the one before it.
 
 Fri 2026-11-06 is the buffer for review, CI, and merges. A Day whose pull request is not merged by its sprint day does not stop the next one: during the sprint, the next Day's branch may be based on the open pull request (ADR-0020 point 17).
 
 ## 1. Verified repository state
 
-Verified on 2026-10-30.
+Verified on 2026-11-02.
 
 | Item | Value | How verified |
 |---|---|---|
-| `origin/main` | `ac32fc80b5de276191ccc5080a9cbac811442c61`, the merge of #28 (Day 1) | `git fetch`; `gh pr view 28` |
-| CI on `ac32fc8` | Run 41084731032 (push): Code quality, Django checks and tests, Dependency audit, Secret scan all passed; `4494 passed in 512.76s` | `gh run view`; job log |
-| Pull requests | 28 merged (#1 to #28), none closed without merging. Open: only the one that changes this file (Day 2) | `gh pr list` |
+| `origin/main` | `5ba91c8`, the merge of #30 (Day 3), after `7904e36`, the merge of #29 (Day 2) | `git fetch`; `gh pr list` |
+| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s` | `gh run view`; job logs |
+| Pull requests | 30 merged (#1 to #30), none closed without merging. Open: only the one that changes this file (Day 4) | `gh pr list` |
 | Protection of `main` | Ruleset "Protect main": pull request required, the four checks required with strict status checks, no bypass | GitHub API, 2026-10-30 |
 | Phase and gate | Phase 1. Gate READY for Phase 1, NOT READY for Phase 2 and later. Unchanged by ADR-0020 | [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 (authoritative) |
 | CI time headroom | The test job took 480 s to 699 s in the runs from 2026-10-25 to 2026-10-30, with 4,494 tests. Its timeout is 900 s. The sprint adds tests, so this is a risk (Q-13) | Job start and end times of those runs |
@@ -69,10 +71,10 @@ Counted from the packages in §4. No percentage is estimated.
 |---|---|
 | Master-roadmap packages | 56 (57 listed, of which G1 is REMOVED) |
 | Sprint packages (S1 to S8) | 8 |
-| DONE | 3 (A1, H1, H6) |
-| AWAITING OWNER MERGE | 1 (S1) |
-| Sprint packages NOT STARTED or BLOCKED on another sprint package | 7 (S2 to S8) |
-| Master-roadmap packages NOT STARTED, nothing preventing them | 3 (E1, E2, G4, all within sprint packages) |
+| DONE | 6 (A1, H1, H6, S1, S2, E1) |
+| IN PROGRESS | 2 (S3 and S4, together in Day 4) |
+| Sprint packages NOT STARTED or BLOCKED on another sprint package | 4 (S5 to S8) |
+| Master-roadmap packages NOT STARTED, nothing preventing them | 2 (E2, G4, within sprint packages) |
 | Master-roadmap packages PARTIAL | 1 (A3) |
 | Master-roadmap packages BLOCKED | 46 |
 | DEFERRED | 3 (D6, G6, G7) |
@@ -86,14 +88,14 @@ The owner's mandates of 2026-10-30 add these packages. Each is built under [ADR-
 
 | ID | Package | Class | Status | Day |
 |---|---|---|---|---|
-| S1 | Record the mandate, the sprint plan, ADR-0020, and the single-operator facts | MUST | AWAITING OWNER MERGE | 2 |
-| S2 | Design system and application shell: tokens, typography, navigation, signed-in home, every existing page restyled; accessibility target (G4, provisional) | MUST | NOT STARTED | 3 |
-| S3 | Sources and policies backend: Source, Document (metadata only), Policy, AI-related provisions, formal events, corpus assignment; permissions, services, selectors, audit; seed command | MUST | BLOCKED: S1 merged (ADR-0020) | 4 |
-| S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | BLOCKED: S3 | 5 |
-| S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | BLOCKED: S1 | 6 |
-| S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | BLOCKED: S3, S5 | 7 |
-| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | BLOCKED: S2 to S6 | 8 |
-| S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | BLOCKED: S7 | 9 |
+| S1 | Record the mandate, the sprint plan, ADR-0020, and the single-operator facts | MUST | **DONE** (#29, `7904e36`) | 2 |
+| S2 | Design system and application shell: tokens, typography, navigation, signed-in home, every existing page restyled; accessibility target (G4, provisional) | MUST | **DONE** (#30, `5ba91c8`) | 3 |
+| S3 | Sources and policies backend: Source, Document (metadata only), Policy, AI-related provisions, formal events, corpus assignment; permissions, services, selectors, audit; seed command | MUST | IN PROGRESS | 4 |
+| S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | IN PROGRESS (merged into Day 4) | 4 |
+| S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | NOT STARTED | 5 |
+| S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | BLOCKED: S3, S5 | 6 |
+| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | BLOCKED: S3 to S6 | 7 |
+| S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | BLOCKED: S7 | 8 |
 
 ### 4.2 Master roadmap
 
@@ -155,7 +157,7 @@ All research work; the owner does it as the researcher. None is needed for the d
 
 | ID | Package | Class | Status | Waits for | Executor |
 |---|---|---|---|---|---|
-| E1 | Design foundation on the existing pages (P-13) | MUST, as S2 | NOT STARTED | — (P-13 answered, §9) | Day |
+| E1 | Design foundation on the existing pages (P-13) | MUST, as S2 | **DONE** (#30) | — | Day |
 | E2 | Browser checks of the existing pages (diagnostic §12, items 1 to 7) | MUST, within S7 | NOT STARTED | Claude Code checks what it can in a local browser; checks that need the owner's authenticator are listed for the owner | Day, Owner |
 | E3 | Interface text style guide (P-14) | POST | BLOCKED | A3, B11 | Day |
 | E4 | Journeys J1 to J9, workspace and public pages | MUST for the workspace journeys of S3 to S6; POST for the public site | BLOCKED: S3 to S6 | The public site needs P-2 and B7 | Day |
@@ -221,58 +223,44 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | Day | Objective | Packages | Started | Status | Pull request |
 |---|---|---|---|---|---|
 | 1 | Reconcile the project state; establish this tracker and the workflow rules | H6 | 2026-10-30 | **DONE**: merged as `ac32fc8`; CI run 41084731032 passed all four checks; `4494 passed` | #28 |
-| 2 | Record the delivery mandate, the sprint plan, and ADR-0020 | S1 | 2026-10-30 | AWAITING OWNER MERGE | The pull request that changes this file |
+| 2 | Record the delivery mandate, the sprint plan, and ADR-0020 | S1 | 2026-10-30 | **DONE**: merged as `7904e36`; CI run 41352450005 passed all four checks; `4494 passed` | #29 |
+| 3 | Design system, application shell, home page | S2, E1 | 2026-10-30 | **DONE**: merged as `5ba91c8`; CI run 41353530141 passed all four checks; `4511 passed` | #30 |
+| 4 | Sources and policies: backend, pages, seed data | S3, S4 | 2026-11-02 | IN PROGRESS | The pull request that changes this file |
 
 ### Planned Days
 
-**Renumbering on 2026-10-30.** The Days planned in #28 as Days 2 to 11 waited for owner decisions that the sprint does not need. They leave the numbered queue and are kept, unnumbered, as the post-sprint queue below. The sprint Days take numbers 3 to 9.
+**Renumbering on 2026-10-30.** The Days planned in #28 as Days 2 to 11 left the numbered queue and are kept, unnumbered, as the post-sprint queue below. **Renumbering on 2026-11-02.** Former Days 4 and 5 are one Day (4); later Days move up by one (§0).
 
 | Day | Sprint day | Objective | Packages | Ready when |
 |---|---|---|---|---|
-| 3 | 1 | Design system and application shell on every existing page, signed-in home | S2, E1, G4 (target) | Now. Phase 1 work; does not depend on Day 2 |
-| 4 | 2 | Sources and policies backend with seed data | S3 | Day 2 merged |
-| 5 | 3 | Policy research pages; reference metadata for the study countries | S4 | Day 4's pull request open (stacked) or merged |
-| 6 | 4 | Indicators, three layers, comparison and coverage | S5, F4 | Day 2 merged |
-| 7 | 5 | Analysis runs, search runs, exports | S6, F2 | Days 4 and 6 open or merged |
-| 8 | 6 | Polish, accessibility, responsive layout, journey tests, defects | S7, E2, G4 | Days 3 to 7 open or merged |
-| 9 | 7 | Professor-ready delivery | S8, J1 (demonstrator) | Day 8 open or merged |
+| 5 | 5 | Indicators, three layers, comparison and coverage | S5, F4 | Day 4's pull request open (stacked) or merged |
+| 6 | 6 | Analysis runs, search runs, exports | S6, F2 | Day 5 open or merged |
+| 7 | 7 | Polish, accessibility, responsive layout, journey tests, defects | S7, E2, G4 | Day 6 open or merged |
+| 8 | Deadline day | Professor-ready delivery | S8, J1 (demonstrator) | Day 7 open or merged |
 
 **Post-sprint queue (unnumbered).** Recording the research governance decisions (A2, when Q-2 to Q-5, Q-7, Q-8 are answered); the job-system and isolation spike (C1, Q-9); the Blueprint revision (H5); the ADR-0004 and ADR-0011 decisions (C2); the Phase 1 exit and account-administration pages (A5, D0, Q-11); status consolidation and the self-review practice (H2 to H4, Q-12); CI reliability (G2, G3, Q-13); the ADR for registry name sources (C4); then the research-grade phases behind their gates.
 
 ## 6. Checklists
 
-### Day 2: record the delivery mandate, the sprint plan, and ADR-0020
+### Day 4: sources and policies, backend and pages
 
-- [x] Verify #28's merge on `origin/main` and its CI
-- [x] Write ADR-0020 and add it to the indexes
-- [x] Reclassify the roadmap: sprint packages S1 to S8; MUST, SHOULD, POST for every package; no requirement deleted, no blocker closed
-- [x] Record the single-operator facts (Q-1, Q-6) in the protocol, LIMITATIONS, and this file
-- [x] Update CLAUDE.md "Current phase" and "Execution workflow" for the sprint, as the owner instructed
-- [x] Quality checks; complete diff review
-- [ ] Pull request; CI on the exact head; the owner merges
+- [x] `sources` and `policies` in their layers, with the data class on every record, database checks, delete-refusing triggers, and append-only policy events
+- [x] Services that require `RESEARCH_CONTRIBUTE`, validate, write, and audit in one transaction; selectors that require `WORKSPACE_READ`; formal status derived, never stored
+- [x] Pages: policies with the core corpus and the contextual registry on separate tabs, filters, coverage by country; policy page with derived status, events, provisions, provenance, and forms; sources and their documents; creation forms
+- [x] Development-only `seed_demo`: demonstration data of two synthetic countries, and verified reference metadata for Uzbekistan and Turkmenistan
+- [x] Tests: services, permissions, data-class rules, database rules, pages, seed command
+- [x] Visual check at desktop and phone width
+- [ ] Full suite; complete diff review; pull request; exact-head CI
 
-Acceptance: no gate, blocker status, research question, or date is changed; every package keeps its status and prerequisites; the four required checks pass on the exact head.
+Acceptance: no demonstration record can belong to a real country or a reference record to a synthetic one; no text of a reference document can be stored; no policy status is stored; every change is audited; all checks pass on the exact head.
 
-### Day 3: design system and application shell
-
-- [ ] Design tokens and a base stylesheet as static files; self-hosted fonts with their licence, or a system font stack
-- [ ] Base template: header, primary navigation by permission, skip link, landmarks, footer
-- [ ] Signed-in home page that shows what the account can reach
-- [ ] Every existing page restyled: sign-in, second factor, account administration, recovery, registry browse and entry, errors
-- [ ] Accessible names for repeated controls; visible focus; contrast checked
-- [ ] Tests: template and access tests, route count and access declarations extended
-- [ ] Visual check in a local browser at phone, tablet, and desktop widths
-- [ ] Quality checks; complete diff review; pull request; exact-head CI
-
-Acceptance: no new Python dependency; no JavaScript build step; no third-party network request from a page; all existing tests pass, extended only where they state exact route counts or markup the restyle changes.
-
-Days 4 to 9 get full checklists when they start; their deliverables are in §4.1.
+Days 5 to 8 get full checklists when they start; their deliverables are in §4.1.
 
 ## 7. Active and pending pull requests
 
 | Pull request | Day | Head | Status |
 |---|---|---|---|
-| The pull request that changes this file | 2 | Reported when it is opened | Awaiting CI, then the owner's merge |
+| The pull request that changes this file | 4 | Reported when it is opened | Awaiting CI, then the owner's merge |
 
 ## 8. Blockers and dependencies
 
@@ -297,6 +285,8 @@ Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 
 | 2026-10-30 | Q-6: there is one reader and no second reader. Where the protocol allows one reader, the blind re-check is used, its interval recorded before the first reading, and the limitation stated. No record says an independent second review occurred | Owner (mandate) | Same |
 | 2026-10-30 | P-13 (part of Q-10): build the design foundation now, as a distinctive, premium interface | Owner (mandate) | This file; S2 |
 | 2026-10-30 | The demonstrator track and the delivery sprint, deadline 2026-11-06 23:59 Asia/Tashkent | Owner (mandate) | [ADR-0020](adr/0020-demonstrator-track.md); §0 |
+| 2026-11-02 | **Provisional**, for the demonstrator only: `seed_demo` grants its two accounts their roles through a seeding account that cannot sign in, and writes countries and languages directly, because no verified Administrator exists in a fresh development database. Development only (`DEBUG`) | Claude Code, under the owner's delegation | `caipo/demo`; [DEVELOPMENT.md](DEVELOPMENT.md) |
+| 2026-11-02 | **Provisional**: the reasons the demonstrator's services give for a refusal are shown in English and are not yet marked for translation; the page around them is | Claude Code, under the owner's delegation | This file; to be closed in Day 7 or after the sprint |
 | 2026-10-30 | P-1 (part of Q-10), **provisional**: WCAG 2.2 level AA as the accessibility target of the demonstrator's pages, checked in S2 and S7 | Claude Code, under the owner's delegation to choose a reasonable default and record it as provisional | This file. The owner may replace it |
 
 ## 10. Decisions awaiting the owner
@@ -320,6 +310,6 @@ Recommended defaults are recommendations, not decisions. Only Q-13 can affect th
 
 ## 11. Next executable Day
 
-- **Day 2** is awaiting the owner's merge.
-- **Day 3** (design system and application shell) starts now, in parallel: it is Phase 1 interface work on existing pages and does not depend on Day 2.
-- **Days 4 and 6** start when Day 2 is merged.
+- **Day 4** (sources and policies) is in progress; its pull request is the one that changes this file.
+- **Day 5** (indicators) starts as soon as Day 4's pull request is open, stacked on it.
+- **Q-13** (CI timeout headroom) is still open and is the one decision that can affect the sprint: the test job took 642 s of its 900 s on `5ba91c8`.

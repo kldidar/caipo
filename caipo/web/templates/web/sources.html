@@ -1,0 +1,50 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Sources" %}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Workspace" %}</p>
+    <div class="section-header">
+      <h1 class="flush-bottom">{% translate "Sources" %}</h1>
+      {% if may_contribute %}<a class="button" href="{% url 'source-create' %}">{% translate "Register a source" %}</a>{% endif %}
+    </div>
+    <p class="lede">{% translate "The publishing channels documents and data come from, each with its publisher, address, access date, terms of use, and what those terms allow. Legal and policy texts are registered by their metadata only." %}</p>
+  </header>
+
+  <nav class="tabs" aria-label="{% translate 'Data class' %}">
+    <a href="?" {% if not data_class %}aria-current="page"{% endif %}>{% translate "All sources" %}</a>
+    {% for value, label in data_classes %}<a href="?class={{ value }}" {% if value == data_class %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+  </nav>
+
+  {% if sources %}
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th scope="col">{% translate "Source" %}</th>
+        <th scope="col">{% translate "Tier" %}</th>
+        <th scope="col">{% translate "Data" %}</th>
+        <th scope="col">{% translate "Terms" %}</th>
+        <th scope="col">{% translate "Permitted use" %}</th>
+        <th scope="col" class="num">{% translate "Documents" %}</th>
+        <th scope="col">{% translate "Accessed" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for source in sources %}
+          <tr>
+            <th scope="row"><a href="{% url 'source' source.public_id %}">{{ source.name }}</a><br><small class="muted">{{ source.publisher }}{% if source.country_alpha2 %} · {{ source.country_alpha2 }}{% endif %}</small></th>
+            <td><span class="code-chip" title="{{ source.tier_label }}">{{ source.source_tier }}</span></td>
+            <td>{% include "web/includes/data_class.html" with data_class=source.data_class %}</td>
+            <td>{% if source.licence_verified %}<span class="badge badge--ok">{% translate "Verified" %}</span>{% else %}<span class="badge badge--warn">{% translate "Not verified" %}</span>{% endif %}</td>
+            <td><small>{{ source.permitted_use_label }}</small></td>
+            <td class="num">{{ source.document_count }}</td>
+            <td><time datetime="{{ source.accessed_on|date:'Y-m-d' }}">{{ source.accessed_on|date:"Y-m-d" }}</time></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="muted"><small>{% translate "A source tier describes a source's relationship to what it reports. It is a neutral category, not a rating of quality." %}</small></p>
+  {% else %}
+    <div class="empty"><p class="empty__title">{% translate "No source is registered here yet." %}</p></div>
+  {% endif %}
+{% endblock %}

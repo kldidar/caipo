@@ -1,0 +1,182 @@
+"""Fill a development database with the demonstration environment (ADR-0020 point 16).
+
+Development only: refuses to run unless DEBUG is on. Creates two accounts to
+sign in with (a Researcher and a Reader), the countries and languages of the
+catalogue, and then every institution, source, document, policy, event, and
+provision of `caipo.demo.catalogue` through the services that write them,
+with their audit events.
+
+The accounts' roles are granted by a seeding account that cannot sign in, as
+the test fixtures do: there is no Administrator yet to grant them. Countries
+and languages are written directly, because only an Administrator verified
+with a second factor may create them through the registry's services. Both
+shortcuts exist only here, and only for a development database.
+
+Running it again changes nothing: it stops if the demonstration is present.
+"""
+
+import secrets
+import uuid
+from typing import Any
+
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
+
+from caipo.accounts.models import RoleEvent, RoleEventType, User
+from caipo.accounts.selectors import Role, authentication_context
+from caipo.demo.catalogue import Catalogue, load
+from caipo.policies import services as policies_services
+from caipo.registry.models import Country, Language
+from caipo.registry.services import NewName, create_institution
+from caipo.sources import services as sources_services
+from caipo.sources.models import Source
+
+SEED_EMAIL = "demo.seed@caipo.test"
+RESEARCHER_EMAIL = "demo.researcher@caipo.test"
+READER_EMAIL = "demo.reader@caipo.test"
+
+
+class Command(BaseCommand):
+    help = "Create the demonstration environment in a development database (DEBUG only)."
+
+    def add_arguments(self, parser: Any) -> None:
+        parser.add_argument(
+            "--password",
+            help="Password for both demonstration accounts. A random one is printed if omitted.",
+        )
+
+    def handle(self, *args: Any, **options: Any) -> None:
+        if not settings.DEBUG:
+            raise CommandError("seed_demo runs only with DEBUG on, in a development database.")
+        catalogue = load()
+        if Source.objects.filter(name=catalogue.sources[0].name).exists():
+            self.stdout.write("The demonstration environment is already present. Nothing done.")
+            return
+        password = options.get("password") or secrets.token_urlsafe(12)
+        with transaction.atomic():
+            researcher = self._accounts(password)
+            self._seed(authentication_context(researcher, verified_device_id=None), catalogue)
+        self.stdout.write(self.style.SUCCESS("Demonstration environment created."))
+        self.stdout.write(f"  Researcher: {RESEARCHER_EMAIL}")
+        self.stdout.write(f"  Reader:     {READER_EMAIL}")
+        if not options.get("password"):
+            self.stdout.write(f"  Password for both (shown once): {password}")
+
+    def _accounts(self, password: str) -> User:
+        seed = User.objects.filter(email=SEED_EMAIL).first() or User.objects.create_user(SEED_EMAIL)
+        accounts = {}
+        for email, role in ((RESEARCHER_EMAIL, Role.RESEARCHER), (READER_EMAIL, Role.READER)):
+            user = User.objects.filter(email=email).first() or User.objects.create_user(email)
+            user.set_password(password)
+            user.save(update_fields=["password"])
+            if not RoleEvent.objects.filter(user=user, role=role).exists():
+                RoleEvent.objects.create(
+                    user=user,
+                    role=role,
+                    event_type=RoleEventType.GRANTED,
+                    actor=seed,
+                    reason="Demonstration environment (seed_demo, development only)",
+                )
+            accounts[role] = user
+        return accounts[Role.RESEARCHER]
+
+    def _seed(self, actor: Any, catalogue: Catalogue) -> None:
+        countries = {}
+        for alpha2, alpha3, name in catalogue.countries:
+            country, _ = Country.objects.get_or_create(
+                alpha2=alpha2, defaults={"alpha3": alpha3, "name_en": name}
+            )
+            countries[alpha2] = country.public_id
+        languages = {}
+        for code, script, name in catalogue.languages:
+            language, _ = Language.objects.get_or_create(
+                code=code, script_code=script, defaults={"name_en": name}
+            )
+            languages[(code, script)] = language.public_id
+        institutions: dict[str, uuid.UUID] = {}
+        for key, kind, alpha2, name in catalogue.institutions:
+            institutions[key] = create_institution(
+                actor=actor,
+                kind=kind,
+                country=countries[alpha2],
+                first_name=NewName(
+                    text=name, language=languages[catalogue.english], kind="official"
+                ),
+            )
+        sources = {
+            spec.key: sources_services.create_source(
+                actor=actor,
+                data_class=spec.data_class,
+                name=spec.name,
+                publisher=spec.publisher,
+                url=spec.url,
+                source_tier=spec.tier,
+                permitted_use=spec.permitted_use,
+                accessed_on=catalogue.accessed,
+                country=countries[spec.country] if spec.country else None,
+                licence=spec.licence,
+                licence_verified=spec.licence_verified,
+                coverage=spec.coverage,
+                limitations=spec.limitations,
+            )
+            for spec in catalogue.sources
+        }
+        documents = {
+            spec.key: sources_services.create_document(
+                actor=actor,
+                source=sources[spec.source],
+                country=countries[spec.country],
+                document_type=spec.document_type,
+                title=spec.title,
+                title_language=languages[spec.language],
+                title_en=spec.title_en,
+                title_en_official=spec.title_en_official,
+                official_identifier=spec.identifier,
+                date_of_issue=spec.issued,
+                official_url=spec.url,
+                accessed_on=catalogue.accessed,
+                issuing_institution=institutions[spec.issuer] if spec.issuer else None,
+                notes=spec.notes,
+            )
+            for spec in catalogue.documents
+        }
+        for policy in catalogue.policies:
+            public_id = policies_services.create_policy(
+                actor=actor,
+                data_class=policy.data_class,
+                country=countries[policy.country],
+                policy_type=policy.policy_type,
+                title=policy.title,
+                title_language=languages[policy.language],
+                corpus_assignment=policy.corpus,
+                assignment_reason=policy.reason,
+                ai_focus=policy.ai_focus,
+                contextual_category=policy.category,
+                title_en=policy.title_en,
+                lead_institution=institutions[policy.lead] if policy.lead else None,
+                summary=policy.summary,
+            )
+            for document, role in policy.documents:
+                policies_services.link_document(
+                    actor=actor, policy=public_id, document=documents[document], role=role
+                )
+            for event_type, effective, document, locator in policy.events:
+                policies_services.record_event(
+                    actor=actor,
+                    policy=public_id,
+                    event_type=event_type,
+                    effective_date=effective,
+                    document=documents[document],
+                    locator=locator,
+                )
+            for provision in policy.provisions:
+                policies_services.add_provision(
+                    actor=actor,
+                    policy=public_id,
+                    provision_type=provision.provision_type,
+                    document=documents[provision.document],
+                    locator=provision.locator,
+                    label=provision.label,
+                    quoted_text=provision.quoted_text,
+                )

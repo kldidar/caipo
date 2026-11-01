@@ -35,8 +35,27 @@ TARGET_TYPES = [
     "registry.language",
     "registry.institution",
     "registry.institution_name",
+    # The demonstrator's records (ADR-0020 point 2).
+    "sources.source",
+    "sources.document",
+    "policies.policy",
+    "policies.policy_document_link",
+    "policies.policy_event",
+    "policies.policy_provision",
 ]
-FIELDS = ["name_en", "kind", "country", "parent", "successor", "valid_from", "valid_to"]
+FIELDS = [
+    "name_en",
+    "kind",
+    "country",
+    "parent",
+    "successor",
+    "valid_from",
+    "valid_to",
+    # A policy's provisional corpus assignment (ADR-0020 point 12).
+    "corpus_assignment",
+    "ai_focus",
+    "contextual_category",
+]
 # Written out here, not read from the application: ADR-0018 point 31.
 ALLOWED_PAIRS = (
     {(action, target_type) for action in ("created", "updated") for target_type in TARGET_TYPES}

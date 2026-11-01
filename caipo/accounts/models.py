@@ -825,6 +825,13 @@ class AuditTargetType(models.TextChoices):
     LANGUAGE = "registry.language", _("Language")
     INSTITUTION = "registry.institution", _("Institution")
     INSTITUTION_NAME = "registry.institution_name", _("Institution name")
+    # The demonstrator's records (ADR-0020 point 2).
+    SOURCE = "sources.source", _("Source")
+    DOCUMENT = "sources.document", _("Document")
+    POLICY = "policies.policy", _("Policy")
+    POLICY_DOCUMENT_LINK = "policies.policy_document_link", _("Policy document")
+    POLICY_EVENT = "policies.policy_event", _("Policy event")
+    POLICY_PROVISION = "policies.policy_provision", _("AI-related provision")
 
 
 class AuditField(models.TextChoices):
@@ -841,6 +848,9 @@ class AuditField(models.TextChoices):
     SUCCESSOR = "successor", _("Successor")
     VALID_FROM = "valid_from", _("Valid from")
     VALID_TO = "valid_to", _("Valid to")
+    CORPUS_ASSIGNMENT = "corpus_assignment", _("Corpus assignment")
+    AI_FOCUS = "ai_focus", _("AI focus")
+    CONTEXTUAL_CATEGORY = "contextual_category", _("Contextual category")
 
 
 # The kinds of record each action applies to. Only a country or a language is

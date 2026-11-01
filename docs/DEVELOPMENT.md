@@ -289,6 +289,23 @@ A fresh database has an empty registry: no migration or code creates a country, 
 
 `<id>` is the record's public identifier, a UUID. The services are in `caipo/registry/services.py` and the reads in `caipo/registry/selectors.py`.
 
+## The demonstration environment
+
+`seed_demo` fills a **development** database with the demonstration environment of [ADR-0020](adr/0020-demonstrator-track.md). It refuses to run unless `DEBUG` is on.
+
+```sh
+uv run --env-file .env python manage.py migrate
+uv run --env-file .env python manage.py seed_demo            # prints a random password once
+uv run --env-file .env python manage.py seed_demo --password "<choose one>"
+```
+
+It creates two accounts that can sign in without a second factor, `demo.researcher@caipo.test` (Researcher) and `demo.reader@caipo.test` (Reader), the countries and languages it needs, and, through the services and with their audit events, the records of `caipo/demo/catalogue.json`:
+
+- **Demonstration data**: synthetic sources, documents, and policies of two synthetic countries, `XA` (DEMO Northland) and `XB` (DEMO Southland). Every title starts with DEMO. They show every feature, including quoted provision text, and say nothing about any real country.
+- **Reference data**: real public documents of Uzbekistan and Turkmenistan, by metadata only, each with its address and access date and a provisional assignment with its reason. No text of them is held.
+
+Running it again changes nothing. To start over, delete the development database (see "Deleting the database").
+
 ## Authorization
 
 Every page is declared through this layer: the sign-in pages (including the recovery request at `/login/verify/recover/`), sign-out, activation, password reset, and the health endpoints are public, and every other page declares a permission. It is the layer that views and services are written against.
