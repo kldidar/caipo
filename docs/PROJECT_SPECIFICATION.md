@@ -175,7 +175,7 @@ Each phase has its own gate check: its blockers in §10 must be closed before it
 
 ## 8. Decisions made and open
 
-Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, and ADR-0019 on 2026-10-11. Five remain Proposed and must not be built on; the last column says what each still needs.
+Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, and ADR-0020 on 2026-10-30. Five remain Proposed and must not be built on; the last column says what each still needs.
 
 | ADR | Topic | Status | Needs |
 |---|---|---|---|
@@ -198,6 +198,7 @@ Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by t
 | 0017 | Account recovery after loss of the second factor | Accepted | — (accepted on 2026-10-04 before its implementation; it changes points of ADR-0014, which it names; the operational audit trail and instructions for its break-glass command, and email delivery in production, wait for ADR-0008) |
 | 0018 | Registry and the general audit record | Accepted | — (accepted on 2026-10-09 before its implementation, which is in increments: the audit foundation is built, and the registry is built: Country and Language, and Institution and InstitutionName; ADR-0019, accepted on 2026-10-11, built the rest of the registry in two increments, supersedes one statement of this ADR, records one test-only exception to its point 2, and states the code forms its point 7 leaves unspecified) |
 | 0019 | Phased registry implementation | Accepted | — (accepted on 2026-10-11 before its implementation, which the project owner starts increment by increment: Increment 2, Country and Language, and Increment 3, Institution and InstitutionName, are built. It sets the order in which the registry of ADR-0018 is built, Country and Language before Institution and InstitutionName; supersedes one statement of ADR-0018, that the first registry migration creates all four tables; records one test-only exception to its point 2; states the forms of the language code and the script code, which its point 7 requires to be checked and does not specify; and adds the rules for delivering and testing each increment) |
+| 0020 | Demonstrator track ahead of the research gates | Accepted | — (decided by the project owner on 2026-10-30 for the delivery sprint; builds reduced, labelled forms of later-phase apps for a local demonstrator; changes no gate status in §10 and closes no blocker) |
 
 ## 9. Environment baseline
 
@@ -270,7 +271,7 @@ The service checks were run with a temporary environment file holding generated 
 
 **Status: READY for Phase 1. NOT READY for Phase 2 and later.**
 
-Phase 1 has no open blocker after the owner decisions of 2026-10-02. Every later phase is still blocked by the open items below; each names the earliest phase it blocks. Closing the Phase 1 blockers does not close any research, security, methodology, data-rights, AI-provider, OCR, or isolation blocker.
+Phase 1 has no open blocker after the owner decisions of 2026-10-02. The demonstrator track of [ADR-0020](adr/0020-demonstrator-track.md) is not a phase and does not change this status. Every later phase is still blocked by the open items below; each names the earliest phase it blocks. Closing the Phase 1 blockers does not close any research, security, methodology, data-rights, AI-provider, OCR, or isolation blocker.
 
 ### Closed
 
