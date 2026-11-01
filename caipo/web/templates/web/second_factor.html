@@ -4,7 +4,10 @@
 {% block title %}{% translate "Two-step verification" %}{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Two-step verification" %}</h1>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Your account" %}</p>
+    <h1>{% translate "Two-step verification" %}</h1>
+  </header>
   {% if error %}
     <p role="alert">{{ error }}</p>
   {% endif %}
@@ -27,13 +30,13 @@
       {% for field in disable_form %}
         <p>{{ field.label_tag }} {{ field }}</p>
       {% endfor %}
-      <button type="submit">{% translate "Turn off two-step verification" %}</button>
+      <button type="submit" class="button--danger">{% translate "Turn off two-step verification" %}</button>
     </form>
   {% else %}
     {% if provisioning %}
       <p>{% translate "Add this key to your authenticator application. It is shown only now and cannot be shown again." %}</p>
-      <p>{% translate "Key:" %} <code>{{ provisioning.secret }}</code></p>
-      <p>{% translate "Or use this address in the application:" %} <code>{{ provisioning.uri }}</code></p>
+      <p class="key-box">{% translate "Key:" %} <code>{{ provisioning.secret }}</code></p>
+      <p class="key-box">{% translate "Or use this address in the application:" %} <code>{{ provisioning.uri }}</code></p>
     {% endif %}
     {% if state == "pending_approval" %}
       <p>{% blocktranslate %}Your request number is <strong>{{ request_number }}</strong>. Two-step verification for your account must be approved by an Administrator before it can be turned on. Give the Administrator this number yourself, and not through this site. Codes are not accepted until the request is approved.{% endblocktranslate %}</p>
@@ -69,10 +72,10 @@
     </form>
   {% endif %}
 
-  <p><a href="{% url 'second-factor-history' %}">{% translate "Recovery history" %}</a></p>
+  <p class="actions"><a class="button button--secondary" href="{% url 'second-factor-history' %}">{% translate "Recovery history" %}</a></p>
 
   <form method="post" action="{% url 'logout' %}">
     {% csrf_token %}
-    <button type="submit">{% translate "Sign out" %}</button>
+    <button type="submit" class="button--ghost">{% translate "Sign out" %}</button>
   </form>
 {% endblock %}

@@ -4,12 +4,23 @@
 {% block title %}{% translate "Registry" %}{% endblock %}
 
 {% block content %}
-  <h1>{% translate "Registry" %}</h1>
-  <p>{% translate "The countries, languages, and institutions the system knows. A deactivated country or language stays here and can no longer be newly referred to." %}</p>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Workspace" %}</p>
+    <h1>{% translate "Registry" %}</h1>
+    <p class="lede">{% translate "The countries, languages, and institutions the system knows. A deactivated country or language stays here and can no longer be newly referred to." %}</p>
+    {% if may_enter %}<p class="actions"><a class="button" href="{% url 'registry-entry' %}">{% translate "Registry entry" %}</a></p>{% endif %}
+  </header>
 
+  <ul class="toc" aria-label="{% translate 'Sections' %}">
+    <li><a href="#countries">{% translate "Countries" %} <span class="count">{{ countries|length }}</span></a></li>
+    <li><a href="#languages">{% translate "Languages" %} <span class="count">{{ languages|length }}</span></a></li>
+    <li><a href="#institutions">{% translate "Institutions" %} <span class="count">{{ institutions|length }}</span></a></li>
+  </ul>
+
+  <span id="countries"></span>
   <h2>{% translate "Countries" %}</h2>
   {% if countries %}
-    <table>
+    <div class="table-wrap"><table>
       <thead>
         <tr>
           <th scope="col">{% translate "Alpha-2 code" %}</th>
@@ -21,21 +32,22 @@
       <tbody>
         {% for country in countries %}
           <tr>
-            <td>{{ country.alpha2 }}</td>
-            <td>{{ country.alpha3 }}</td>
+            <td><span class="code-chip">{{ country.alpha2 }}</span></td>
+            <td><span class="code-chip">{{ country.alpha3 }}</span></td>
             <td>{{ country.name_en }}</td>
-            <td>{% if country.is_active %}{% translate "Active" %}{% else %}{% translate "Deactivated" %}{% endif %}</td>
+            <td>{% if country.is_active %}<span class="badge badge--ok">{% translate "Active" %}</span>{% else %}<span class="badge">{% translate "Deactivated" %}</span>{% endif %}</td>
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+    </table></div>
   {% else %}
-    <p>{% translate "No country has been entered." %}</p>
+    <div class="empty"><p class="empty__title">{% translate "No country has been entered." %}</p></div>
   {% endif %}
 
+  <span id="languages"></span>
   <h2>{% translate "Languages" %}</h2>
   {% if languages %}
-    <table>
+    <div class="table-wrap"><table>
       <thead>
         <tr>
           <th scope="col">{% translate "Language code" %}</th>
@@ -47,24 +59,26 @@
       <tbody>
         {% for language in languages %}
           <tr>
-            <td>{{ language.code }}</td>
-            <td>{{ language.script_code }}</td>
+            <td><span class="code-chip">{{ language.code }}</span></td>
+            <td><span class="code-chip">{{ language.script_code }}</span></td>
             <td>{{ language.name_en }}</td>
-            <td>{% if language.is_active %}{% translate "Active" %}{% else %}{% translate "Deactivated" %}{% endif %}</td>
+            <td>{% if language.is_active %}<span class="badge badge--ok">{% translate "Active" %}</span>{% else %}<span class="badge">{% translate "Deactivated" %}</span>{% endif %}</td>
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+    </table></div>
   {% else %}
-    <p>{% translate "No language has been entered." %}</p>
+    <div class="empty"><p class="empty__title">{% translate "No language has been entered." %}</p></div>
   {% endif %}
 
+  <span id="institutions"></span>
   <h2>{% translate "Institutions" %}</h2>
   {% translate "Not recorded" as not_recorded %}
   {% for institution in institutions %}
+    <article class="card entity">
     <h3>{{ institution.label }}</h3>
     {% include "web/_institution_attributes.html" %}
-    <table>
+    <div class="table-wrap"><table>
       <caption>{% translate "Names" %}</caption>
       <thead>
         <tr>
@@ -86,9 +100,9 @@
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+    </table></div>
     {% if institution.names_entered_in_error %}
-      <table>
+      <div class="table-wrap"><table>
         <caption>{% translate "Marked as entered in error, and not names of this institution" %}</caption>
         <thead>
           <tr>
@@ -106,14 +120,12 @@
             </tr>
           {% endfor %}
         </tbody>
-      </table>
+      </table></div>
     {% endif %}
+    </article>
   {% empty %}
-    <p>{% translate "No institution has been entered." %}</p>
+    <div class="empty"><p class="empty__title">{% translate "No institution has been entered." %}</p></div>
   {% endfor %}
 
-  {% if may_enter %}
-    <p><a href="{% url 'registry-entry' %}">{% translate "Registry entry" %}</a></p>
-  {% endif %}
-  <p><a href="{% url 'login' %}">{% translate "Back" %}</a></p>
+  <p class="actions"><a class="button button--ghost" href="{% url 'login' %}">← {% translate "Back" %}</a></p>
 {% endblock %}

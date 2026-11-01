@@ -1,14 +1,55 @@
-{% load i18n %}{% get_current_language as language_code %}<!doctype html>
+{% load i18n static %}{% get_current_language as language_code %}<!doctype html>
 <html lang="{{ language_code }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light dark">
   <title>{% block title %}{% endblock %} · {% translate "CAIPO" %}</title>
+  <link rel="preload" href="{% static 'web/fonts/inter-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'web/fonts/source-serif-4-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'web/caipo.css' %}">
+  <link rel="icon" href="{% static 'web/mark.svg' %}" type="image/svg+xml">
+  {% block navigation_assets %}{% if navigation %}
+    <script src="{% static 'web/navigation.js' %}" defer></script>
+  {% endif %}{% endblock %}
 </head>
-<body>
-  <main>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="skip-link" href="#main">{% translate "Skip to main content" %}</a>
+  <header class="masthead">
+    <div class="masthead__inner">
+      <a class="brand" href="{% url 'home' %}" aria-label="{% translate 'CAIPO, Central Asia AI Policy Observatory: home' %}">
+        {% include "web/includes/mark.svg" %}
+        <span class="brand__text" aria-hidden="true">
+          <span class="brand__name">{% translate "CAIPO" %}</span>
+          <span class="brand__tag">{% translate "Central Asia AI Policy Observatory" %}</span>
+        </span>
+      </a>
+      {% block navigation %}{% if navigation %}
+        <nav id="primary-nav" class="primary-nav" aria-label="{% translate 'Primary' %}" data-menu-label="{% translate 'Menu' %}">
+          {% for group in navigation.groups %}
+            <span class="primary-nav__group-label" aria-hidden="true">{{ group.label }}</span>
+            <span class="primary-nav__list">
+              {% for item in group.items %}<a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a>{% endfor %}
+            </span>
+          {% endfor %}
+          <span class="primary-nav__spacer"></span>
+          <span class="account-menu">
+            {% for item in navigation.account_items %}<a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a>{% endfor %}
+            <a class="account-menu__who" href="{% url 'login' %}"{% if navigation.on_account_page %} aria-current="page"{% endif %}><span class="avatar" aria-hidden="true">{{ navigation.initials }}</span><span>{% translate "Your account" %}</span></a>
+          </span>
+        </nav>
+      {% endif %}{% endblock %}
+    </div>
+  </header>
+  <main id="main" tabindex="-1" class="{% block main_class %}page{% endblock %}">
     {% block content %}{% endblock %}
   </main>
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p><strong>{% translate "CAIPO" %}</strong> · {% translate "A research platform for the comparative study of AI policy and economic transformation in Central Asia." %}</p>
+      <p>{% translate "Sources are recorded with their provenance. Missing data stays missing. Associations are never presented as causes." %}</p>
+    </div>
+  </footer>
 </body>
 </html>

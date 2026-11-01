@@ -3,8 +3,13 @@
 
 {% block title %}{% translate "Page not found" %}{% endblock %}
 
+{% block main_class %}status-page{% endblock %}
+
 {% block content %}
+  <div class="page--medium">
+  <p class="status-page__code" aria-hidden="true">404</p>
   <h1>{% translate "Page not found" %}</h1>
   <p>{% translate "There is no page at this address." %}</p>
-  <p><a href="{% url 'login' %}">{% translate "Sign-in page" %}</a></p>
+  <p class="actions actions--center"><a class="button" href="{% url 'home' %}">{% translate "Home" %}</a> <a class="button button--secondary" href="{% url 'login' %}">{% translate "Sign-in page" %}</a></p>
+  </div>
 {% endblock %}

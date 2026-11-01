@@ -5,6 +5,7 @@ from caipo.web import (
     activation,
     authentication,
     health,
+    home,
     password_reset,
     recovery,
     recovery_history,
@@ -15,6 +16,7 @@ from caipo.web import (
 )
 
 urlpatterns = [
+    path("", home.home, name="home"),
     path("health/live/", health.live, name="health-live"),
     path("health/ready/", health.ready, name="health-ready"),
     path("login/", authentication.sign_in, name="login"),

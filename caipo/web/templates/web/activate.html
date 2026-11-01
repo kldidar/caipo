@@ -1,9 +1,9 @@
-{% extends "web/base.html" %}
+{% extends "web/focused.html" %}
 {% load i18n static %}
 
 {% block title %}{% translate "Activate your account" %}{% endblock %}
 
-{% block content %}
+{% block card %}
   <h1>{% translate "Activate your account" %}</h1>
   {% if error %}
     <p role="alert">{{ error }}</p>
