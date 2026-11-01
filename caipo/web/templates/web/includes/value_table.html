@@ -1,0 +1,12 @@
+{% load i18n caipo_values %}<div class="table-wrap"><table>
+  <caption>{{ view.name }} ({{ view.unit }})</caption>
+  <thead><tr><th scope="col">{% translate "Year" %}</th>{% for series in view.series %}<th scope="col" class="num">{{ series.country }}</th>{% endfor %}</tr></thead>
+  <tbody>
+    {% for year in view.years %}
+      <tr>
+        <th scope="row">{{ year }}</th>
+        {% for series in view.series %}{% with point=series.points|index:forloop.parentloop.counter0 %}<td class="num{% if point.is_missing %} is-missing{% endif %}">{% if point.is_missing %}<span class="missing">{% translate "no value" %}</span>{% else %}{{ point.value|value }}{% if point.is_flagged %} <abbr class="flag" title="{{ point.status_label }}">{{ point.status_label|slice:":1" }}</abbr>{% endif %}{% endif %}</td>{% endwith %}{% endfor %}
+      </tr>
+    {% endfor %}
+  </tbody>
+</table></div>

@@ -72,8 +72,9 @@ Counted from the packages in §4. No percentage is estimated.
 | Master-roadmap packages | 56 (57 listed, of which G1 is REMOVED) |
 | Sprint packages (S1 to S8) | 8 |
 | DONE | 6 (A1, H1, H6, S1, S2, E1) |
-| IN PROGRESS | 2 (S3 and S4, together in Day 4) |
-| Sprint packages NOT STARTED or BLOCKED on another sprint package | 4 (S5 to S8) |
+| AWAITING OWNER MERGE | 2 (S3 and S4, together in Day 4, #31: CI passed on `184fec4`, `4674 passed`) |
+| IN PROGRESS | 1 (S5, Day 5) |
+| Sprint packages NOT STARTED or BLOCKED on another sprint package | 3 (S6 to S8) |
 | Master-roadmap packages NOT STARTED, nothing preventing them | 2 (E2, G4, within sprint packages) |
 | Master-roadmap packages PARTIAL | 1 (A3) |
 | Master-roadmap packages BLOCKED | 46 |
@@ -90,9 +91,9 @@ The owner's mandates of 2026-10-30 add these packages. Each is built under [ADR-
 |---|---|---|---|---|
 | S1 | Record the mandate, the sprint plan, ADR-0020, and the single-operator facts | MUST | **DONE** (#29, `7904e36`) | 2 |
 | S2 | Design system and application shell: tokens, typography, navigation, signed-in home, every existing page restyled; accessibility target (G4, provisional) | MUST | **DONE** (#30, `5ba91c8`) | 3 |
-| S3 | Sources and policies backend: Source, Document (metadata only), Policy, AI-related provisions, formal events, corpus assignment; permissions, services, selectors, audit; seed command | MUST | IN PROGRESS | 4 |
-| S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | IN PROGRESS (merged into Day 4) | 4 |
-| S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | NOT STARTED | 5 |
+| S3 | Sources and policies backend: Source, Document (metadata only), Policy, AI-related provisions, formal events, corpus assignment; permissions, services, selectors, audit; seed command | MUST | AWAITING OWNER MERGE (#31) | 4 |
+| S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | AWAITING OWNER MERGE (#31, merged into Day 4) | 4 |
+| S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | IN PROGRESS | 5 |
 | S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | BLOCKED: S3, S5 | 6 |
 | S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | BLOCKED: S3 to S6 | 7 |
 | S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | BLOCKED: S7 | 8 |
@@ -225,7 +226,8 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 1 | Reconcile the project state; establish this tracker and the workflow rules | H6 | 2026-10-30 | **DONE**: merged as `ac32fc8`; CI run 41084731032 passed all four checks; `4494 passed` | #28 |
 | 2 | Record the delivery mandate, the sprint plan, and ADR-0020 | S1 | 2026-10-30 | **DONE**: merged as `7904e36`; CI run 41352450005 passed all four checks; `4494 passed` | #29 |
 | 3 | Design system, application shell, home page | S2, E1 | 2026-10-30 | **DONE**: merged as `5ba91c8`; CI run 41353530141 passed all four checks; `4511 passed` | #30 |
-| 4 | Sources and policies: backend, pages, seed data | S3, S4 | 2026-11-02 | IN PROGRESS | The pull request that changes this file |
+| 4 | Sources and policies: backend, pages, seed data | S3, S4 | 2026-11-02 | AWAITING OWNER MERGE | #31 |
+| 5 | Indicators in three layers, comparison, coverage | S5, F4 | 2026-11-02 | IN PROGRESS (stacked on #31) | The pull request that changes this file |
 
 ### Planned Days
 
@@ -233,7 +235,6 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 
 | Day | Sprint day | Objective | Packages | Ready when |
 |---|---|---|---|---|
-| 5 | 5 | Indicators, three layers, comparison and coverage | S5, F4 | Day 4's pull request open (stacked) or merged |
 | 6 | 6 | Analysis runs, search runs, exports | S6, F2 | Day 5 open or merged |
 | 7 | 7 | Polish, accessibility, responsive layout, journey tests, defects | S7, E2, G4 | Day 6 open or merged |
 | 8 | Deadline day | Professor-ready delivery | S8, J1 (demonstrator) | Day 7 open or merged |

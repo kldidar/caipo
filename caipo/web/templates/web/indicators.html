@@ -1,0 +1,74 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Economic transformation" %}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Workspace" %}</p>
+    <h1>{% translate "Economic transformation" %}</h1>
+    <p class="lede">{% translate "Indicators in three separate layers. Layers are reported on their own for each country and are never combined into an index or an overall verdict." %}</p>
+  </header>
+
+  <p class="notice notice--warning"><span><strong>{% translate "Not a causal analysis." %}</strong> {% translate "These views show what was measured. They do not show that any policy caused any change, and a pattern across layers or countries is not evidence of a cause." %}</span></p>
+
+  <nav class="tabs" aria-label="{% translate 'Countries compared' %}">
+    <a href="?class=reference&amp;layer={{ layer }}" {% if data_class == "reference" %}aria-current="page"{% endif %}>{% translate "Study countries (reference data)" %}</a>
+    <a href="?class=demonstration&amp;layer={{ layer }}" {% if data_class == "demonstration" %}aria-current="page"{% endif %}>{% translate "Demonstration countries" %}</a>
+  </nav>
+  {% if data_class == "demonstration" %}{% include "web/includes/demo_notice.html" %}{% endif %}
+
+  <section class="section" aria-labelledby="coverage-title">
+    <h2 id="coverage-title" class="flush-top">{% translate "Coverage by layer and country" %}</h2>
+    <div class="table-wrap"><table class="coverage">
+      <thead><tr>
+        <th scope="col">{% translate "Layer" %}</th>
+        {% for country in coverage.0.countries %}<th scope="col">{{ country.country }}</th>{% endfor %}
+      </tr></thead>
+      <tbody>
+        {% for row in coverage %}
+          <tr>
+            <th scope="row"><a href="?class={{ data_class }}&amp;layer={{ row.layer }}">{{ row.label }}</a></th>
+            {% for cell in row.countries %}
+              <td>
+                {% if not row.indicators %}<span class="coverage__none">{% translate "No indicator recorded" %}</span>
+                {% elif cell.with_values %}<span class="coverage__value">{% blocktranslate with held=cell.with_values total=row.indicators %}{{ held }} of {{ total }} indicators{% endblocktranslate %}</span><br><small class="muted">{% blocktranslate with year=cell.latest_year %}latest value {{ year }}{% endblocktranslate %}</small>
+                {% else %}<span class="coverage__none">{% blocktranslate with total=row.indicators %}0 of {{ total }} indicators{% endblocktranslate %}</span>{% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% empty %}
+          <tr><td>{% translate "Nothing is recorded." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="muted"><small>{% translate "“No indicator recorded” means that no indicator for this layer has been recorded here from the sources searched. It is not evidence that no reliable measure exists. A layer is never filled from another layer." %}</small></p>
+  </section>
+
+  <nav class="tabs tabs--layers" aria-label="{% translate 'Layer' %}">
+    {% for value, label in layers %}<a href="?class={{ data_class }}&amp;layer={{ value }}" {% if value == layer %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+  </nav>
+  <div class="layer-note">{% include "web/includes/layer_note.html" %}</div>
+
+  {% for view, chart in indicators %}
+    <article class="card indicator">
+      <div class="indicator__header">
+        <div>
+          <p class="policy-card__meta"><span class="code-chip">{{ view.code }}</span> <span>{{ view.source_name }}</span> {% include "web/includes/data_class.html" with data_class=view.data_class %} <span class="badge badge--provisional" title="{{ view.layer_reason }}">{% translate "Layer provisional" %}</span></p>
+          <h2 class="indicator__title"><a href="{% url 'indicator' view.public_id %}">{{ view.name }}</a></h2>
+          <p class="muted"><small>{{ view.unit }} · {% if view.years %}{{ view.years.0 }}–{{ view.years|last }}{% endif %}</small></p>
+        </div>
+      </div>
+      {% include "web/includes/line_chart.html" with title=view.name %}
+      <details class="disclosure">
+        <summary>{% translate "Show the values" %}</summary>
+        <div class="disclosure__body">{% include "web/includes/value_table.html" %}</div>
+      </details>
+    </article>
+  {% empty %}
+    <div class="empty">
+      <p class="empty__title">{% blocktranslate %}No indicator is recorded for {{ layer_label }} in this set of countries.{% endblocktranslate %}</p>
+      <p>{% translate "The layer is reported as having no indicator, not dropped. This says only what has been recorded here, not that no reliable, comparable measure exists." %}</p>
+    </div>
+  {% endfor %}
+{% endblock %}

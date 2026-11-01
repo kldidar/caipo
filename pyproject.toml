@@ -89,7 +89,8 @@ layers = [
     "config",
     "demo",
     "web",
-    "policies",
+    # Siblings of layer 5: neither imports the other.
+    "policies | indicators",
     "sources",
     "registry",
     "accounts",
@@ -127,7 +128,7 @@ ignore_imports = [
 [[tool.importlinter.contracts]]
 name = "Demonstrator boundary (ADR-0020 point 2): sources and policies use lower apps only through their services and selectors"
 type = "forbidden"
-source_modules = ["caipo.sources", "caipo.policies"]
+source_modules = ["caipo.sources", "caipo.policies", "caipo.indicators"]
 forbidden_modules = [
     "caipo.accounts.apps",
     "caipo.accounts.authentication",
@@ -144,12 +145,13 @@ ignore_imports = [
     # Tests read the audit records a service wrote, and set up registry rows.
     "caipo.sources.tests.** -> caipo.accounts.models",
     "caipo.policies.tests.** -> caipo.accounts.models",
+    "caipo.indicators.tests.** -> caipo.registry.models",
     "caipo.sources.tests.** -> caipo.registry.models",
 ]
 
 [[tool.importlinter.contracts]]
-name = "Policies use sources only through its services and selectors (ADR-0020 point 2)"
+name = "Policies and indicators use sources only through its services and selectors (ADR-0020 point 2)"
 type = "forbidden"
-source_modules = ["caipo.policies"]
+source_modules = ["caipo.policies", "caipo.indicators"]
 forbidden_modules = ["caipo.sources.models"]
 allow_indirect_imports = true

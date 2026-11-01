@@ -18,6 +18,8 @@ from caipo.sources.models import Document, DocumentType, PermittedUse, Source, S
 __all__ = [
     "DocumentEntry",
     "DocumentReference",
+    "SourceReference",
+    "source_reference",
     "DocumentType",
     "PermittedUse",
     "SourceDetail",
@@ -258,3 +260,21 @@ def counts(context: AuthenticationContext | None) -> dict[str, int]:
     for data_class, number in Document.objects.values_list("data_class").annotate(n=Count("id")):
         result[f"documents_{data_class}"] = number
     return result
+
+
+@dataclass(frozen=True)
+class SourceReference:
+    pk: int
+    public_id: uuid.UUID
+    data_class: str
+    name: str
+
+
+def source_reference(public_id: uuid.UUID) -> SourceReference | None:
+    """Return the key, data class, and name of a source, or None. For higher apps."""
+    row = (
+        Source.objects.filter(public_id=public_id)
+        .values_list("pk", "public_id", "data_class", "name")
+        .first()
+    )
+    return SourceReference(*row) if row else None

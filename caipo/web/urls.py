@@ -6,6 +6,7 @@ from caipo.web import (
     authentication,
     health,
     home,
+    indicators,
     password_reset,
     policies,
     recovery,
@@ -160,4 +161,6 @@ urlpatterns = [
         name="policy-provision-add",
     ),
     path("policies/<uuid:public_id>/assignment/", policies.reassign, name="policy-reassign"),
+    path("indicators/", indicators.compare, name="indicators"),
+    path("indicators/<uuid:public_id>/", indicators.detail, name="indicator"),
 ]
