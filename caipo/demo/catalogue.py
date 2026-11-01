@@ -83,6 +83,25 @@ class PolicySpec:
 
 
 @dataclass(frozen=True)
+class IndicatorSpec:
+    source: str
+    code: str
+    layer: str
+    unit: str
+    reason: str
+    estimated: bool = False
+    name: str = ""
+    definition: str = ""
+
+
+@dataclass(frozen=True)
+class DemoRelease:
+    source: str
+    label: str
+    file_name: str
+
+
+@dataclass(frozen=True)
 class Catalogue:
     accessed: date
     countries: tuple[tuple[str, str, str], ...]
@@ -91,6 +110,10 @@ class Catalogue:
     sources: tuple[SourceSpec, ...]
     documents: tuple[DocumentSpec, ...]
     policies: tuple[PolicySpec, ...]
+    indicators: tuple[IndicatorSpec, ...]
+    demo_release: DemoRelease
+    # (indicator code, country, year, value as text or None, status)
+    demo_observations: tuple[tuple[str, str, int, str | None, str], ...]
 
     @property
     def english(self) -> tuple[str, str]:
@@ -142,4 +165,10 @@ def load(path: Path = PATH) -> Catalogue:
             for item in data["documents"]
         ),
         policies=tuple(_policy(item) for item in data["policies"]),
+        indicators=tuple(IndicatorSpec(**item) for item in data["indicators"]),
+        demo_release=DemoRelease(**data["demo_release"]),
+        demo_observations=tuple(
+            (code, country, int(year), value, status)
+            for code, country, year, value, status in data["demo_observations"]
+        ),
     )

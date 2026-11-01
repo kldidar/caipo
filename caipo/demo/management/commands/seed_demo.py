@@ -15,8 +15,11 @@ shortcuts exist only here, and only for a development database.
 Running it again changes nothing: it stops if the demonstration is present.
 """
 
+import hashlib
+import json
 import secrets
 import uuid
+from decimal import Decimal
 from typing import Any
 
 from django.conf import settings
@@ -26,6 +29,9 @@ from django.db import transaction
 from caipo.accounts.models import RoleEvent, RoleEventType, User
 from caipo.accounts.selectors import Role, authentication_context
 from caipo.demo.catalogue import Catalogue, load
+from caipo.demo.worldbank import read_snapshot
+from caipo.indicators import services as indicators_services
+from caipo.indicators.services import ObservationRow
 from caipo.policies import services as policies_services
 from caipo.registry.models import Country, Language
 from caipo.registry.services import NewName, create_institution
@@ -141,6 +147,7 @@ class Command(BaseCommand):
             )
             for spec in catalogue.documents
         }
+        self._indicators(actor, catalogue, sources)
         for policy in catalogue.policies:
             public_id = policies_services.create_policy(
                 actor=actor,
@@ -180,3 +187,53 @@ class Command(BaseCommand):
                     label=provision.label,
                     quoted_text=provision.quoted_text,
                 )
+
+    def _indicators(self, actor: Any, catalogue: Catalogue, sources: dict[str, uuid.UUID]) -> None:
+        estimated = frozenset(spec.code for spec in catalogue.indicators if spec.estimated)
+        snapshot = read_snapshot(estimated)
+        for spec in catalogue.indicators:
+            described = snapshot.descriptions.get(spec.code)
+            indicators_services.create_indicator(
+                actor=actor,
+                source=sources[spec.source],
+                code=spec.code,
+                name=described.name if described else spec.name,
+                unit=spec.unit,
+                layer=spec.layer,
+                layer_reason=spec.reason,
+                definition=described.definition if described else spec.definition,
+                original_provider=described.original_provider if described else "",
+            )
+        reference_source = next(
+            spec.source for spec in catalogue.indicators if spec.code in snapshot.descriptions
+        )
+        indicators_services.import_release(
+            actor=actor,
+            source=sources[reference_source],
+            label=snapshot.label,
+            retrieved_on=snapshot.retrieved_on,
+            file_name="caipo/demo/data/worldbank/MANIFEST.json",
+            sha256=snapshot.sha256,
+            rows=snapshot.rows,
+        )
+        release = catalogue.demo_release
+        indicators_services.import_release(
+            actor=actor,
+            source=sources[release.source],
+            label=release.label,
+            retrieved_on=catalogue.accessed,
+            file_name=release.file_name,
+            sha256=hashlib.sha256(
+                json.dumps(catalogue.demo_observations, sort_keys=True).encode()
+            ).hexdigest(),
+            rows=[
+                ObservationRow(
+                    indicator_code=code,
+                    country_alpha2=country,
+                    year=year,
+                    value=Decimal(value) if value is not None else None,
+                    status=status,
+                )
+                for code, country, year, value, status in catalogue.demo_observations
+            ],
+        )

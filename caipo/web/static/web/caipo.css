@@ -1932,6 +1932,197 @@ details.disclosure > .disclosure__body {
   font-weight: 550;
 }
 
+/* ---------- Charts ---------- */
+
+/* Categorical slots 1 and 2 of the validated reference palette of the
+   data-visualisation method: blue and orange stay apart under every common
+   colour-vision deficiency. Each country keeps its slot on every chart. */
+:root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #6250d6;
+  --series-4: #1baf7a;
+  --chart-grid: #e6e1d5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #9085e9;
+    --series-4: #199e70;
+    --chart-grid: #26344a;
+  }
+}
+
+.series-1 { --series: var(--series-1); }
+.series-2 { --series: var(--series-2); }
+.series-3 { --series: var(--series-3); }
+.series-4 { --series: var(--series-4); }
+
+.chart {
+  margin: var(--s-4) 0;
+}
+
+.chart__svg {
+  display: block;
+  width: 100%;
+  max-width: 52rem;
+  height: auto;
+  overflow: visible;
+}
+
+.chart__grid line {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.chart__axis {
+  fill: var(--ink-3);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart__series path {
+  fill: none;
+  stroke: var(--series);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart__series circle {
+  fill: var(--series);
+  stroke: var(--surface);
+  stroke-width: 2;
+  cursor: default;
+  transition: r var(--fast) var(--ease);
+}
+
+.chart__series circle.is-flagged {
+  fill: var(--surface);
+  stroke: var(--series);
+}
+
+.chart__series circle:hover,
+.chart__series circle:focus-visible {
+  r: 6;
+  outline: none;
+}
+
+.chart__label {
+  fill: var(--ink-2);
+  font-size: 12px;
+  font-weight: 650;
+  font-family: var(--font-sans);
+}
+
+.chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin-top: var(--s-3);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.legend-item__swatch {
+  width: 1.25rem;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--series);
+}
+
+.legend-item__flag {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--ink-3);
+}
+
+.legend-item--note {
+  color: var(--ink-3);
+}
+
+.indicator {
+  margin-bottom: var(--s-5);
+}
+
+.indicator__title {
+  margin: var(--s-2) 0 var(--s-1);
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+}
+
+.indicator__title a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.indicator__title a:hover {
+  color: var(--brand-ink);
+  text-decoration: underline;
+}
+
+.layer-note {
+  margin-bottom: var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  background: var(--brand-tint);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.layer-note p {
+  margin: 0;
+  max-width: none;
+}
+
+.coverage td {
+  min-width: 10rem;
+}
+
+.coverage__value {
+  font-weight: 650;
+}
+
+.coverage__none,
+.missing {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+td.is-missing {
+  background: repeating-linear-gradient(135deg, transparent 0 6px, var(--surface-2) 6px 7px);
+}
+
+abbr.flag {
+  text-decoration: none;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--provisional);
+  cursor: help;
+}
+
+code.hash {
+  word-break: break-all;
+  font-size: var(--text-xs);
+}
+
+.release {
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--line);
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 960px) {

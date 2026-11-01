@@ -303,6 +303,7 @@ It creates two accounts that can sign in without a second factor, `demo.research
 
 - **Demonstration data**: synthetic sources, documents, and policies of two synthetic countries, `XA` (DEMO Northland) and `XB` (DEMO Southland). Every title starts with DEMO. They show every feature, including quoted provision text, and say nothing about any real country.
 - **Reference data**: real public documents of Uzbekistan and Turkmenistan, by metadata only, each with its address and access date and a provisional assignment with its reason. No text of them is held.
+- **Indicators**: eight World Bank indicators for Turkmenistan and Uzbekistan, 2010 to 2024, read from the committed snapshot in `caipo/demo/data/worldbank/` (CC BY 4.0; every file's SHA-256 is checked against `MANIFEST.json` before it is read, and the application makes no network call), and four synthetic indicators of the two synthetic countries, including two in layer C.
 
 Running it again changes nothing. To start over, delete the development database (see "Deleting the database").
 

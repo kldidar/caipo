@@ -1,0 +1,64 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ view.name }}{% endblock %}
+
+{% block content %}
+  {% translate "Not recorded" as not_recorded %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'indicators' %}?class={{ view.data_class }}&amp;layer={{ view.layer }}">{{ view.layer_label }}</a></nav>
+  <header class="page-header">
+    <p class="policy-card__meta"><span class="code-chip">{{ view.code }}</span> {% include "web/includes/data_class.html" with data_class=view.data_class %}</p>
+    <h1>{{ view.name }}</h1>
+    <p class="lede">{{ view.unit }}</p>
+  </header>
+  {% if view.data_class == "demonstration" %}{% include "web/includes/demo_notice.html" %}{% endif %}
+
+  <div class="detail-grid">
+    <div class="detail-grid__main">
+      <section class="panel" aria-labelledby="chart-title">
+        <div class="panel__header"><h2 id="chart-title">{% translate "Values by country" %}</h2></div>
+        <div class="panel__body">
+          {% include "web/includes/line_chart.html" with title=view.name chart=chart %}
+          {% include "web/includes/value_table.html" %}
+          <p class="muted"><small>{% translate "Values are shown rounded to two decimals; they are stored exactly as published. A year without a value is left empty and is never filled in." %}</small></p>
+        </div>
+      </section>
+      {% if detail.definition %}
+        <section class="panel" aria-labelledby="definition-title">
+          <div class="panel__header"><h2 id="definition-title">{% translate "Definition, as published" %}</h2></div>
+          <div class="panel__body"><p>{{ detail.definition|linebreaksbr }}</p></div>
+        </section>
+      {% endif %}
+    </div>
+    <aside class="detail-grid__side">
+      <section class="panel" aria-labelledby="layer-title">
+        <div class="panel__header"><h2 id="layer-title">{% translate "Layer" %}</h2></div>
+        <div class="panel__body">
+          <p><strong>{{ view.layer_label }}</strong> <span class="badge badge--provisional">{% translate "Provisional" %}</span></p>
+          <p class="muted"><small>{{ view.layer_reason }}</small></p>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="provenance-title">
+        <div class="panel__header"><h2 id="provenance-title">{% translate "Provenance" %}</h2></div>
+        <div class="panel__body">
+          <dl>
+            <dt>{% translate "Source" %}</dt><dd><a href="{% url 'source' view.source_public_id %}">{{ view.source_name }}</a></dd>
+            <dt>{% translate "Original provider" %}</dt><dd>{{ detail.original_provider|default:not_recorded }}</dd>
+            <dt>{% translate "Terms" %}</dt><dd>{{ detail.source_licence|default:not_recorded }}</dd>
+          </dl>
+          {% for release in detail.releases %}
+            <div class="release">
+              <p><strong>{{ release.label }}</strong></p>
+              <dl>
+                <dt>{% translate "Retrieved" %}</dt><dd>{{ release.retrieved_on|date:"Y-m-d" }}</dd>
+                <dt>{% translate "File" %}</dt><dd><code>{{ release.file_name }}</code></dd>
+                <dt>{% translate "SHA-256" %}</dt><dd><code class="hash">{{ release.sha256 }}</code></dd>
+                <dt>{% translate "Values" %}</dt><dd>{{ release.observations }}</dd>
+              </dl>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    </aside>
+  </div>
+{% endblock %}
