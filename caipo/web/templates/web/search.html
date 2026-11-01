@@ -1,0 +1,31 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ search.title }}{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'searches' %}">{% translate "Searches" %}</a></nav>
+  <header class="page-header">
+    <p class="policy-card__meta">{% include "web/includes/data_class.html" with data_class=search.data_class %} <span>{{ search.layer_label }}</span> <span>{{ search.countries }}</span></p>
+    <h1>{{ search.title }}</h1>
+    <p class="lede"><span class="badge {% if search.outcome == 'no_qualifying_source_found' %}badge--warn{% elif search.outcome == 'qualifying_sources_found' %}badge--ok{% endif %}">{{ search.outcome_label }}</span> · {% translate "searched on" %} {{ search.searched_on|date:"Y-m-d" }} · {% translate "recorded by" %} {{ search.created_by }}</p>
+  </header>
+  {% if search.data_class == "demonstration" %}{% include "web/includes/demo_notice.html" %}{% endif %}
+  {% if search.outcome == "no_qualifying_source_found" %}
+    <p class="notice notice--warning"><span><strong>{% translate "A bounded negative finding." %}</strong> {% translate "Nothing that met the inclusion criteria was found in the sources examined below, by the method below. It is not evidence that no such source exists." %}</span></p>
+  {% endif %}
+  <section class="panel">
+    <div class="panel__header"><h2>{% translate "Summary" %}</h2></div>
+    <div class="panel__body"><p>{{ search.summary|linebreaksbr }}</p></div>
+  </section>
+  <div class="grid grid--2 section">
+    <section class="panel"><div class="panel__header"><h2>{% translate "Queries" %}</h2></div><div class="panel__body"><p>{{ search.queries|linebreaksbr }}</p></div></section>
+    <section class="panel"><div class="panel__header"><h2>{% translate "Sources in scope" %}</h2></div><div class="panel__body"><p>{{ search.source_universe|linebreaksbr }}</p></div></section>
+    <section class="panel"><div class="panel__header"><h2>{% translate "Inclusion and exclusion criteria" %}</h2></div><div class="panel__body"><p>{{ search.inclusion_criteria|linebreaksbr }}</p>{% if search.exclusion_criteria %}<p class="muted">{{ search.exclusion_criteria|linebreaksbr }}</p>{% endif %}</div></section>
+    <section class="panel"><div class="panel__header"><h2>{% translate "Method" %}</h2></div><div class="panel__body"><p>{{ search.method|linebreaksbr }}</p></div></section>
+  </div>
+  <section class="panel section">
+    <div class="panel__header"><h2>{% translate "Sources examined" %}</h2></div>
+    <div class="panel__body"><p>{{ search.sources_examined|linebreaksbr }}</p></div>
+  </section>
+{% endblock %}

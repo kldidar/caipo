@@ -77,6 +77,7 @@ def test_the_registry_has_a_layer_of_its_own_directly_above_accounts() -> None:
         "config",
         "demo",
         "web",
+        "research",
         "policies | indicators",
         "sources",
         "registry",

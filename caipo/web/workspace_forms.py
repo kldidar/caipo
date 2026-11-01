@@ -20,6 +20,7 @@ from caipo.policies.selectors import (
     PolicyType,
     ProvisionType,
 )
+from caipo.research.selectors import SearchLayer, SearchOutcome
 from caipo.sources.selectors import DocumentType, PermittedUse, SourceTier
 
 if TYPE_CHECKING:
@@ -139,3 +140,29 @@ class ProvisionForm(_OptionsForm):
     locator = _text(_("Locator, for example an article"), max_length=200)
     label = _text(_("What it provides for"), max_length=300)
     quoted_text = _area(_("Quoted text (demonstration data only)"))
+
+
+class AnalysisForm(_OptionsForm):
+    title = _text(_("Title"), max_length=300)
+    data_class = forms.ChoiceField(label=_("Data class"), choices=DataClass.choices)
+    indicators = forms.MultipleChoiceField(
+        label=_("Indicators"), widget=forms.CheckboxSelectMultiple
+    )
+    start_year = forms.IntegerField(label=_("First year"), min_value=1900, max_value=2100)
+    end_year = forms.IntegerField(label=_("Last year"), min_value=1900, max_value=2100)
+
+
+class SearchForm(forms.Form):
+    data_class = forms.ChoiceField(label=_("Data class"), choices=DataClass.choices)
+    title = _text(_("Title"), max_length=300)
+    layer = forms.ChoiceField(label=_("Layer searched for"), choices=SearchLayer.choices)
+    countries = _text(_("Countries searched"), max_length=200)
+    searched_on = forms.DateField(label=_("Searched on"), widget=_DATE)
+    queries = _area(_("Queries, in each language"), required=True)
+    source_universe = _area(_("Sources in scope"), required=True)
+    inclusion_criteria = _area(_("Inclusion criteria"), required=True)
+    exclusion_criteria = _area(_("Exclusion criteria"))
+    sources_examined = _area(_("Sources examined, with reasons for exclusion"), required=True)
+    method = _area(_("Method, in enough detail to repeat it"), required=True)
+    outcome = forms.ChoiceField(label=_("Outcome"), choices=SearchOutcome.choices)
+    summary = _area(_("Summary, bounded by what was examined"), required=True)

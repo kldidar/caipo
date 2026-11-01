@@ -36,7 +36,10 @@ __all__ = [
     "Point",
     "ReleaseEntry",
     "Series",
+    "AnalysisInput",
+    "analysis_inputs",
     "coverage",
+    "indicator_choices",
     "indicator_detail",
     "layer_view",
 ]
@@ -293,3 +296,78 @@ def indicator_detail(
         .values_list("label", "retrieved_on", "file_name", "sha256", "held")
     )
     return IndicatorDetail(view, definition, original, url, licence, verified, releases)
+
+
+@dataclass(frozen=True)
+class AnalysisInput:
+    """One value an analysis may use: the latest release's value, with that release."""
+
+    indicator: str
+    indicator_name: str
+    unit: str
+    layer: str
+    country: str
+    year: int
+    value: Decimal | None
+    status: str
+    release_sha256: str
+    release_label: str
+    source: str
+
+
+def analysis_inputs(
+    context: AuthenticationContext | None,
+    *,
+    indicators: list[uuid.UUID],
+    data_class: str,
+    start_year: int,
+    end_year: int,
+) -> list[AnalysisInput]:
+    """Return the values of some indicators of one data class between two years, for analysis.
+
+    For each indicator, country, and year, the value of the latest release.
+    Indicators of another data class are not returned. Reads only. Raises
+    PermissionDenied if the context may not read the workspace.
+    """
+    accounts_selectors.require_permission(context, Permission.WORKSPACE_READ)
+    latest: dict[tuple[str, str, int], AnalysisInput] = {}
+    for row in (
+        Observation.objects.filter(
+            indicator__public_id__in=indicators,
+            indicator__data_class=data_class,
+            year__gte=start_year,
+            year__lte=end_year,
+        )
+        .order_by("release_id")
+        .values_list(
+            "indicator__code",
+            "indicator__name",
+            "indicator__unit",
+            "indicator__layer",
+            "country__alpha2",
+            "year",
+            "value",
+            "status",
+            "release__sha256",
+            "release__label",
+            "indicator__source__name",
+        )
+    ):
+        item = AnalysisInput(*row)
+        latest[(item.indicator, item.country, item.year)] = item
+    return [latest[key] for key in sorted(latest)]
+
+
+def indicator_choices(
+    context: AuthenticationContext | None, *, data_class: str
+) -> list[tuple[uuid.UUID, str, str]]:
+    """Return the indicators of one data class as (public identifier, name, layer), for a form.
+
+    Reads only. Raises PermissionDenied if the context may not read the workspace.
+    """
+    accounts_selectors.require_permission(context, Permission.WORKSPACE_READ)
+    return list(
+        Indicator.objects.filter(data_class=data_class)
+        .order_by("layer", "name")
+        .values_list("public_id", "name", "layer")
+    )

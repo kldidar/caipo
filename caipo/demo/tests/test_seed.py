@@ -12,6 +12,7 @@ from caipo.core.data_class import is_synthetic_country
 from caipo.demo.catalogue import load
 from caipo.indicators.models import DatasetRelease, Indicator, Observation
 from caipo.policies.models import Policy, PolicyProvision
+from caipo.research.models import AnalysisRun, SearchRun
 from caipo.sources.models import Document, Source
 
 pytestmark = pytest.mark.django_db
@@ -42,6 +43,13 @@ def test_it_creates_the_catalogue_through_the_services() -> None:
         catalogue.demo_observations
     )
     assert Observation.objects.filter(release__data_class="reference").count() == 240
+    assert AnalysisRun.objects.count() == len(catalogue.analyses)
+    assert (
+        SearchRun.objects.filter(
+            outcome="no_qualifying_source_found", data_class="reference"
+        ).count()
+        == 1
+    )
     assert "demo.researcher@caipo.test" in out.getvalue()
     assert "TEST-password-for-demo" not in out.getvalue()
     researcher = User.objects.get(email="demo.researcher@caipo.test")

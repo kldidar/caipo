@@ -1,0 +1,100 @@
+{% extends "web/base.html" %}
+{% load i18n caipo_values %}
+
+{% block title %}{{ analysis.title }}{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'analyses' %}">{% translate "Analysis" %}</a></nav>
+  <header class="page-header">
+    <p class="policy-card__meta">{% include "web/includes/data_class.html" with data_class=analysis.data_class %} <span>{{ analysis.method_label }}, {% translate "version" %} {{ analysis.method_version }}</span></p>
+    <div class="section-header">
+      <h1 class="flush-bottom">{{ analysis.title }}</h1>
+      <span class="cluster">
+        <a class="button button--secondary button--small" href="{% url 'analysis-csv' analysis.public_id %}">{% translate "Export CSV" %}</a>
+        <a class="button button--secondary button--small" href="{% url 'analysis-json' analysis.public_id %}">{% translate "Export JSON" %}</a>
+      </span>
+    </div>
+    <p class="lede">{{ analysis.parameters.start_year }}–{{ analysis.parameters.end_year }} · {% translate "run by" %} {{ analysis.created_by }} · {{ analysis.created_at|date:"Y-m-d H:i" }} UTC</p>
+  </header>
+  {% if analysis.data_class == "demonstration" %}{% include "web/includes/demo_notice.html" %}{% endif %}
+  <p class="notice notice--warning"><span><strong>{% translate "Not a causal analysis." %}</strong> {{ non_causation }}</span></p>
+
+  <section class="section" aria-labelledby="result-title">
+    <h2 id="result-title" class="flush-top">{% translate "Result" %}</h2>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th scope="col">{% translate "Indicator" %}</th>
+        <th scope="col">{% translate "Country" %}</th>
+        <th scope="col" class="num">{{ analysis.parameters.start_year }}</th>
+        <th scope="col" class="num">{{ analysis.parameters.end_year }}</th>
+        <th scope="col" class="num">{% translate "Change" %}</th>
+        <th scope="col" class="num">{% translate "Change, %" %}</th>
+        <th scope="col" class="num">{% translate "Years held" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for row in analysis.result %}
+          <tr>
+            <th scope="row"><span class="code-chip">{{ row.layer }}</span> {{ row.indicator_name }}<br><small class="muted">{{ row.unit }}</small></th>
+            <td><span class="code-chip">{{ row.country }}</span></td>
+            <td class="num{% if not row.start_value %} is-missing{% endif %}">{% if row.start_value %}{{ row.start_value|value_text }}{% else %}<span class="missing">{% translate "no value" %}</span>{% endif %}</td>
+            <td class="num{% if not row.end_value %} is-missing{% endif %}">{% if row.end_value %}{{ row.end_value|value_text }}{% else %}<span class="missing">{% translate "no value" %}</span>{% endif %}</td>
+            <td class="num">{% if row.absolute_change %}{{ row.absolute_change|value_text }}{% else %}<span class="missing" title="{{ row.not_computed_because }}">{% translate "not computed" %}</span>{% endif %}</td>
+            <td class="num">{% if row.relative_change_percent %}{{ row.relative_change_percent|value_text }}{% else %}<span class="missing">—</span>{% endif %}</td>
+            <td class="num">{{ row.years_held }} / {{ row.years_held|add:row.years_missing }}{% if row.values_flagged %} <abbr class="flag" title="{% translate 'values flagged estimated, provisional, or projected' %}">{{ row.values_flagged }} E</abbr>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="muted"><small>{{ methodology }}</small></p>
+  </section>
+
+  <div class="grid grid--2 section">
+    <section class="panel" aria-labelledby="repro-title">
+      <div class="panel__header"><h2 id="repro-title">{% translate "Reproducibility" %}</h2></div>
+      <div class="panel__body">
+        <dl>
+          <dt>{% translate "Input fingerprint" %}</dt><dd><code class="hash">{{ analysis.input_fingerprint }}</code></dd>
+          <dt>{% translate "Result fingerprint" %}</dt><dd><code class="hash">{{ analysis.result_fingerprint }}</code></dd>
+          <dt>{% translate "Values used" %}</dt><dd>{{ analysis.inputs|length }}</dd>
+        </dl>
+        {% if reproduction %}
+          {% if reproduction.same_inputs and reproduction.same_result %}
+            <p class="notice notice--success" role="status"><span><strong>{% translate "Reproduced exactly." %}</strong> {% translate "Run again on the values held now, the inputs and the result have the same fingerprints." %}</span></p>
+          {% elif reproduction.same_inputs %}
+            <p class="notice notice--danger" role="status"><span><strong>{% translate "Same inputs, different result." %}</strong> {% translate "The method has changed since this run." %}</span></p>
+          {% else %}
+            <p class="notice notice--warning" role="status"><span><strong>{% translate "The inputs have changed." %}</strong> {% translate "A later release has been imported since this run. The run keeps the values it used; a new run would use the new ones." %} <code class="hash">{{ reproduction.input_fingerprint }}</code></span></p>
+          {% endif %}
+        {% else %}
+          <p class="actions"><a class="button" href="?check=1">{% translate "Check reproducibility" %}</a></p>
+          <p class="muted"><small>{% translate "Runs the method again on the values held now and compares the fingerprints. Nothing is written." %}</small></p>
+        {% endif %}
+      </div>
+    </section>
+    <section class="panel" aria-labelledby="releases-title">
+      <div class="panel__header"><h2 id="releases-title">{% translate "Sources of the values" %}</h2></div>
+      <div class="panel__body">
+        {% for source, label, sha in analysis.releases %}
+          <div class="release">
+            <p><strong>{{ source }}</strong><br><small>{{ label }}</small></p>
+            <code class="hash">{{ sha }}</code>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <details class="disclosure section">
+    <summary>{% blocktranslate count n=analysis.inputs|length %}Every value used ({{ n }}){% plural %}Every value used ({{ n }}){% endblocktranslate %}</summary>
+    <div class="disclosure__body">
+      <div class="table-wrap"><table>
+        <thead><tr><th scope="col">{% translate "Indicator" %}</th><th scope="col">{% translate "Country" %}</th><th scope="col">{% translate "Year" %}</th><th scope="col" class="num">{% translate "Value as stored" %}</th><th scope="col">{% translate "Status" %}</th><th scope="col">{% translate "Release" %}</th></tr></thead>
+        <tbody>
+          {% for item in analysis.inputs %}
+            <tr><td><span class="code-chip">{{ item.indicator }}</span></td><td>{{ item.country }}</td><td>{{ item.year }}</td><td class="num mono">{{ item.value|default_if_none:"—" }}</td><td>{{ item.status }}</td><td><code class="hash">{{ item.release_sha256|slice:":12" }}…</code></td></tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+{% endblock %}
