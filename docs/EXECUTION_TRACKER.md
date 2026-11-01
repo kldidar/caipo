@@ -73,9 +73,9 @@ Counted from the packages in §4. No percentage is estimated.
 | Sprint packages (S1 to S8) | 8 |
 | DONE | 6 (A1, H1, H6, S1, S2, E1) |
 | AWAITING OWNER MERGE | 2 (S3 and S4, together in Day 4, #31: CI passed on `184fec4`, `4674 passed`) |
-| IN PROGRESS | 1 (S6, Day 6) |
-| AWAITING OWNER MERGE, stacked | 1 (S5, Day 5, #32) |
-| Sprint packages NOT STARTED or BLOCKED on another sprint package | 2 (S7, S8) |
+| IN PROGRESS | 1 (S7, Day 7) |
+| AWAITING OWNER MERGE, stacked | 2 (S5, Day 5, #32; S6, Day 6, #33) |
+| Sprint packages NOT STARTED or BLOCKED on another sprint package | 1 (S8) |
 | Master-roadmap packages NOT STARTED, nothing preventing them | 2 (E2, G4, within sprint packages) |
 | Master-roadmap packages PARTIAL | 1 (A3) |
 | Master-roadmap packages BLOCKED | 46 |
@@ -95,8 +95,8 @@ The owner's mandates of 2026-10-30 add these packages. Each is built under [ADR-
 | S3 | Sources and policies backend: Source, Document (metadata only), Policy, AI-related provisions, formal events, corpus assignment; permissions, services, selectors, audit; seed command | MUST | AWAITING OWNER MERGE (#31) | 4 |
 | S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | AWAITING OWNER MERGE (#31, merged into Day 4) | 4 |
 | S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | AWAITING OWNER MERGE (#32) | 5 |
-| S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | IN PROGRESS | 6 |
-| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | BLOCKED: S3 to S6 | 7 |
+| S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | AWAITING OWNER MERGE (#33) | 6 |
+| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | IN PROGRESS | 7 |
 | S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | BLOCKED: S7 | 8 |
 
 ### 4.2 Master roadmap
@@ -229,7 +229,8 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 3 | Design system, application shell, home page | S2, E1 | 2026-10-30 | **DONE**: merged as `5ba91c8`; CI run 41353530141 passed all four checks; `4511 passed` | #30 |
 | 4 | Sources and policies: backend, pages, seed data | S3, S4 | 2026-11-02 | AWAITING OWNER MERGE | #31 |
 | 5 | Indicators in three layers, comparison, coverage | S5, F4 | 2026-11-02 | AWAITING OWNER MERGE (stacked on #31; CI runs when it is retargeted to `main`) | #32 |
-| 6 | Analysis runs, search runs, exports | S6, F2 | 2026-11-02 | IN PROGRESS (stacked on #32) | The pull request that changes this file |
+| 6 | Analysis runs, search runs, exports | S6, F2 | 2026-11-02 | AWAITING OWNER MERGE (stacked on #32) | #33 |
+| 7 | Polish, accessibility, journey tests | S7, E2, G4 | 2026-11-02 | IN PROGRESS (stacked on #33) | The pull request that changes this file |
 
 ### Planned Days
 
@@ -237,7 +238,6 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 
 | Day | Sprint day | Objective | Packages | Ready when |
 |---|---|---|---|---|
-| 7 | 7 | Polish, accessibility, responsive layout, journey tests, defects | S7, E2, G4 | Day 6 open or merged |
 | 8 | Deadline day | Professor-ready delivery | S8, J1 (demonstrator) | Day 7 open or merged |
 
 **Post-sprint queue (unnumbered).** Recording the research governance decisions (A2, when Q-2 to Q-5, Q-7, Q-8 are answered); the job-system and isolation spike (C1, Q-9); the Blueprint revision (H5); the ADR-0004 and ADR-0011 decisions (C2); the Phase 1 exit and account-administration pages (A5, D0, Q-11); status consolidation and the self-review practice (H2 to H4, Q-12); CI reliability (G2, G3, Q-13); the ADR for registry name sources (C4); then the research-grade phases behind their gates.
@@ -289,6 +289,7 @@ Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 
 | 2026-10-30 | The demonstrator track and the delivery sprint, deadline 2026-11-06 23:59 Asia/Tashkent | Owner (mandate) | [ADR-0020](adr/0020-demonstrator-track.md); §0 |
 | 2026-11-02 | **Provisional**, for the demonstrator only: `seed_demo` grants its two accounts their roles through a seeding account that cannot sign in, and writes countries and languages directly, because no verified Administrator exists in a fresh development database. Development only (`DEBUG`) | Claude Code, under the owner's delegation | `caipo/demo`; [DEVELOPMENT.md](DEVELOPMENT.md) |
 | 2026-11-02 | **Provisional**: the reasons the demonstrator's services give for a refusal are shown in English and are not yet marked for translation; the page around them is | Claude Code, under the owner's delegation | This file; to be closed in Day 7 or after the sprint |
+| 2026-11-02 | Accessibility evidence for the provisional P-1 target (WCAG 2.2 AA): axe-core 4.10.2, run locally from a scratch environment and not added to the project, found **no violation** of the WCAG 2.0, 2.1, and 2.2 A and AA rules or of its best-practice rules on 17 pages in light and in dark mode; text colour pairs were computed at 4.9:1 or more, chart lines at 3.2:1 or more (graphical objects). Keyboard focus is visible; charts have a text alternative in a table. Not checked: screen-reader use by a person, zoom to 400 % on every page | Claude Code | This file |
 | 2026-10-30 | P-1 (part of Q-10), **provisional**: WCAG 2.2 level AA as the accessibility target of the demonstrator's pages, checked in S2 and S7 | Claude Code, under the owner's delegation to choose a reasonable default and record it as provisional | This file. The owner may replace it |
 
 ## 10. Decisions awaiting the owner

@@ -40,6 +40,28 @@
     </section>
   {% endif %}
 
+  {% if workspace %}
+    <section class="section" aria-labelledby="economy-title">
+      <div class="section-header">
+        <h2 id="economy-title">{% translate "Economic transformation, study countries" %}</h2>
+        <a href="{% url 'indicators' %}">{% translate "Compare the countries" %}</a>
+      </div>
+      <div class="grid grid--3">
+        {% for layer in workspace.layers %}
+          <a class="card card--link" href="{% url 'indicators' %}?layer={{ layer.layer }}">
+            <span class="card__title">{{ layer.label }}</span>
+            {% if layer.indicators %}
+              {% for country in layer.countries %}<span class="card__body">{{ country.country }}: {% blocktranslate with held=country.with_values total=layer.indicators %}{{ held }} of {{ total }} indicators with values{% endblocktranslate %}{% if country.latest_year %}, {% blocktranslate with year=country.latest_year %}latest {{ year }}{% endblocktranslate %}{% endif %}</span>{% endfor %}
+            {% else %}
+              <span class="card__body"><em>{% translate "No indicator recorded for this layer." %}</em></span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+      <p class="muted"><small>{% blocktranslate with a=workspace.analyses s=workspace.searches %}{{ a }} recorded analysis runs and {{ s }} recorded searches in the research workspace.{% endblocktranslate %} <a href="{% url 'analyses' %}">{% translate "Analysis" %}</a> · <a href="{% url 'searches' %}">{% translate "Searches" %}</a></small></p>
+    </section>
+  {% endif %}
+
   {% if registry %}
     <section class="section" aria-labelledby="registry-title">
       <div class="section-header">

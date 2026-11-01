@@ -7,8 +7,10 @@ from django.views.decorators.http import require_safe
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts.selectors import Permission
+from caipo.indicators import selectors as indicators_selectors
 from caipo.policies import selectors as policies_selectors
 from caipo.registry import selectors as registry_selectors
+from caipo.research import selectors as research_selectors
 from caipo.sources import selectors as sources_selectors
 from caipo.web import sessions
 from caipo.web.access import public
@@ -45,6 +47,9 @@ def home(request: HttpRequest) -> HttpResponse:
             "provisions": sum(row.provisions for row in coverage),
             "coverage": coverage,
             **sources_selectors.counts(actor),
+            "layers": indicators_selectors.coverage(actor, data_class="reference"),
+            "analyses": len(research_selectors.analyses(actor)),
+            "searches": len(research_selectors.searches(actor)),
         }
     context = {
         "workspace": workspace,
