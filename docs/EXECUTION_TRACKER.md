@@ -2,9 +2,32 @@
 
 Status: Progress record, updated with every execution Day · Last updated: 2026-10-30
 
-This file records the progress of the master roadmap: what is done, what is waiting, and what comes next. **It decides nothing.** Requirements, phases, gates, blocker status, research rules, and architecture decisions are set by [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md), the Accepted ADRs, [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md), and the other documents listed in [CLAUDE.md](../CLAUDE.md). Where this file disagrees with them, they govern and this file is corrected. The rules for working with it are in [CLAUDE.md](../CLAUDE.md), "Execution workflow". It is the only progress tracker.
+This file records progress: what is done, what is waiting, and what comes next. **It decides nothing.** Requirements, phases, gates, blocker status, research rules, and architecture decisions are set by [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md), the Accepted ADRs, [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md), and the other documents listed in [CLAUDE.md](../CLAUDE.md). Where this file disagrees with them, they govern and this file is corrected. The rules for working with it are in [CLAUDE.md](../CLAUDE.md), "Execution workflow". It is the only progress tracker.
 
-Statuses: **DONE** (completed and verified), **PARTIAL**, **AWAITING OWNER MERGE**, **BLOCKED** (waiting for a named prerequisite or decision), **NOT STARTED** (approved, nothing prevents it), **DEFERRED** (postponed on purpose), **REMOVED** (crossed out, with the reason).
+Statuses: **DONE** (completed and verified), **PARTIAL**, **IN PROGRESS**, **AWAITING OWNER MERGE**, **BLOCKED** (waiting for a named prerequisite or decision), **NOT STARTED** (nothing prevents it), **DEFERRED** (postponed on purpose), **REMOVED** (crossed out, with the reason).
+
+## 0. Delivery sprint (2026-10-30 to 2026-11-06)
+
+On 2026-10-30 the project owner changed how CAIPO is completed (two mandates of that date):
+
+- **Who.** The project owner is the sole owner, operator, and researcher. There is no second reader, no reviewer other than the owner, and no technical team. Engineering, documentation, and bounded source discovery are delegated to Claude Code. The owner's only routine step is to review and merge pull requests; Claude Code never merges.
+- **Goal.** A complete, working, polished CAIPO demonstrator for a university professor: a functional Django backend and a distinctive, premium, accessible interface, with seeded data, transparent provenance, and professional documentation.
+- **Deadline.** **2026-11-06, 23:59 Asia/Tashkent.**
+- **How.** [ADR-0020](adr/0020-demonstrator-track.md) (accepted when the owner merges Day 2) sets the demonstrator track: reduced forms of `sources`, `policies`, `indicators`, and `research` built ahead of the research gates, every record classed `demonstration` (synthetic, synthetic countries only) or `reference` (real public metadata and openly licensed values), metadata only for legal texts, provisional classifications labelled as such. No gate changes status and no blocker closes.
+
+Sprint days are calendar milestones. Execution Days (§5) keep their own sequential numbers.
+
+| Sprint day | Date | Milestone | Execution Days |
+|---|---|---|---|
+| 1 | Fri 2026-10-30 | Mandate and plan recorded; design system and application shell | 2, 3 |
+| 2 | Sat 2026-10-31 | Core data architecture: sources and policies, permissions, audit, seed data | 4 |
+| 3 | Sun 2026-11-01 | Policy research experience: core corpus and contextual registry, provenance | 5 |
+| 4 | Mon 2026-11-02 | Indicators in three layers, country comparison, charts, coverage | 6 |
+| 5 | Tue 2026-11-03 | Research workspace: reproducible analysis runs, search runs, exports | 7 |
+| 6 | Wed 2026-11-04 | Polish, accessibility, responsive layout, journey tests, defects | 8 |
+| 7 | Thu 2026-11-05 to Fri 2026-11-06 | Clean-setup verification, README with screenshots, demonstration script, final limitations | 9 |
+
+Fri 2026-11-06 is the buffer for review, CI, and merges. A Day whose pull request is not merged by its sprint day does not stop the next one: during the sprint, the next Day's branch may be based on the open pull request (ADR-0020 point 17).
 
 ## 1. Verified repository state
 
@@ -12,16 +35,16 @@ Verified on 2026-10-30.
 
 | Item | Value | How verified |
 |---|---|---|
-| `origin/main` | `aa51d21fe7912365350fc2443565d60e0f8c608b`, the merge of #27 | `git fetch`; `gh pr view 27` |
-| CI on `aa51d21` | Run 41024056944 (push): Code quality, Django checks and tests, Dependency audit, Secret scan all passed; `4494 passed in 636.59s` | `gh run view`; job log |
-| Pull requests | 27 merged (#1 to #27), none closed without merging. Open: only the one that adds this file | `gh pr list` |
+| `origin/main` | `ac32fc80b5de276191ccc5080a9cbac811442c61`, the merge of #28 (Day 1) | `git fetch`; `gh pr view 28` |
+| CI on `ac32fc8` | Run 41084731032 (push): Code quality, Django checks and tests, Dependency audit, Secret scan all passed; `4494 passed in 512.76s` | `gh run view`; job log |
+| Pull requests | 28 merged (#1 to #28), none closed without merging. Open: only the one that changes this file (Day 2) | `gh pr list` |
 | Protection of `main` | Ruleset "Protect main": pull request required, the four checks required with strict status checks, no bypass | GitHub API, 2026-10-30 |
-| Phase and gate | Phase 1. Gate READY for Phase 1, NOT READY for Phase 2 and later | [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 (authoritative) |
-| CI time headroom | The test job took 480 s to 699 s in the 12 runs from 2026-10-25 to 2026-10-30, with the same 4,494 tests. Its timeout is 900 s | Job start and end times of those runs |
+| Phase and gate | Phase 1. Gate READY for Phase 1, NOT READY for Phase 2 and later. Unchanged by ADR-0020 | [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 (authoritative) |
+| CI time headroom | The test job took 480 s to 699 s in the runs from 2026-10-25 to 2026-10-30, with 4,494 tests. Its timeout is 900 s. The sprint adds tests, so this is a risk (Q-13) | Job start and end times of those runs |
 
 ## 2. Historical completed work
 
-Work done before this tracker existed. It has **no Day numbers**: no day-by-day record of it exists, and none is reconstructed.
+Work done before execution Days existed has **no Day numbers**.
 
 | Work | Evidence | Outcome |
 |---|---|---|
@@ -30,291 +53,273 @@ Work done before this tracker existed. It has **no Day numbers**: no day-by-day 
 | Recovery from a lost second factor | #4 to #10 | ADR-0017, all six increments built |
 | Audit foundation, registry | #11 to #15 | ADR-0018 Increment 1; ADR-0019 Increments 2 and 3 built |
 | Diagnostic of 2026-10-20 and its fixes | #16 to #21 | M1 to M4, L1 to L9, I7 fixed or resolved; I1 to I6 open ([report](reports/caipo-full-diagnostic-2026-10-20.md) §20.3) |
-| Product Excellence Blueprint | #22, #23 | A proposal; its decisions P-1 to P-14 are open |
+| Product Excellence Blueprint | #22, #23 | A proposal; its decisions P-1 to P-14 are open, except as §9 records |
 | B22 working model, provisional pilot defaults, pilot clarifications | #24 to #26 | Recorded in the protocol; B22 and O-1 to O-11 stay open |
-| Full audit and master roadmap | Prepared on 2026-10-28; accepted by the project owner, who on 2026-10-30 named it "the approved CAIPO master roadmap" | Package A1 |
-| H1, documentation corrections (K5, K6, K8, K10, K11, Blueprint §11) | #27, merged as `aa51d21`; CI as in §1 | Package H1 |
-| A2, research governance decision pack | Prepared on 2026-10-30 in a terminal session | Its eight questions are §10, Q-1 to Q-8. No answer recorded yet |
+| Full audit and master roadmap | Prepared on 2026-10-28; accepted by the project owner on 2026-10-30 | Package A1 |
+| H1, documentation corrections | #27, merged as `aa51d21` | Package H1 |
+| A2, research governance decision pack | Prepared on 2026-10-30 in a terminal session | Its questions are §10. Q-1 and Q-6 answered on 2026-10-30 (§9) |
 
-**Evidence held outside this repository.** These exist only in Claude Code session transcripts on the owner's machine, and are to be placed in the store that package A4 designates: the B8 options brief (2026-10-27), the source-feasibility memos (2026-10-27 and 10-28), and the full audit (2026-10-28). The 2026-10-28 memo also records a process incident: full legal texts were downloaded against the metadata-only rule and then deleted, and the findings that relied on them are marked unverified. None of this evidence is a research finding of the study.
+**Evidence held outside this repository.** These exist only in Claude Code session transcripts on the owner's machine, and are to be placed in the store that package A4 designates: the B8 options brief (2026-10-27), the source-feasibility memos (2026-10-27 and 10-28), and the full audit (2026-10-28). The 2026-10-28 memo also records a process incident: full legal texts were downloaded against the metadata-only rule and then deleted, and the findings that relied on them are marked unverified. None of this evidence is a research finding of the study, and none of it is used as a reference record under ADR-0020 without being found again and verified.
 
 ## 3. Overall progress
 
-Counted from the approved packages in §4. No percentage is estimated.
+Counted from the packages in §4. No percentage is estimated.
 
 | Measure | Count |
 |---|---|
-| Approved packages | 56 (57 listed, of which G1 is REMOVED) |
-| DONE | 2 (A1, H1) |
-| Remaining | 54 |
-| AWAITING OWNER MERGE | 1 (H6) |
-| BLOCKED | 50 |
-| NOT STARTED, nothing preventing it | 0 |
+| Master-roadmap packages | 56 (57 listed, of which G1 is REMOVED) |
+| Sprint packages (S1 to S8) | 8 |
+| DONE | 3 (A1, H1, H6) |
+| AWAITING OWNER MERGE | 1 (S1) |
+| Sprint packages NOT STARTED or BLOCKED on another sprint package | 7 (S2 to S8) |
+| Master-roadmap packages NOT STARTED, nothing preventing them | 3 (E1, E2, G4, all within sprint packages) |
+| Master-roadmap packages PARTIAL | 1 (A3) |
+| Master-roadmap packages BLOCKED | 46 |
 | DEFERRED | 3 (D6, G6, G7) |
-| Owner decisions pending | 14 (§10, Q-1 to Q-14) |
+| Owner decisions pending | 11 (§10) |
 
-## 4. Corrected master roadmap
+## 4. Roadmap and sprint classification
 
-The master roadmap of 2026-10-28 with every package's verified status. **Executor**: *Day*, a Claude Code execution Day; *Owner*; *Researcher*; *External*, a person outside the project. Changes since 2026-10-28: A1 and H1 are DONE; A2 is prepared; G1 is REMOVED, because H1 corrected the text it offered as an alternative; H6 is added; G3 is updated by the measurement in §1.
+### 4.1 Sprint packages
 
-### A. Owner decisions and prerequisites
+The owner's mandates of 2026-10-30 add these packages. Each is built under [ADR-0020](adr/0020-demonstrator-track.md), except S2, which is Phase 1 interface work on existing pages.
 
-| ID | Package | Status | Waits for | Executor |
+| ID | Package | Class | Status | Day |
 |---|---|---|---|---|
-| A1 | Accept the audit baseline | **DONE** | — | Owner |
-| A2 | Research governance decisions | **BLOCKED**: prepared, waiting for the owner's decisions | Q-1 to Q-8; then Day 2 records them | Owner, then Day |
-| A3 | Blueprint §9.2 decisions (at least P-1, P-11, P-13, P-14) | BLOCKED | Q-10 | Owner |
-| A4 | Store for research working records outside this repository | BLOCKED | Q-7 (decides the location); then the researcher places the evidence of §2 there | Owner, Researcher |
-| A5 | Phase 1 exit, or its residual items | BLOCKED | Q-11 | Owner, then Day |
-| A6 | Housekeeping: old backups (I6), merged branches, local `main`, leftover worktrees, Dependabot | BLOCKED | Q-14 | Owner |
+| S1 | Record the mandate, the sprint plan, ADR-0020, and the single-operator facts | MUST | AWAITING OWNER MERGE | 2 |
+| S2 | Design system and application shell: tokens, typography, navigation, signed-in home, every existing page restyled; accessibility target (G4, provisional) | MUST | NOT STARTED | 3 |
+| S3 | Sources and policies backend: Source, Document (metadata only), Policy, AI-related provisions, formal events, corpus assignment; permissions, services, selectors, audit; seed command | MUST | BLOCKED: S1 merged (ADR-0020) | 4 |
+| S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | BLOCKED: S3 | 5 |
+| S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | BLOCKED: S1 | 6 |
+| S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | BLOCKED: S3, S5 | 7 |
+| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | BLOCKED: S2 to S6 | 8 |
+| S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | BLOCKED: S7 | 9 |
 
-### B. Research and policy-source methodology
+### 4.2 Master roadmap
 
-| ID | Package | Status | Waits for | Executor |
-|---|---|---|---|---|
-| B1 | Languages, scripts, readers, pilot terminology lists (O-5) | BLOCKED | A2, A4, readers (Q-6) | Researcher |
-| B2 | Run and report the §3.8 pilot | BLOCKED | B1 | Researcher |
-| B3 | Decide O-1 to O-3 and O-5 to O-10; O-4 after B20 | BLOCKED | B2, A2 | Researcher, Owner |
-| B4 | B8 period design (structure, start reason, end rule, date convention, observations before the period) | BLOCKED | A2 (Q-3, Q-5) | Researcher |
-| B5 | O-11: revise RQ1 to RQ4 | BLOCKED | B3, B4 | Researcher |
-| B6 | Close B22 under its confirmed gate | BLOCKED | B1 to B5, B20 (F-15), O-10 | Owner, then Day |
-| B7 | B9: inclusion criteria and verified seed list | BLOCKED | B6 | Researcher |
-| B8 | B10: scanned-share sample and OCR decision | BLOCKED | A recorded right to keep sample files (Q-8) | Researcher, Day |
-| B9 | B7: rights policy, project-data licence, removal procedure | BLOCKED | A competent rights reviewer (Q-8) | External, Owner |
-| B10 | B12: indicator selection and layer assignment | BLOCKED | B6, B9 | Researcher |
-| B11 | B11 codebook, B23 decision, English prohibited-wording list | BLOCKED | B6 (codebook); Q-1 (who writes the wording list) | Researcher, Owner |
-| B12 | B13 team and B20 ethics review | BLOCKED | Q-4, Q-6 | Researcher, External |
+The master roadmap of 2026-10-28 with every package's status and its sprint class: **MUST** (needed by the deadline), **SHOULD** (fits after the core journeys work), **POST** (after the deadline: research-grade work behind the gates, production hardening, optional work). A POST class removes no requirement: each package keeps its status and prerequisites. **Executor**: *Day*, a Claude Code execution Day; *Owner*, the project owner, who is also the researcher (§9); *External*, a person outside the project.
 
-### C. Data model and ingestion readiness
+#### A. Owner decisions and prerequisites
 
-| ID | Package | Status | Waits for | Executor |
-|---|---|---|---|---|
-| C1 | Shared B4/B21 spike (job system and worker isolation) | BLOCKED | Q-9 (the owner starts it, with boundaries) | Day |
-| C2 | Decide ADR-0004 and ADR-0011 | BLOCKED | C1, then the owner's acceptance | Day, Owner |
-| C3 | DATA_MODEL, specification, AI_ARCHITECTURE amendments for F-1 to F-16 | BLOCKED | B3, B6 | Day |
-| C4 | ADR for the source of a registry name or date, and a preferred name (I3) | BLOCKED | A3 (P-11) | Day, Owner |
-| C5 | Phase 2 gate marked READY | BLOCKED | B6, B7, B8, B9, C2, C3 | Owner, Day |
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| A1 | Accept the audit baseline | — | **DONE** | — | Owner |
+| A2 | Research governance decisions | POST | BLOCKED. Q-1 and Q-6 answered (§9) | Q-2 to Q-5, Q-7, Q-8; then a Day records them in the protocol | Owner, then Day |
+| A3 | Blueprint §9.2 decisions (at least P-1, P-11, P-13, P-14) | SHOULD | PARTIAL: P-13 answered, P-1 provisional (§9) | P-11, P-14 (Q-10) | Owner |
+| A4 | Store for research working records outside this repository | POST | BLOCKED | Q-7 | Owner |
+| A5 | Phase 1 exit, or its residual items | SHOULD | BLOCKED | Q-11 | Owner, then Day |
+| A6 | Housekeeping: old backups (I6), merged branches, local `main`, leftover worktrees, Dependabot | POST | BLOCKED | Q-14 | Owner |
 
-### D. Backend implementation
+#### B. Research and policy-source methodology
 
-| ID | Package | Status | Waits for | Executor |
-|---|---|---|---|---|
-| D0 | Account-administration pages (disable, enable, grant and revoke roles) | BLOCKED | A5 (Q-11) | Day |
-| D1 | Phase 2: sources, documents, ingestion, fetch guard, parsing, review, rights | BLOCKED | C5 | Day |
-| D2 | Phase 3: policies and indicators | BLOCKED | D1; B11, B12, B23 | Day |
-| D3 | Phase 4: claims, evidence, reviews, SearchRun, AnalysisRun | BLOCKED | D2; B13, B20 | Day |
-| D4 | Phase 5: retrieval, search, assistant, evaluation | BLOCKED | D3; B14, B15, B16, B19, B24; ADR-0003, ADR-0006 | Day |
-| D5 | Phase 6: comparisons and export | BLOCKED | D4; B17, B7 | Day |
-| D6 | Reader of the audit record (I4) | DEFERRED | ADR-0018, "Not in this milestone" | Day |
+All research work; the owner does it as the researcher. None is needed for the demonstrator, which labels its classifications provisional (ADR-0020 point 8).
 
-### E. Interface and user journeys
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| B1 | Languages, scripts, readers, pilot terminology lists (O-5) | POST | BLOCKED | A2, A4. Reader: the owner alone, with the blind re-check (§9) | Owner |
+| B2 | Run and report the §3.8 pilot | POST | BLOCKED | B1 | Owner |
+| B3 | Decide O-1 to O-3 and O-5 to O-10; O-4 after B20 | POST | BLOCKED | B2, A2 | Owner |
+| B4 | B8 period design | POST | BLOCKED | A2 (Q-3, Q-5) | Owner |
+| B5 | O-11: revise RQ1 to RQ4 | POST | BLOCKED | B3, B4 | Owner |
+| B6 | Close B22 under its confirmed gate | POST | BLOCKED | B1 to B5, B20 (F-15), O-10 | Owner, then Day |
+| B7 | B9: inclusion criteria and verified seed list | POST | BLOCKED | B6 | Owner |
+| B8 | B10: scanned-share sample and OCR decision | POST | BLOCKED | A recorded right to keep sample files (Q-8) | Owner, Day |
+| B9 | B7: rights policy, project-data licence, removal procedure | POST | BLOCKED | A competent rights reviewer (Q-8) | External, Owner |
+| B10 | B12: indicator selection and layer assignment | POST | BLOCKED | B6, B9 | Owner |
+| B11 | B11 codebook, B23 decision, English prohibited-wording list | POST | BLOCKED | B6. Q-1 is answered: the owner writes the list | Owner |
+| B12 | B13 team and B20 ethics review | POST | BLOCKED. B13: the team is one person (§9); the self-review rule still needs confirming. B20 open | Q-4 | Owner, External |
 
-| ID | Package | Status | Waits for | Executor |
-|---|---|---|---|---|
-| E1 | Design foundation on the existing pages (P-13) | BLOCKED | A3 (Q-10) | Day |
-| E2 | Browser checks of the existing pages (diagnostic §12, items 1 to 7) | BLOCKED | The owner, with a browser and an Administrator signed in with a second factor | Owner, Day |
-| E3 | Interface text style guide (P-14) | BLOCKED | A3, B11 | Day |
-| E4 | Journeys J1 to J9, workspace and public pages | BLOCKED | H5; the phase of each journey; P-2 and B7 for the public site | Day |
+#### C. Data model and ingestion readiness
 
-### F. Analysis and reproducibility
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| C1 | Shared B4/B21 spike (job system and worker isolation) | POST | BLOCKED | Q-9 | Day |
+| C2 | Decide ADR-0004 and ADR-0011 | POST | BLOCKED | C1, then the owner's acceptance | Day, Owner |
+| C3 | DATA_MODEL, specification, AI_ARCHITECTURE amendments for F-1 to F-16 | POST | BLOCKED | B3, B6 | Day |
+| C4 | ADR for the source of a registry name or date, and a preferred name (I3) | POST | BLOCKED | P-11 (Q-10) | Day, Owner |
+| C5 | Phase 2 gate marked READY | POST | BLOCKED | B6, B7, B8, B9, C2, C3 | Owner, Day |
 
-| ID | Package | Status | Waits for | Executor |
-|---|---|---|---|---|
-| F1 | FR-42 shared time axis, with the non-causation notice and the wording check | BLOCKED | D2, D3, B11 | Day |
-| F2 | AnalysisRun with observation counts; sensitivity input for contextual material (F-4) | BLOCKED | D3 | Day |
-| F3 | Corpus manifest, data snapshot, rebuild test (FR-61, NFR-05) | BLOCKED | D1, B7 | Day |
-| F4 | Coverage per country and layer on every comparison | BLOCKED | D3, D5 | Day |
+#### D. Backend implementation
 
-### G. Security, testing, accessibility, performance
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| D0 | Account-administration pages (disable, enable, grant and revoke roles) | SHOULD | BLOCKED | Q-11 | Day |
+| D1 | Phase 2, research-grade: sources, documents, ingestion, fetch guard, parsing, review, rights | POST. A metadata-only demonstrator form is S3 | BLOCKED | C5 | Day |
+| D2 | Phase 3, research-grade: policies and indicators | POST. Demonstrator forms are S3, S5 | BLOCKED | D1; B11, B12, B23 | Day |
+| D3 | Phase 4, research-grade: claims, evidence, reviews, SearchRun, AnalysisRun | POST. Demonstrator forms of SearchRun and AnalysisRun are S6; claims are not built | BLOCKED | D2; B13, B20 | Day |
+| D4 | Phase 5: retrieval, search, assistant, evaluation | POST | BLOCKED | D3; B14, B15, B16, B19, B24; ADR-0003, ADR-0006 | Day |
+| D5 | Phase 6, research-grade: comparisons and export | POST. Demonstrator forms are S5, S6 | BLOCKED | D4; B17, B7 | Day |
+| D6 | Reader of the audit record (I4) | SHOULD | DEFERRED | ADR-0018, "Not in this milestone" | Day |
 
-| ID | Package | Status | Waits for | Executor |
-|---|---|---|---|---|
-| G1 | Coverage measurement, or correct CONTRIBUTING | **REMOVED**: H1 corrected CONTRIBUTING. Adding a coverage tool would be a new decision with a dependency justification | — | — |
-| G2 | Scheduled dependency audit, or Dependabot alerts | BLOCKED | Q-13 | Day |
-| G3 | CI time headroom | BLOCKED. The headroom is smaller than the audit recorded (§1) | Q-13 (any change to the workflow) | Day |
-| G4 | Accessibility target and checks (P-1) | BLOCKED | A3 (Q-10) | Day |
-| G5 | Phase 2 security tests (fetch guard, parser limits) | BLOCKED | D1 | Day |
-| G6 | First performance measurements (NFR-07) | DEFERRED | Real data | Day |
-| G7 | Optional: database check for L5; `pre-commit` | DEFERRED | An owner decision, if ever wanted | Day |
+#### E. Interface and user journeys
 
-### H. Documentation
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| E1 | Design foundation on the existing pages (P-13) | MUST, as S2 | NOT STARTED | — (P-13 answered, §9) | Day |
+| E2 | Browser checks of the existing pages (diagnostic §12, items 1 to 7) | MUST, within S7 | NOT STARTED | Claude Code checks what it can in a local browser; checks that need the owner's authenticator are listed for the owner | Day, Owner |
+| E3 | Interface text style guide (P-14) | POST | BLOCKED | A3, B11 | Day |
+| E4 | Journeys J1 to J9, workspace and public pages | MUST for the workspace journeys of S3 to S6; POST for the public site | BLOCKED: S3 to S6 | The public site needs P-2 and B7 | Day |
 
-| ID | Package | Status | Waits for | Executor |
-|---|---|---|---|---|
-| H1 | Documentation corrections | **DONE** (#27, `aa51d21`) | — | Day |
-| H2 | One source for status (K9): reduce the status narratives to pointers | BLOCKED | Q-12 | Day |
-| H3 | Freeze the diagnostic report; decide where I1 to I6 are tracked | BLOCKED | Q-12 | Day |
-| H4 | Recorded self-review in every pull request (K7), for example a template | BLOCKED | Q-12 | Day |
-| H5 | Blueprint revision: the §10 order, and journeys for core versus contextual material and layers A to C (K1, K13) | BLOCKED | A2 | Day |
-| H6 | This execution tracker and the CLAUDE.md workflow rules | **AWAITING OWNER MERGE** (Day 1) | The owner's merge | Day |
+#### F. Analysis and reproducibility
 
-### I. Deployment and release
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| F1 | FR-42 shared time axis, with the non-causation notice and the wording check | SHOULD, within S6 if time allows | BLOCKED | S5, S6 | Day |
+| F2 | AnalysisRun with observation counts | MUST, as S6 (demonstrator form) | BLOCKED | S5 | Day |
+| F3 | Corpus manifest, data snapshot, rebuild test (FR-61, NFR-05) | POST | BLOCKED | D1, B7 | Day |
+| F4 | Coverage per country and layer on every comparison | MUST, as S5 | BLOCKED | S5 | Day |
 
-| ID | Package | Status | Waits for | Executor |
-|---|---|---|---|---|
-| I1 | B17 and ADR-0008 | BLOCKED | C2 | Owner, Day |
-| I2 | Production hardening (diagnostic I1, I2, I5) | BLOCKED | I1 | Day |
-| I3 | Release images, image scan, tags | BLOCKED | I1 | Day |
-| I4 | Backups with a restore test, monitoring, runbooks, rollback | BLOCKED | I1 | Day |
-| I5 | PostgreSQL collation and locale decided | BLOCKED | I1; before any data is kept from D1 | Owner, Day |
+#### G. Security, testing, accessibility, performance
 
-### J. Acceptance
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| G1 | Coverage measurement, or correct CONTRIBUTING | — | **REMOVED**: H1 corrected CONTRIBUTING | — | — |
+| G2 | Scheduled dependency audit, or Dependabot alerts | POST | BLOCKED | Q-13 | Day |
+| G3 | CI time headroom | SHOULD: the sprint adds tests | BLOCKED | Q-13 (any change to the workflow) | Day |
+| G4 | Accessibility target and checks (P-1) | MUST, within S2 and S7 | NOT STARTED. Target provisional (§9) | — | Day |
+| G5 | Phase 2 security tests (fetch guard, parser limits) | POST | BLOCKED | D1 | Day |
+| G6 | First performance measurements (NFR-07) | POST | DEFERRED | Real data | Day |
+| G7 | Optional: database check for L5; `pre-commit` | POST | DEFERRED | An owner decision, if ever wanted | Day |
 
-| ID | Package | Status | Waits for | Executor |
-|---|---|---|---|---|
-| J1 | Acceptance audit at each of the four completion milestones | BLOCKED | The first milestone: methodologically ready for ingestion | Day |
+#### H. Documentation
 
-**Critical path.** A2 → B1 → B2 → B3 → (B4 → B5) → B6 → C3 → C5 → D1, with B20 needed before B6 (F-15) and C1 → C2 needed before C5. Most of it is research done by the researcher; the Days on it record decisions and amend documents.
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| H1 | Documentation corrections | — | **DONE** (#27, `aa51d21`) | — | Day |
+| H2 | One source for status (K9) | POST | BLOCKED | Q-12 | Day |
+| H3 | Freeze the diagnostic report; decide where I1 to I6 are tracked | POST | BLOCKED | Q-12 | Day |
+| H4 | Recorded self-review in every pull request (K7) | SHOULD. Meanwhile each sprint pull request records its self-review in its description | BLOCKED | Q-12 | Day |
+| H5 | Blueprint revision: §10 order, core and contextual journeys, layers A to C | POST. The demonstrator pages keep core and contextual material and the three layers apart (ADR-0020) | BLOCKED | A2 | Day |
+| H6 | The execution tracker and the CLAUDE.md workflow rules | — | **DONE** (#28, `ac32fc8`; CI as in §1) | — | Day |
+
+#### I. Deployment and release
+
+All POST: the demonstrator runs locally (ADR-0020 point 3).
+
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| I1 | B17 and ADR-0008 | POST | BLOCKED | C2 | Owner, Day |
+| I2 | Production hardening (diagnostic I1, I2, I5) | POST | BLOCKED | I1 | Day |
+| I3 | Release images, image scan, tags | POST | BLOCKED | I1 | Day |
+| I4 | Backups with a restore test, monitoring, runbooks, rollback | POST | BLOCKED | I1 | Day |
+| I5 | PostgreSQL collation and locale decided | POST | BLOCKED | I1; before any research data is kept from D1 | Owner, Day |
+
+#### J. Acceptance
+
+| ID | Package | Class | Status | Waits for | Executor |
+|---|---|---|---|---|---|
+| J1 | Acceptance audit at each completion milestone | MUST for the demonstrator (within S8, against the owner's final acceptance list); POST for the research milestones | BLOCKED | S7 | Day |
+
+**Critical path of the sprint.** S1 → S3 → S4; S1 → S5; S3 and S5 → S6 → S7 → S8. S2 runs in parallel from the start. **Critical path of the research build** (unchanged, after the sprint): A2 → B1 → B2 → B3 → (B4 → B5) → B6 → C3 → C5 → D1, with B20 before B6 (F-15) and C1 → C2 before C5.
 
 ## 5. Execution Days
 
-A Day is one unit of work by Claude Code, in one or more sessions, with one coherent deliverable and written acceptance criteria. The counter starts with Day 1 on 2026-10-30. A Day's number is fixed when it starts. Planned Days are numbered in their planned order; if a planned Day is blocked and a later one can run first, the queue is renumbered, and the change is recorded here.
+A Day is one unit of work by Claude Code, with one coherent deliverable and written acceptance criteria. The counter started with Day 1 on 2026-10-30. A Day's number is fixed when it starts.
 
 ### Days started
 
 | Day | Objective | Packages | Started | Status | Pull request |
 |---|---|---|---|---|---|
-| 1 | Reconcile the project state; establish this tracker and the workflow rules | H6 | 2026-10-30 | AWAITING OWNER MERGE | The pull request that adds this file |
+| 1 | Reconcile the project state; establish this tracker and the workflow rules | H6 | 2026-10-30 | **DONE**: merged as `ac32fc8`; CI run 41084731032 passed all four checks; `4494 passed` | #28 |
+| 2 | Record the delivery mandate, the sprint plan, and ADR-0020 | S1 | 2026-10-30 | AWAITING OWNER MERGE | The pull request that changes this file |
 
 ### Planned Days
 
-Provisional numbers. **Ready when** names what must hold before the Day can start.
+**Renumbering on 2026-10-30.** The Days planned in #28 as Days 2 to 11 waited for owner decisions that the sprint does not need. They leave the numbered queue and are kept, unnumbered, as the post-sprint queue below. The sprint Days take numbers 3 to 9.
 
-| Day | Objective | Packages | Ready when |
-|---|---|---|---|
-| 2 | Record the research governance decisions | A2 (and the decision parts of A4, B12) | Day 1 merged; Q-1 to Q-8 answered |
-| 3 | Job-system and worker-isolation spike | C1 | Q-9 answered |
-| 4 | Revise the Blueprint's order and journeys | H5 | Day 2 merged |
-| 5 | Prepare the ADR-0004 and ADR-0011 decisions from the spike | C2 | Day 3 merged; then the owner decides |
-| 6 | Design foundation on the existing pages | E1, G4 (target only) | Q-10 answered (P-1, P-13) |
-| 7 | Phase 1 exit and account-administration pages | A5, D0 | Q-11 answered |
-| 8 | Status consolidation, diagnostic report frozen, self-review practice | H2, H3, H4 | Q-12 answered |
-| 9 | CI reliability: dependency audit schedule and time headroom | G2, G3 | Q-13 answered |
-| 10 | Browser checks of the existing pages, with the owner | E2 | The owner is available with a browser |
-| 11 | ADR for the source of registry names and dates | C4 | Q-10 answered (P-11) |
+| Day | Sprint day | Objective | Packages | Ready when |
+|---|---|---|---|---|
+| 3 | 1 | Design system and application shell on every existing page, signed-in home | S2, E1, G4 (target) | Now. Phase 1 work; does not depend on Day 2 |
+| 4 | 2 | Sources and policies backend with seed data | S3 | Day 2 merged |
+| 5 | 3 | Policy research pages; reference metadata for the study countries | S4 | Day 4's pull request open (stacked) or merged |
+| 6 | 4 | Indicators, three layers, comparison and coverage | S5, F4 | Day 2 merged |
+| 7 | 5 | Analysis runs, search runs, exports | S6, F2 | Days 4 and 6 open or merged |
+| 8 | 6 | Polish, accessibility, responsive layout, journey tests, defects | S7, E2, G4 | Days 3 to 7 open or merged |
+| 9 | 7 | Professor-ready delivery | S8, J1 (demonstrator) | Day 8 open or merged |
 
-**After Day 11 (not yet numbered).** Days that record research outcomes as the researcher completes them (B4, B5, B6, B8 closure records); the F-point amendments of C3, one reviewed change per group; the Phase 2 gate change (C5); then Phase 2 (D1 with G5) and the later phases, which are planned in Days only when their gates are near.
+**Post-sprint queue (unnumbered).** Recording the research governance decisions (A2, when Q-2 to Q-5, Q-7, Q-8 are answered); the job-system and isolation spike (C1, Q-9); the Blueprint revision (H5); the ADR-0004 and ADR-0011 decisions (C2); the Phase 1 exit and account-administration pages (A5, D0, Q-11); status consolidation and the self-review practice (H2 to H4, Q-12); CI reliability (G2, G3, Q-13); the ADR for registry name sources (C4); then the research-grade phases behind their gates.
 
-**Estimate, not a promise.** Days 2 to 11, plus about 7 to 10 further Days for research records, the F-points, and the Phase 2 gate: about 17 to 20 Days of engineering work before Phase 2 can start. The research packages run on the researcher's time and are not counted in Days. Phases 2 to 6 are not estimated in Days until C5.
+## 6. Checklists
 
-## 6. Checklists for the upcoming Days
+### Day 2: record the delivery mandate, the sprint plan, and ADR-0020
 
-### Day 1: reconcile the project state; establish this tracker and the workflow rules
+- [x] Verify #28's merge on `origin/main` and its CI
+- [x] Write ADR-0020 and add it to the indexes
+- [x] Reclassify the roadmap: sprint packages S1 to S8; MUST, SHOULD, POST for every package; no requirement deleted, no blocker closed
+- [x] Record the single-operator facts (Q-1, Q-6) in the protocol, LIMITATIONS, and this file
+- [x] Update CLAUDE.md "Current phase" and "Execution workflow" for the sprint, as the owner instructed
+- [x] Quality checks; complete diff review
+- [ ] Pull request; CI on the exact head; the owner merges
 
-Deliverable: this file, the "Execution workflow" section of CLAUDE.md, and a link from the README, in one documentation pull request.
+Acceptance: no gate, blocker status, research question, or date is changed; every package keeps its status and prerequisites; the four required checks pass on the exact head.
 
-- [x] Fetch `origin/main` and verify its SHA and CI
-- [x] Reconcile the 27 merged pull requests, the direct commits, the audit, the A2 pack, and the session records
-- [x] Classify every roadmap package, with evidence, and count progress
-- [x] Write this tracker
-- [x] Add the workflow rules to CLAUDE.md, checked against its existing rules
-- [x] Link the tracker from the README documentation map
-- [x] Quality checks: `git diff --check`, links, `ruff`, `mypy`, `lint-imports`
-- [x] Review the complete diff
-- [ ] Create the pull request
-- [ ] Verify CI on its exact head and read the pytest summary
-- [ ] The owner merges; the merge and its CI are verified
+### Day 3: design system and application shell
 
-Acceptance: every section this file requires exists; every package has a status with its evidence or prerequisite; no decision, gate, blocker status, research question, or date is changed; the CLAUDE.md rules contradict no existing rule; the four required checks pass on the exact head.
+- [ ] Design tokens and a base stylesheet as static files; self-hosted fonts with their licence, or a system font stack
+- [ ] Base template: header, primary navigation by permission, skip link, landmarks, footer
+- [ ] Signed-in home page that shows what the account can reach
+- [ ] Every existing page restyled: sign-in, second factor, account administration, recovery, registry browse and entry, errors
+- [ ] Accessible names for repeated controls; visible focus; contrast checked
+- [ ] Tests: template and access tests, route count and access declarations extended
+- [ ] Visual check in a local browser at phone, tablet, and desktop widths
+- [ ] Quality checks; complete diff review; pull request; exact-head CI
 
-### Day 2: record the research governance decisions
+Acceptance: no new Python dependency; no JavaScript build step; no third-party network request from a page; all existing tests pass, extended only where they state exact route counts or markup the restyle changes.
 
-Ready when Day 1 is merged and Q-1 to Q-8 are answered.
-
-- [ ] Record the answers to Q-1 to Q-8 in [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) (§3 for decision authority, §3.5 for the closure gate and the sequencing, §3.7 or §3.8 for readers, records, and rights checks), with the date, and add a §12 change record
-- [ ] If Q-4 is answered (a): a separate reviewed change to the specification adds the F-15 note on B20, without moving B20 from Phase 4
-- [ ] No blocker closed; B22, B8, B20, and O-1 to O-11 stay open; no date, research question, or gate changed
-- [ ] Update this tracker: Day 1 marked DONE with its merge SHA and CI; A2 status
-- [ ] Quality checks; complete diff review; pull request(s); exact-head CI
-
-Acceptance: each answer is recorded as the owner gave it, attributed and dated; every changed sentence traces to an answer; CI passes on the exact head.
-
-### Day 3: job-system and worker-isolation spike (C1)
-
-Ready when Q-9 is answered. Proposed boundaries: a throwaway branch that is never merged; nothing added to the lockfile of `main`; the candidates of [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10, B4 (a stable Celery release, `django-tasks`, Dramatiq, one more only if justified) on Python 3.14; ADR-0011's requirements as the test plan; synthetic data only; no outbound network beyond package installation.
-
-- [ ] Write the test plan from ADR-0011 and ADR-0004's open points
-- [ ] Build the minimal harness on the spike branch
-- [ ] Demonstrate each requirement with a test, or show why it cannot be met
-- [ ] Write the spike report, including what was not verified, as a documentation pull request
-- [ ] Quality checks on the report pull request; complete diff review; exact-head CI
-
-Acceptance: every requirement is shown with a test result or recorded as not met; no dependency reaches `main`; the report proposes and decides nothing; ADR-0004 and ADR-0011 stay Proposed.
-
-### Day 4: revise the Blueprint's order and journeys (H5)
-
-Ready when Day 2 is merged.
-
-- [ ] Revise Blueprint §10 action 2 to the order the owner chose in Q-3
-- [ ] Revise the journeys so core and contextual material, and layers A, B, and C, stay separate (K13)
-- [ ] Keep every recommendation a proposal: no proposed feature is presented as approved
-- [ ] Update this tracker; quality checks; complete diff review; pull request; exact-head CI
-
-Acceptance: no conflict remains between the Blueprint and the protocol's dependencies; the Blueprint still decides nothing.
-
-### Days 5 to 11
-
-Each also includes: update this tracker; quality checks; complete diff review; pull request; exact-head CI. Each is detailed further when it comes next in the queue.
-
-- **Day 5 (C2).** Ready when Day 3 is merged. Draft the proposed changes to ADR-0004 and ADR-0011 from the spike's results, each statement traced to a test. Acceptance: both ADRs stay Proposed until the owner accepts them; nothing is installed on `main`.
-- **Day 6 (E1, target of G4).** Ready when Q-10 is answered. Design tokens and a base stylesheet as static files; navigation and landmarks in the base template; distinct accessible names for repeated buttons; a synthetic script-specimen page if P-13 includes it. Acceptance: no new dependency and no JavaScript build step (ADR-0010); template tests for the accessible names; route count and access declarations updated if a page is added; manual browser check listed for Day 10.
-- **Day 7 (A5, D0).** Ready when Q-11 is answered. Record the Phase 1 exit in the specification as the owner decides; pages to disable and enable an account and to grant and revoke a role, through the existing services and permissions. Acceptance: tests for access per role, refusals, and the role and account events; the exact route count and permission sets extended where tests state them.
-- **Day 8 (H2, H3, H4).** Ready when Q-12 is answered. Reduce the status narratives to pointers to the specification; freeze the diagnostic report and track I1 to I6 where the owner decides; add the self-review practice. Acceptance: no status statement left that disagrees with the specification; no decision changed.
-- **Day 9 (G2, G3).** Ready when Q-13 is answered. The chosen dependency-audit schedule; the chosen timeout and sharding plan. Acceptance: CI still deploys nothing and holds no secret; the change is the one the owner approved.
-- **Day 10 (E2).** Ready when the owner is available. Work through diagnostic §12 items 1 to 7 with the owner and record the results. Acceptance: each item recorded as checked, failed (with a follow-up), or not checkable.
-- **Day 11 (C4).** Ready when Q-10 (P-11) is answered. Draft the ADR for the source of a registry name or date and a preferred name, as Proposed. Acceptance: the ADR decides nothing until the owner accepts it.
+Days 4 to 9 get full checklists when they start; their deliverables are in §4.1.
 
 ## 7. Active and pending pull requests
 
 | Pull request | Day | Head | Status |
 |---|---|---|---|
-| The pull request that adds this file | 1 | Reported when it is opened | Awaiting CI, then the owner's merge |
+| The pull request that changes this file | 2 | Reported when it is opened | Awaiting CI, then the owner's merge |
 
 ## 8. Blockers and dependencies
 
-Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 for blockers, [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.5 to §3.7 for O-1 to O-11 and F-1 to F-16, the [diagnostic report](reports/caipo-full-diagnostic-2026-10-20.md) §20.3 for I1 to I6. This table only points to them.
+Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 for blockers, [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.5 to §3.7 for O-1 to O-11 and F-1 to F-16, the [diagnostic report](reports/caipo-full-diagnostic-2026-10-20.md) §20.3 for I1 to I6. This table only points to them, and says what each blocks.
 
-| Blocks | Open items | Package |
-|---|---|---|
-| Phase 2 | B4, B21 (shared spike); B7 (rights policy); B8 (period and questions); B9 (seed list); B10 (OCR); B22 (domain, under the closure gate of protocol §3.5) | C1, C2, B9, B4, B5, B7, B8, B1 to B6 |
-| Phase 2, through F-15 | B20 must be answered before B22 can close, although the specification lists it under Phase 4 | B12 |
-| Phase 3 | B11, B12, B23 | B11, B10 |
-| Phase 4 | B13, B20 | B12 |
-| Phase 5 | B14, B15, B16, B19, B24 | D4 |
-| Phase 6 | B17 | I1 |
-| B22 closure | O-1 to O-11, all OPEN; provisional defaults do not count | B3, B5 |
-| Other documents | F-1 to F-16, all unsettled | C3 |
-| Not phase-gated | I1, I2, I5 (ADR-0008); I3 (needs an ADR); I4 (deferred by ADR-0018); I6 (housekeeping) | I2, C4, D6, A6 |
+| Open items | Blocks publication of research results | Blocks ingestion of source material | Blocks production deployment | Blocks the demonstrator |
+|---|---|---|---|---|
+| B4, B21 (job system, isolation) | — | Yes | Yes | No: no ingestion or jobs are built |
+| B7 (rights policy) | Yes | Yes | Yes | No: legal texts are metadata only; reference values come only from openly licensed providers |
+| B8, B22, O-1 to O-11, F-1 to F-16 | Yes | Yes | — | No: classifications are labelled provisional |
+| B9 (seed list), B10 (OCR) | Yes | Yes | — | No: reference records are a labelled sample, not a seed list |
+| B11, B12, B23 | Yes | — | — | No: indicator choice and layer assignment are labelled provisional |
+| B13, B20 | Yes | — | — | No: no research claims are built. Sensitive security, defence, surveillance, and law-enforcement material is excluded from the demonstrator |
+| B14, B15, B16, B19, B24 | Yes (assistant) | — | — | No: no assistant is built |
+| B17, ADR-0008, I1 to I6 | — | — | Yes | No: the demonstrator runs locally |
 
 ## 9. Decisions settled since the audit
 
-None. A1 is the owner's acceptance of the audit baseline; it settles no research or architecture decision.
+| Date | Decision | By | Recorded in |
+|---|---|---|---|
+| 2026-10-30 | Q-1: the project owner is also the responsible researcher, and the sole operator. There is no separate research or technical team | Owner (mandate) | This file; [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3 and §12; [LIMITATIONS.md](LIMITATIONS.md) §2.9 |
+| 2026-10-30 | Q-6: there is one reader and no second reader. Where the protocol allows one reader, the blind re-check is used, its interval recorded before the first reading, and the limitation stated. No record says an independent second review occurred | Owner (mandate) | Same |
+| 2026-10-30 | P-13 (part of Q-10): build the design foundation now, as a distinctive, premium interface | Owner (mandate) | This file; S2 |
+| 2026-10-30 | The demonstrator track and the delivery sprint, deadline 2026-11-06 23:59 Asia/Tashkent | Owner (mandate) | [ADR-0020](adr/0020-demonstrator-track.md); §0 |
+| 2026-10-30 | P-1 (part of Q-10), **provisional**: WCAG 2.2 level AA as the accessibility target of the demonstrator's pages, checked in S2 and S7 | Claude Code, under the owner's delegation to choose a reasonable default and record it as provisional | This file. The owner may replace it |
 
 ## 10. Decisions awaiting the owner
 
-Recommended defaults are recommendations, not decisions. Q-1 to Q-8 are the A2 decision pack of 2026-10-30.
+Recommended defaults are recommendations, not decisions. Only Q-13 can affect the sprint.
 
 | ID | Decision | Why it matters | Recommended default | Alternatives and consequences | Blocks |
 |---|---|---|---|---|---|
-| Q-1 | Is the project owner also the responsible researcher? If not, who is? | No research decision can be validly recorded without it | State the fact. If the same person: each record says which role acted, and the single-person limitation is stated | A separate researcher decides the content of B8, B9, and B22; the owner approves scope changes and closure gates | Day 2, all of B |
-| Q-2 | Confirm the six conditions of protocol §3.5 as the binding B22 closure gate (F-9)? | Without a confirmed gate, B22 could be closed on the shorter specification row | Confirm all six as written; O-4 needs B20 (no exception); the single-reader re-check is allowed with its limitation; B8 closes first or in the same change | Change conditions, with reasons, in a reviewed protocol change. Keeping only the specification row is not recommended | B6, Phase 2 |
-| Q-3 | Order of B22 and B8 | They depend on each other; the Blueprint's order cannot be followed | (a) Split the B8 work: set the period first, on grounds independent of AI policy dates, before any indicator values are examined; write the questions with O-11; B8 closes with or just before B22 | (b) close B8 and O-11 together with B22; (c) a pilot-only period; (d) protocol dependencies govern, the Blueprint is fixed later | B4, B5, H5 |
-| Q-4 | When is B20 answered (F-15)? And which institution, if any? | B22 cannot close until B20 is answered | (a) The researcher asks the institution now; B20 stays a Phase 4 blocker; a separate reviewed change adds the F-15 note to the specification | Waiting until Phase 4 keeps Phase 2 blocked. With no institution, the specification row cannot be met as written and needs a separate decision | B12, B6 |
-| Q-5 | B8 working basis and closure test | Fixes how the period is chosen before data is seen | P1, one common window, as a working basis only; a fixed end cutoff; the start reason recorded before values are examined. Closure test: §3.3 states period, start reason, end rule, date convention, and use of earlier observations; §2 revised to the O-11 constraints; one reviewed change with the specification row and the owner's confirmation | Keep P1 and P3 both open; or P3, which needs §3.3 and §4.2 reworded | B4 |
-| Q-6 | Who reads which language and script; is a second reader available? | The pilot records its readers before any candidate is read (§3.8 point 1) | State the people who exist. One reader: the blind re-check, with its limitation; seek a second reader where possible | A team of named readers gives agreement between readers, which is stronger evidence | B1, B2, B12 |
-| Q-7 | Where are pilot records and other working records kept? | The protocol keeps them outside this public repository, in a place the owner designates (O-10) | A private, version-controlled repository with access for the owner and the researcher only; metadata records only; kept document files outside git, with their hashes recorded; nothing published until B7 | A local repository with a backup | A4, B1, B2 |
-| Q-8 | Who makes the pilot's rights checks, and who is the competent rights reviewer for B7? | Files may be kept for the pilot only after a recorded check; B7 needs a competent reviewer | The researcher makes and records the pilot checks, and an uncertain case is not kept; the owner names or commissions the B7 reviewer now | A named rights adviser makes the pilot checks too | B2, B8, B9 |
-| Q-9 | Start the C1 spike with the boundaries of §6, Day 3? | The only Phase 2 gate work engineering can do while research proceeds | Yes, with those boundaries | Defer it until the research decisions are made | C1, C2 |
-| Q-10 | Blueprint decisions P-1 (accessibility target), P-11 (sources of names), P-13 (design foundation now), P-14 (text style guide) | E1, G4, and C4 depend on them | The Blueprint's recommended options for each | Reject or defer each | A3, E1, G4, C4 |
-| Q-11 | Phase 1 exit: declare it met, with D0 as a residual Phase 1 item or as later work? | No document declares Phase 1 complete; account administration has no page | Declare the exit met, with D0 as a residual Phase 1 item | Keep Phase 1 open until D0 is built | A5, D0 |
-| Q-12 | Status consolidation (including CLAUDE.md "Current phase"), freezing the diagnostic report, a pull request template | Status is narrated in about seven places | Approve all three as Day 8 | Approve some; or keep the current practice | H2, H3, H4 |
-| Q-13 | Dependency audit between changes; CI timeout headroom | No scheduled audit exists; the test job reached 78% of its timeout | A weekly scheduled run of the existing dependency audit in CI; raise the test job's timeout and plan sharding | Dependabot alerts (a repository setting); leave the timeout and accept the risk of failed runs | G2, G3 |
-| Q-14 | Housekeeping: old backups, merged branches, local `main`, leftover worktrees, Dependabot setting | Clutter and stored account data | Decide item by item; nothing is deleted without the owner's word | Keep everything | A6 |
+| Q-2 | Confirm the six conditions of protocol §3.5 as the binding B22 closure gate (F-9)? | Without a confirmed gate, B22 could be closed on the shorter specification row | Confirm all six as written; O-4 needs B20; the single-reader re-check is allowed with its limitation; B8 closes first or in the same change | Change conditions in a reviewed protocol change | B6, Phase 2 |
+| Q-3 | Order of B22 and B8 | They depend on each other | (a) Split the B8 work: set the period first, on grounds independent of AI policy dates, before any indicator values are examined | (b) close B8 and O-11 with B22; (c) a pilot-only period; (d) protocol dependencies govern | B4, B5, H5 |
+| Q-4 | When is B20 answered (F-15)? And which institution, if any? | B22 cannot close until B20 is answered | (a) Ask the institution now; B20 stays a Phase 4 blocker | Waiting keeps Phase 2 blocked | B12, B6 |
+| Q-5 | B8 working basis and closure test | Fixes how the period is chosen before data is seen | P1, one common window, as a working basis only; a fixed end cutoff; the start reason recorded before values are examined | Keep P1 and P3 both open; or P3 | B4 |
+| Q-7 | Where are pilot records and other working records kept? | The protocol keeps them outside this public repository (O-10) | A private, version-controlled repository; metadata records only; nothing published until B7 | A local repository with a backup | A4, B1, B2 |
+| Q-8 | Who makes the pilot's rights checks, and who is the competent rights reviewer for B7? | Files may be kept for the pilot only after a recorded check | The owner makes and records the pilot checks, and an uncertain case is not kept; the owner names or commissions the B7 reviewer | A named rights adviser | B2, B8, B9 |
+| Q-9 | Start the C1 spike? | Phase 2 gate work | After the sprint | Defer longer | C1, C2 |
+| Q-10 (rest) | P-11 (sources of names), P-14 (text style guide); confirm or replace the provisional P-1 | C4 and E3 depend on them | The Blueprint's recommended options | Reject or defer each | A3, C4, E3 |
+| Q-11 | Phase 1 exit: declare it met, with D0 as a residual item? | No document declares Phase 1 complete | Declare the exit met, with D0 residual | Keep Phase 1 open until D0 is built | A5, D0 |
+| Q-12 | Status consolidation, freezing the diagnostic report, a pull request template | Status is narrated in about seven places | Approve all three after the sprint | Approve some | H2, H3, H4 |
+| Q-13 | CI timeout headroom; dependency audit between changes | The test job reached 78% of its 900 s timeout, and the sprint adds tests. A timed-out job fails a required check | Raise the test job's timeout to 1,500 s now (one line of `.github/workflows/ci.yml`); a weekly scheduled dependency audit after the sprint | Leave it and accept the risk that a sprint pull request's CI fails on time alone | G2, G3, the sprint's CI |
+| Q-14 | Housekeeping | Clutter and stored account data | Item by item; nothing deleted without the owner's word | Keep everything | A6 |
 
 ## 11. Next executable Day
 
-**Day 1 is awaiting the owner's merge.** After the merge, the next Day is the first planned Day whose "Ready when" holds:
-
-- **Day 2** as soon as Q-1 to Q-8 are answered;
-- **Day 3** as soon as Q-9 is answered, independently of Day 2;
-- otherwise no Day can start, and the questions above are what unblocks them.
+- **Day 2** is awaiting the owner's merge.
+- **Day 3** (design system and application shell) starts now, in parallel: it is Phase 1 interface work on existing pages and does not depend on Day 2.
+- **Days 4 and 6** start when Day 2 is merged.
