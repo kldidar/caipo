@@ -12,6 +12,7 @@ import uuid
 from datetime import date
 
 from django.db import IntegrityError, transaction
+from django.utils.translation import gettext as _
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts import services as accounts_services
@@ -53,20 +54,20 @@ class DuplicateLinkError(InvalidEntryError):
 
 def _listed(value: str, values: list[str], field: str) -> str:
     if value not in values:
-        raise InvalidEntryError(f"The {field} is not one of those listed.")
+        raise InvalidEntryError(_("The %(field)s is not one of those listed.") % {"field": field})
     return value
 
 
 def _assignment(corpus_assignment: str, ai_focus: str, contextual_category: str) -> None:
-    _listed(corpus_assignment, CorpusAssignment.values, "corpus assignment")
+    _listed(corpus_assignment, CorpusAssignment.values, _("corpus assignment"))
     if corpus_assignment == CorpusAssignment.CORE:
-        _listed(ai_focus, AIFocus.values, "AI focus")
+        _listed(ai_focus, AIFocus.values, _("AI focus"))
         if contextual_category:
-            raise InvalidEntryError("A core policy has no contextual category.")
+            raise InvalidEntryError(_("A core policy has no contextual category."))
     else:
-        _listed(contextual_category, ContextualCategory.values, "contextual category")
+        _listed(contextual_category, ContextualCategory.values, _("contextual category"))
         if ai_focus:
-            raise InvalidEntryError("A contextual policy has no AI focus.")
+            raise InvalidEntryError(_("A contextual policy has no AI focus."))
 
 
 def _record(
@@ -95,16 +96,16 @@ def _log(actor: AuthenticationContext, event: str, public_id: uuid.UUID) -> None
 def _locked_policy(public_id: uuid.UUID) -> Policy:
     policy = Policy.objects.select_for_update().filter(public_id=public_id).first()
     if policy is None:
-        raise RecordNotFoundError("The policy does not exist.")
+        raise RecordNotFoundError(_("The policy does not exist."))
     return policy
 
 
 def _document_of(policy: Policy, document: uuid.UUID) -> sources_selectors.DocumentReference:
     reference = sources_selectors.document_reference(document)
     if reference is None:
-        raise RecordNotFoundError("The document does not exist.")
+        raise RecordNotFoundError(_("The document does not exist."))
     if reference.data_class != policy.data_class:
-        raise DataClassError("A policy and its documents are of the same data class.")
+        raise DataClassError(_("A policy and its documents are of the same data class."))
     return reference
 
 
@@ -142,46 +143,48 @@ def create_policy(
     not acceptable. Nothing is stored in any of those cases.
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
-    _listed(data_class, DataClass.values, "data class")
-    _listed(policy_type, PolicyType.values, "kind of policy")
+    _listed(data_class, DataClass.values, _("data class"))
+    _listed(policy_type, PolicyType.values, _("kind of policy"))
     _assignment(corpus_assignment, ai_focus, contextual_category)
-    reason = clean_text(assignment_reason, field="reason for the assignment", max_length=5000)
+    reason = clean_text(assignment_reason, field=_("reason for the assignment"), max_length=5000)
     country_ref = registry_selectors.country_reference(country)
     if country_ref is None:
-        raise RecordNotFoundError("The country does not exist.")
+        raise RecordNotFoundError(_("The country does not exist."))
     if not country_ref.is_active:
-        raise InvalidEntryError("The country is deactivated.")
+        raise InvalidEntryError(_("The country is deactivated."))
     if not country_fits(data_class, country_ref.alpha2):
         raise DataClassError(
-            "Demonstration records belong only to synthetic countries, "
-            "and reference records never do."
+            _(
+                "Demonstration records belong only to synthetic countries, "
+                "and reference records never do."
+            )
         )
     language = registry_selectors.language_reference(title_language)
     if language is None:
-        raise RecordNotFoundError("The language does not exist.")
+        raise RecordNotFoundError(_("The language does not exist."))
     if not language.is_active:
-        raise InvalidEntryError("The language is deactivated.")
+        raise InvalidEntryError(_("The language is deactivated."))
     lead = None
     if lead_institution is not None:
         lead = registry_selectors.institution_key(lead_institution)
         if lead is None:
-            raise RecordNotFoundError("The institution does not exist.")
+            raise RecordNotFoundError(_("The institution does not exist."))
     with transaction.atomic():
         policy = Policy.objects.create(
             data_class=data_class,
             country_id=country_ref.pk,
             lead_institution_id=lead.pk if lead else None,
             policy_type=policy_type,
-            title=clean_text(title, field="title", max_length=TITLE_MAX_LENGTH),
+            title=clean_text(title, field=_("title"), max_length=TITLE_MAX_LENGTH),
             title_language_id=language.pk,
             title_en=clean_text(
-                title_en, field="English title", max_length=TITLE_MAX_LENGTH, required=False
+                title_en, field=_("English title"), max_length=TITLE_MAX_LENGTH, required=False
             ),
             corpus_assignment=corpus_assignment,
             ai_focus=ai_focus,
             contextual_category=contextual_category,
             assignment_reason=reason,
-            summary=clean_text(summary, field="summary", max_length=5000, required=False),
+            summary=clean_text(summary, field=_("summary"), max_length=5000, required=False),
         )
         _record(actor, AuditTargetType.POLICY, policy.public_id)
     _log(actor, "policies.policy_created", policy.public_id)
@@ -215,7 +218,7 @@ def reassign_policy(
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
     _assignment(corpus_assignment, ai_focus, contextual_category)
-    reason = clean_text(assignment_reason, field="reason for the assignment", max_length=5000)
+    reason = clean_text(assignment_reason, field=_("reason for the assignment"), max_length=5000)
     with transaction.atomic():
         record = _locked_policy(policy)
         changes = tuple(
@@ -228,9 +231,11 @@ def reassign_policy(
             if old != new
         )
         if not changes:
-            raise InvalidEntryError("The assignment is the present one.")
+            raise InvalidEntryError(_("The assignment is the present one."))
         if corpus_assignment == CorpusAssignment.CONTEXTUAL and record.provisions.exists():
-            raise InvalidEntryError("A policy with AI-related provisions stays in the core corpus.")
+            raise InvalidEntryError(
+                _("A policy with AI-related provisions stays in the core corpus.")
+            )
         record.corpus_assignment = corpus_assignment
         record.ai_focus = ai_focus
         record.contextual_category = contextual_category
@@ -265,7 +270,7 @@ def link_document(
     any of those cases.
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
-    _listed(role, DocumentRole.values, "role")
+    _listed(role, DocumentRole.values, _("role"))
     try:
         with transaction.atomic():
             record = _locked_policy(policy)
@@ -273,14 +278,14 @@ def link_document(
             if PolicyDocumentLink.objects.filter(
                 policy=record, document_id=reference.pk, role=role
             ).exists():
-                raise DuplicateLinkError("The document is already linked in this role.")
+                raise DuplicateLinkError(_("The document is already linked in this role."))
             link = PolicyDocumentLink.objects.create(
                 policy=record, document_id=reference.pk, role=role
             )
             _record(actor, AuditTargetType.POLICY_DOCUMENT_LINK, link.public_id)
     except IntegrityError as error:
         if "policies_link_unique" in str(error):
-            raise DuplicateLinkError("The document is already linked in this role.") from error
+            raise DuplicateLinkError(_("The document is already linked in this role.")) from error
         raise
     _log(actor, "policies.document_linked", link.public_id)
     return link.public_id
@@ -313,9 +318,9 @@ def record_event(
     stored in any of those cases.
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
-    _listed(event_type, PolicyEventType.values, "event")
+    _listed(event_type, PolicyEventType.values, _("event"))
     clean_locator = clean_text(
-        locator, field="locator", max_length=LOCATOR_MAX_LENGTH, required=False
+        locator, field=_("locator"), max_length=LOCATOR_MAX_LENGTH, required=False
     )
     with transaction.atomic():
         record = _locked_policy(policy)
@@ -324,12 +329,14 @@ def record_event(
             policy=record, document_id=reference.pk, role__in=FORMAL_ROLES
         ).exists():
             raise InvalidEntryError(
-                "A formal event is established by a document linked as the enacting text, "
-                "an amendment, or an implementing act."
+                _(
+                    "A formal event is established by a document linked as the enacting text, "
+                    "an amendment, or an implementing act."
+                )
             )
         once = (PolicyEventType.ADOPTED, PolicyEventType.ENTERED_INTO_FORCE)
         if event_type in once and record.events.filter(event_type=event_type).exists():
-            raise InvalidEntryError("This event is already recorded for the policy.")
+            raise InvalidEntryError(_("This event is already recorded for the policy."))
         event = PolicyEvent.objects.create(
             policy=record,
             event_type=event_type,
@@ -368,24 +375,24 @@ def add_provision(
     stored in any of those cases.
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
-    _listed(provision_type, ProvisionType.values, "kind of provision")
+    _listed(provision_type, ProvisionType.values, _("kind of provision"))
     with transaction.atomic():
         record = _locked_policy(policy)
         if record.corpus_assignment != CorpusAssignment.CORE:
-            raise InvalidEntryError("Only a policy in the core corpus has coded provisions.")
+            raise InvalidEntryError(_("Only a policy in the core corpus has coded provisions."))
         reference = _document_of(record, document)
         if not PolicyDocumentLink.objects.filter(policy=record, document_id=reference.pk).exists():
-            raise InvalidEntryError("A provision is located in a document of the policy.")
-        text = clean_text(quoted_text, field="quoted text", max_length=5000, required=False)
+            raise InvalidEntryError(_("A provision is located in a document of the policy."))
+        text = clean_text(quoted_text, field=_("quoted text"), max_length=5000, required=False)
         if text and record.data_class != DataClass.DEMONSTRATION:
-            raise DataClassError("The text of a reference document is not held.")
+            raise DataClassError(_("The text of a reference document is not held."))
         provision = PolicyProvision.objects.create(
             policy=record,
             data_class=record.data_class,
             provision_type=provision_type,
             document_id=reference.pk,
-            locator=clean_text(locator, field="locator", max_length=LOCATOR_MAX_LENGTH),
-            label=clean_text(label, field="description", max_length=300),
+            locator=clean_text(locator, field=_("locator"), max_length=LOCATOR_MAX_LENGTH),
+            label=clean_text(label, field=_("description"), max_length=300),
             quoted_text=text,
         )
         _record(actor, AuditTargetType.POLICY_PROVISION, provision.public_id)

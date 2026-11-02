@@ -20,7 +20,7 @@
 
   <section class="section" aria-labelledby="coverage-title">
     <h2 id="coverage-title" class="flush-top">{% translate "Coverage by layer and country" %}</h2>
-    <div class="table-wrap"><table class="coverage">
+    <div class="table-wrap" tabindex="0"><table class="coverage">
       <thead><tr>
         <th scope="col">{% translate "Layer" %}</th>
         {% for country in coverage.0.countries %}<th scope="col">{{ country.country }}</th>{% endfor %}

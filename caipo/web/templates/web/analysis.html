@@ -21,7 +21,7 @@
 
   <section class="section" aria-labelledby="result-title">
     <h2 id="result-title" class="flush-top">{% translate "Result" %}</h2>
-    <div class="table-wrap"><table>
+    <div class="table-wrap" tabindex="0"><table>
       <thead><tr>
         <th scope="col">{% translate "Indicator" %}</th>
         <th scope="col">{% translate "Country" %}</th>
@@ -87,7 +87,7 @@
   <details class="disclosure section">
     <summary>{% blocktranslate count n=analysis.inputs|length %}Every value used ({{ n }}){% plural %}Every value used ({{ n }}){% endblocktranslate %}</summary>
     <div class="disclosure__body">
-      <div class="table-wrap"><table>
+      <div class="table-wrap" tabindex="0"><table>
         <thead><tr><th scope="col">{% translate "Indicator" %}</th><th scope="col">{% translate "Country" %}</th><th scope="col">{% translate "Year" %}</th><th scope="col" class="num">{% translate "Value as stored" %}</th><th scope="col">{% translate "Status" %}</th><th scope="col">{% translate "Release" %}</th></tr></thead>
         <tbody>
           {% for item in analysis.inputs %}

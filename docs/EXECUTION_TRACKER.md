@@ -33,13 +33,13 @@ Fri 2026-11-06 is the buffer for review, CI, and merges. A Day whose pull reques
 
 ## 1. Verified repository state
 
-Verified on 2026-11-02, after the owner's merge of #36.
+Verified on 2026-11-02, after the owner's merge of #37.
 
 | Item | Value | How verified |
 |---|---|---|
-| `origin/main` | `2f42d68`, the merge of #36 (Days 5 to 8), after `9e5e9ea` (#31, Day 4), `5ba91c8` (#30, Day 3), and `7904e36` (#29, Day 2) | `git fetch`; `gh pr view 36` |
-| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s`. `9e5e9ea`: run 41405637271, all four checks passed, `4674 passed in 631.67s`. `2f42d68`: run 41409027896, all four checks passed, `4787 passed in 682.99s` | `gh run view`; job logs |
-| Pull requests | 36 merged, none closed without merging. #1 to #31 and #36 were merged into `main`. **#32 to #35 were merged into the branches they were stacked on** (`feat/sources-policies`, `feat/indicators`, `feat/research-workspace`, `feat/polish-quality`), not into `main`, on 2026-11-02 between 07:20 and 07:23 UTC; no CI ran on them, because CI runs only for pull requests into `main`. #36 brought Days 5 to 8 to `main`, merged as `2f42d68`. Open: only the one that changes this file (Day 9) | `gh pr list`; merge bases |
+| `origin/main` | `c66e2d4`, the merge of #37 (Day 9), after `2f42d68` (#36, Days 5 to 8), `9e5e9ea` (#31, Day 4), `5ba91c8` (#30, Day 3), and `7904e36` (#29, Day 2) | `git fetch`; `gh pr view 36` |
+| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s`. `9e5e9ea`: run 41405637271, all four checks passed, `4674 passed in 631.67s`. `2f42d68`: run 41409027896, all four checks passed, `4787 passed in 682.99s`. `c66e2d4`: run 41413845532, all four checks passed, `4787 passed in 677.49s`, test job 712 s of its new 1,500 s | `gh run view`; job logs |
+| Pull requests | 37 merged, none closed without merging. #1 to #31, #36, and #37 were merged into `main`. **#32 to #35 were merged into the branches they were stacked on** (`feat/sources-policies`, `feat/indicators`, `feat/research-workspace`, `feat/polish-quality`), not into `main`, on 2026-11-02 between 07:20 and 07:23 UTC; no CI ran on them, because CI runs only for pull requests into `main`. #36 brought Days 5 to 8 to `main`, merged as `2f42d68`. Open: only the one that changes this file (Day 10) | `gh pr list`; merge bases |
 | Protection of `main` | Ruleset "Protect main": pull request required, the four checks required with strict status checks, no bypass | GitHub API, 2026-10-30 |
 | Phase and gate | Phase 1. Gate READY for Phase 1, NOT READY for Phase 2 and later. Unchanged by ADR-0020 | [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 (authoritative) |
 | CI time headroom | The test job took 480 s to 738 s in the 25 successful runs from 2026-10-24 to 2026-11-02; runs of the same 4,494 tests ranged from 480 s to 699 s. Its limit was 900 s; Day 9 raises it to 1,500 s with the owner's approval (§9) | Job start and end times of those runs (`gh run view`) |
@@ -71,8 +71,8 @@ Counted from the packages in §4. No percentage is estimated.
 |---|---|
 | Master-roadmap packages | 56 (57 listed, of which G1 is REMOVED) |
 | Sprint packages (S1 to S8) | 8 |
-| DONE | 14 (A1, H1, H6, E1, F2 and F4 in their demonstrator forms, S1 to S8) |
-| AWAITING OWNER MERGE | 1 (G3, Day 9) |
+| DONE | 15 (A1, H1, H6, E1, G3, F2 and F4 in their demonstrator forms, S1 to S8) |
+| AWAITING OWNER MERGE | 0; Day 10's pull request closes no package by itself |
 | Sprint packages NOT STARTED or BLOCKED on another sprint package | 0 |
 | Master-roadmap packages PARTIAL | 5 (A3, E2, E4, G4, J1; §12 says what is missing) |
 | Master-roadmap packages BLOCKED | 41 |
@@ -176,8 +176,8 @@ All research work; the owner does it as the researcher. None is needed for the d
 |---|---|---|---|---|---|
 | G1 | Coverage measurement, or correct CONTRIBUTING | — | **REMOVED**: H1 corrected CONTRIBUTING | — | — |
 | G2 | Scheduled dependency audit, or Dependabot alerts | POST | BLOCKED | Q-13 | Day |
-| G3 | CI time headroom | SHOULD: the sprint adds tests | AWAITING OWNER MERGE (Day 9): test job limit 900 s → 1,500 s, by a stated rule. Sharding not needed yet | — | Day |
-| G4 | Accessibility target and checks (P-1) | MUST, within S2 and S7 | PARTIAL: automated checks and contrast done (§9); screen-reader use and 400 % zoom not checked | — | Day |
+| G3 | CI time headroom | SHOULD: the sprint adds tests | **DONE** (#37, `c66e2d4`): test job limit 900 s → 1,500 s, by a stated rule. Sharding not needed yet | — | Day |
+| G4 | Accessibility target and checks (P-1) | MUST, within S2 and S7 | PARTIAL: automated checks, contrast, reflow at 320 CSS px (400 % zoom), and the accessibility tree are checked (§9); no person has used the pages with a screen reader | — | Day |
 | G5 | Phase 2 security tests (fetch guard, parser limits) | POST | BLOCKED | D1 | Day |
 | G6 | First performance measurements (NFR-07) | POST | DEFERRED | Real data | Day |
 | G7 | Optional: database check for L5; `pre-commit` | POST | DEFERRED | An owner decision, if ever wanted | Day |
@@ -229,7 +229,8 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 6 | Analysis runs, search runs, exports | S6, F2 | 2026-11-02 | **DONE**: merged into `feat/indicators` by #33, brought to `main` by #36 as `2f42d68`; CI run 41409027896 passed all four checks; `4787 passed` | #33 |
 | 7 | Polish, accessibility, journey tests | S7, E2, G4 | 2026-11-02 | **DONE**: merged into `feat/research-workspace` by #34, brought to `main` by #36 as `2f42d68`; CI run 41409027896 passed all four checks; `4787 passed` | #34 |
 | 8 | Professor-ready delivery: README with screenshots, demonstration guide, clean-setup check | S8, J1 (demonstrator) | 2026-11-02 | **DONE**: merged into `feat/polish-quality` by #35, brought to `main` by #36 as `2f42d68`; CI run 41409027896 passed all four checks; `4787 passed` | #35 |
-| 9 | CI headroom, sprint records, acceptance check | G3, J1 | 2026-11-02 | AWAITING OWNER MERGE | The pull request that changes this file |
+| 9 | CI headroom, sprint records, acceptance check | G3, J1 | 2026-11-02 | **DONE**: merged as `c66e2d4`; CI run 41413845532 passed all four checks; `4787 passed` | #37 |
+| 10 | Translatable refusal messages, reflow at 400 % zoom, accessibility tree | G4 | 2026-11-02 | AWAITING OWNER MERGE | The pull request that changes this file |
 
 ### Planned Days
 
@@ -260,7 +261,7 @@ Days 5 to 8 get full checklists when they start; their deliverables are in §4.1
 
 | Pull request | Day | Head | Status |
 |---|---|---|---|
-| The pull request that changes this file | 9 | Reported when it is opened | Awaiting CI, then the owner's merge |
+| The pull request that changes this file | 10 | Reported when it is opened | Awaiting CI, then the owner's merge |
 
 ## 8. Blockers and dependencies
 
@@ -286,9 +287,10 @@ Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 
 | 2026-10-30 | P-13 (part of Q-10): build the design foundation now, as a distinctive, premium interface | Owner (mandate) | This file; S2 |
 | 2026-10-30 | The demonstrator track and the delivery sprint, deadline 2026-11-06 23:59 Asia/Tashkent | Owner (mandate) | [ADR-0020](adr/0020-demonstrator-track.md); §0 |
 | 2026-11-02 | **Provisional**, for the demonstrator only: `seed_demo` grants its two accounts their roles through a seeding account that cannot sign in, and writes countries and languages directly, because no verified Administrator exists in a fresh development database. Development only (`DEBUG`) | Claude Code, under the owner's delegation | `caipo/demo`; [DEVELOPMENT.md](DEVELOPMENT.md) |
-| 2026-11-02 | **Provisional**: the reasons the demonstrator's services give for a refusal are shown in English and are not yet marked for translation; the page around them is | Claude Code, under the owner's delegation | This file; to be closed in Day 7 or after the sprint |
+| 2026-11-02 | ~~**Provisional**: the reasons the demonstrator's services give for a refusal are not yet marked for translation~~ **Closed in Day 10**: every refusal reason of the demonstrator's services and views passes through gettext with named placeholders, the names of fields too; a test reads the code and fails on an untranslated reason or an f-string in one | Claude Code | `caipo/web/tests/test_translatable_refusals.py` |
 | 2026-11-02 | Accessibility evidence for the provisional P-1 target (WCAG 2.2 AA): axe-core 4.10.2, run locally from a scratch environment and not added to the project, found **no violation** of the WCAG 2.0, 2.1, and 2.2 A and AA rules or of its best-practice rules on 17 pages in light and in dark mode; text colour pairs were computed at 4.9:1 or more, chart lines at 3.2:1 or more (graphical objects). Keyboard focus is visible; charts have a text alternative in a table. Not checked: screen-reader use by a person, zoom to 400 % on every page | Claude Code | This file |
 | 2026-11-02 | Q-13, first part: raise the CI test job's time limit, by as much as is needed and for a stated reason. Set to 25 minutes by the rule "twice the longest successful run, rounded up to five minutes" (738 s), to be recomputed when a run takes more than 1,000 s; written in `.github/workflows/ci.yml` | Owner (approval); Claude Code (the rule and the value) | This file; the workflow |
+| 2026-11-02 | Further accessibility evidence (Day 10): at a 320 CSS px viewport, the equivalent of 400 % zoom (WCAG 1.4.10), all 21 pages tried and the open menu reflow without horizontal scrolling, tables and charts excepted, and axe-core finds no violation on any of them. One defect found and fixed: long values in definition lists overflowed their panel by 25 px. The accessibility tree of 13 pages has one banner, one main, one contentinfo, named navigation, one `h1`, no skipped heading level, and no unnamed link, button, image, or field. Chart points no longer take keyboard focus (they were up to about 120 tab stops on a page inside an image); their values are in the table beside each chart. Scrollable table containers take focus so they can be scrolled from the keyboard. Not done: a person using a screen reader | Claude Code | This file |
 | 2026-10-30 | P-1 (part of Q-10), **provisional**: WCAG 2.2 level AA as the accessibility target of the demonstrator's pages, checked in S2 and S7 | Claude Code, under the owner's delegation to choose a reasonable default and record it as provisional | This file. The owner may replace it |
 
 ## 10. Decisions awaiting the owner
@@ -312,10 +314,10 @@ Recommended defaults are recommendations, not decisions. None of them blocks the
 
 ## 11. Next executable Day
 
-- **Day 9** (CI headroom, these records, the acceptance check of §12) is the pull request that changes this file.
+- **Day 10** (translatable refusal messages, reflow at 400 % zoom, accessibility tree) is the pull request that changes this file.
 - **Correction of 2026-11-02, kept for the record.** The stacked pull requests #32 to #35 were merged into their stack branches, not `main`, because GitHub retargets a stacked pull request only when its base branch is deleted. #36 brought their four commits to `main` unchanged. No pull request is stacked from now on unless it is retargeted to `main` by hand before it is merged.
 - **Before the demonstration:** the owner reads [DEMO.md](DEMO.md) and runs `seed_demo` on an empty development database.
-- **After Day 9:** the items that are partial in §12 (translation of service refusal messages; screen-reader and 400 % zoom checks), then the post-sprint queue (§5).
+- **What remains of the owner's acceptance list (§12):** a page to add an indicator (an import of values stays out of the demonstrator by ADR-0020 point 3), and a check by a person using a screen reader. Then the post-sprint queue (§5).
 
 ## 12. The owner's acceptance list for the demonstrator
 
@@ -343,9 +345,9 @@ The list of the owner's mandate of 2026-10-30, §11, checked on 2026-11-02 again
 | C. Unit and integration tests | Met | 4,787 tests |
 | C. Critical end-to-end journeys tested | Met, through the Django test client | Not driven through a real browser in CI; the pages were checked in a headless browser by hand |
 | C. Four required CI checks passing | Met | Run 41409027896 on `2f42d68` |
-| C. Accessibility and responsive layout | Partial | axe-core: no WCAG 2.2 A/AA violation on 17 pages in both themes; widths from 390 px to 1440 px checked. Screen-reader use and 400 % zoom not checked |
+| C. Accessibility and responsive layout | Partial | axe-core: no WCAG 2.2 A/AA violation on 17 pages in both themes and on 21 pages at 320 CSS px; reflow at 400 % zoom checked on every page; accessibility tree checked on 13 pages (§9). Not done: a person using a screen reader |
 | C. Security review | Met, as a targeted review of the sprint's code on 2026-11-02 | No unescaped output, no raw SQL, no outbound network call, no CSRF exemption in the new code; every route declares its access; stored addresses limited to `http(s)` by the service and a database check; CSV formula injection neutralised; snapshot files hash-checked and validated; `seed_demo` refuses to run without `DEBUG`. Not a penetration test |
-| C. No known critical defects | Met | None known. Known minor item: refusal messages of the new services are not marked for translation (§9) |
+| C. No known critical defects | Met | None known |
 | D. Professional interface | Met | The design system; screenshots in the README |
 | D. README with screenshots | Met | [README.md](../README.md) |
 | D. Architecture explanation | Met | The README diagram; [ARCHITECTURE.md](ARCHITECTURE.md) |

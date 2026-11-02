@@ -7,6 +7,8 @@ the services of `sources` and `policies` raise.
 import re
 import unicodedata
 
+from django.utils.translation import gettext as _
+
 # Characters that change the direction of the text around them. A title that
 # holds one can be shown in an order that is not the order it was typed.
 _DIRECTION_CONTROLS = re.compile("[‪-‮⁦-⁩]")
@@ -33,11 +35,16 @@ def clean_text(value: str, *, field: str, max_length: int, required: bool = True
     """
     text = unicodedata.normalize("NFC", value).strip()
     if required and not text:
-        raise InvalidEntryError(f"The {field} is required.")
+        raise InvalidEntryError(_("The %(field)s is required.") % {"field": field})
     if len(text) > max_length:
-        raise InvalidEntryError(f"The {field} is at most {max_length} characters.")
+        raise InvalidEntryError(
+            _("The %(field)s is at most %(limit)d characters.")
+            % {"field": field, "limit": max_length}
+        )
     if _DIRECTION_CONTROLS.search(text):
-        raise InvalidEntryError(f"The {field} holds a direction control character.")
+        raise InvalidEntryError(
+            _("The %(field)s holds a direction control character.") % {"field": field}
+        )
     return text
 
 
@@ -51,7 +58,7 @@ def clean_address(value: str, *, field: str, max_length: int, required: bool = T
     if not address and not required:
         return ""
     if not address:
-        raise InvalidEntryError(f"The {field} is required.")
+        raise InvalidEntryError(_("The %(field)s is required.") % {"field": field})
     if len(address) > max_length or not _WEB_ADDRESS.match(address):
-        raise InvalidEntryError(f"The {field} is an http or https address.")
+        raise InvalidEntryError(_("The %(field)s is an http or https address.") % {"field": field})
     return address
