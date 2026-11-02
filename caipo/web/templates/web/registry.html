@@ -20,7 +20,7 @@
   <span id="countries"></span>
   <h2>{% translate "Countries" %}</h2>
   {% if countries %}
-    <div class="table-wrap"><table>
+    <div class="table-wrap" tabindex="0"><table>
       <thead>
         <tr>
           <th scope="col">{% translate "Alpha-2 code" %}</th>
@@ -47,7 +47,7 @@
   <span id="languages"></span>
   <h2>{% translate "Languages" %}</h2>
   {% if languages %}
-    <div class="table-wrap"><table>
+    <div class="table-wrap" tabindex="0"><table>
       <thead>
         <tr>
           <th scope="col">{% translate "Language code" %}</th>
@@ -78,7 +78,7 @@
     <article class="card entity">
     <h3>{{ institution.label }}</h3>
     {% include "web/_institution_attributes.html" %}
-    <div class="table-wrap"><table>
+    <div class="table-wrap" tabindex="0"><table>
       <caption>{% translate "Names" %}</caption>
       <thead>
         <tr>
@@ -102,7 +102,7 @@
       </tbody>
     </table></div>
     {% if institution.names_entered_in_error %}
-      <div class="table-wrap"><table>
+      <div class="table-wrap" tabindex="0"><table>
         <caption>{% translate "Marked as entered in error, and not names of this institution" %}</caption>
         <thead>
           <tr>

@@ -10,6 +10,7 @@ import uuid
 from datetime import date
 
 from django.db import transaction
+from django.utils.translation import gettext as _
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts import services as accounts_services
@@ -41,20 +42,22 @@ def _choice(
     value: str, choices: type[DataClass | SourceTier | PermittedUse | DocumentType], field: str
 ) -> str:
     if value not in choices.values:
-        raise InvalidEntryError(f"The {field} is not one of those listed.")
+        raise InvalidEntryError(_("The %(field)s is not one of those listed.") % {"field": field})
     return value
 
 
 def _country(public_id: uuid.UUID, data_class: str) -> registry_selectors.CountryReference:
     country = registry_selectors.country_reference(public_id)
     if country is None:
-        raise RecordNotFoundError("The country does not exist.")
+        raise RecordNotFoundError(_("The country does not exist."))
     if not country.is_active:
-        raise InvalidEntryError("The country is deactivated.")
+        raise InvalidEntryError(_("The country is deactivated."))
     if not country_fits(data_class, country.alpha2):
         raise DataClassError(
-            "Demonstration records belong only to synthetic countries, "
-            "and reference records never do."
+            _(
+                "Demonstration records belong only to synthetic countries, "
+                "and reference records never do."
+            )
         )
     return country
 
@@ -111,27 +114,27 @@ def create_source(
     not acceptable. Nothing is stored in any of those cases.
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
-    _choice(data_class, DataClass, "data class")
-    _choice(source_tier, SourceTier, "source tier")
-    _choice(permitted_use, PermittedUse, "permitted use")
-    clean_licence = clean_text(licence, field="licence", max_length=500, required=False)
+    _choice(data_class, DataClass, _("data class"))
+    _choice(source_tier, SourceTier, _("source tier"))
+    _choice(permitted_use, PermittedUse, _("permitted use"))
+    clean_licence = clean_text(licence, field=_("licence"), max_length=500, required=False)
     if licence_verified and not clean_licence:
-        raise InvalidEntryError("A licence called verified is written down.")
+        raise InvalidEntryError(_("A licence called verified is written down."))
     with transaction.atomic():
         source = Source.objects.create(
             data_class=data_class,
-            name=clean_text(name, field="name", max_length=NAME_MAX_LENGTH),
-            publisher=clean_text(publisher, field="publisher", max_length=NAME_MAX_LENGTH),
-            url=clean_address(url, field="address", max_length=URL_MAX_LENGTH),
+            name=clean_text(name, field=_("name"), max_length=NAME_MAX_LENGTH),
+            publisher=clean_text(publisher, field=_("publisher"), max_length=NAME_MAX_LENGTH),
+            url=clean_address(url, field=_("address"), max_length=URL_MAX_LENGTH),
             source_tier=source_tier,
             country_id=_country(country, data_class).pk if country is not None else None,
             licence=clean_licence,
             licence_verified=licence_verified,
             permitted_use=permitted_use,
             accessed_on=accessed_on,
-            coverage=clean_text(coverage, field="coverage", max_length=5000, required=False),
+            coverage=clean_text(coverage, field=_("coverage"), max_length=5000, required=False),
             limitations=clean_text(
-                limitations, field="limitations", max_length=5000, required=False
+                limitations, field=_("limitations"), max_length=5000, required=False
             ),
         )
         _record(actor, AuditTargetType.SOURCE, source.public_id)
@@ -174,46 +177,46 @@ def create_document(
     not acceptable. Nothing is stored in any of those cases.
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
-    _choice(document_type, DocumentType, "form")
+    _choice(document_type, DocumentType, _("form"))
     with transaction.atomic():
         parent = Source.objects.filter(public_id=source).values_list("pk", "data_class").first()
         if parent is None:
-            raise RecordNotFoundError("The source does not exist.")
+            raise RecordNotFoundError(_("The source does not exist."))
         source_pk, data_class = parent
         language = registry_selectors.language_reference(title_language)
         if language is None:
-            raise RecordNotFoundError("The language does not exist.")
+            raise RecordNotFoundError(_("The language does not exist."))
         if not language.is_active:
-            raise InvalidEntryError("The language is deactivated.")
+            raise InvalidEntryError(_("The language is deactivated."))
         issuer = None
         if issuing_institution is not None:
             issuer = registry_selectors.institution_key(issuing_institution)
             if issuer is None:
-                raise RecordNotFoundError("The institution does not exist.")
+                raise RecordNotFoundError(_("The institution does not exist."))
         english = clean_text(
-            title_en, field="English title", max_length=TITLE_MAX_LENGTH, required=False
+            title_en, field=_("English title"), max_length=TITLE_MAX_LENGTH, required=False
         )
         if title_en_official and not english:
-            raise InvalidEntryError("An English title called official is given.")
+            raise InvalidEntryError(_("An English title called official is given."))
         document = Document.objects.create(
             source_id=source_pk,
             data_class=data_class,
             country_id=_country(country, data_class).pk,
             issuing_institution_id=issuer.pk if issuer else None,
             document_type=document_type,
-            title=clean_text(title, field="title", max_length=TITLE_MAX_LENGTH),
+            title=clean_text(title, field=_("title"), max_length=TITLE_MAX_LENGTH),
             title_language_id=language.pk,
             title_en=english,
             title_en_official=title_en_official,
             official_identifier=clean_text(
-                official_identifier, field="official identifier", max_length=200, required=False
+                official_identifier, field=_("official identifier"), max_length=200, required=False
             ),
             date_of_issue=date_of_issue,
             official_url=clean_address(
-                official_url, field="official address", max_length=URL_MAX_LENGTH, required=False
+                official_url, field=_("official address"), max_length=URL_MAX_LENGTH, required=False
             ),
             accessed_on=accessed_on,
-            notes=clean_text(notes, field="notes", max_length=5000, required=False),
+            notes=clean_text(notes, field=_("notes"), max_length=5000, required=False),
         )
         _record(actor, AuditTargetType.DOCUMENT, document.public_id)
     _log(actor, "sources.document_created", document.public_id)

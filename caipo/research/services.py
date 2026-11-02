@@ -10,6 +10,7 @@ import uuid
 from datetime import date
 
 from django.db import transaction
+from django.utils.translation import gettext as _
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts import services as accounts_services
@@ -61,7 +62,7 @@ def run_analysis(
     InvalidEntryError or RecordNotFoundError. Nothing is stored in either case.
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
-    clean_title = clean_text(title, field="title", max_length=300)
+    clean_title = clean_text(title, field=_("title"), max_length=300)
     inputs = gather(
         actor,
         data_class=data_class,
@@ -135,12 +136,14 @@ def record_search(
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
     for value, values, field in (
-        (data_class, DataClass.values, "data class"),
-        (layer, SearchLayer.values, "layer"),
-        (outcome, SearchOutcome.values, "outcome"),
+        (data_class, DataClass.values, _("data class")),
+        (layer, SearchLayer.values, _("layer")),
+        (outcome, SearchOutcome.values, _("outcome")),
     ):
         if value not in values:
-            raise InvalidEntryError(f"The {field} is not one of those listed.")
+            raise InvalidEntryError(
+                _("The %(field)s is not one of those listed.") % {"field": field}
+            )
 
     def long(text: str, field: str, required: bool = True) -> str:
         return clean_text(text, field=field, max_length=10000, required=required)
@@ -148,9 +151,9 @@ def record_search(
     with transaction.atomic():
         search = SearchRun.objects.create(
             data_class=data_class,
-            title=clean_text(title, field="title", max_length=300),
+            title=clean_text(title, field=_("title"), max_length=300),
             layer=layer,
-            countries=clean_text(countries, field="countries", max_length=200),
+            countries=clean_text(countries, field=_("countries"), max_length=200),
             searched_on=searched_on,
             queries=long(queries, "queries"),
             source_universe=long(source_universe, "sources in scope"),

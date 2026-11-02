@@ -10,7 +10,7 @@
       {% for series in chart.series %}
         <g class="chart__series series-{{ series.index }}">
           {% for path in series.paths %}<path d="{{ path }}"/>{% endfor %}
-          {% for point in series.points %}<circle cx="{{ point.x }}" cy="{{ point.y }}" r="{% if point.flagged %}4.5{% else %}4{% endif %}" class="{% if point.flagged %}is-flagged{% endif %}" tabindex="0"><title>{{ point.label }}</title></circle>{% endfor %}
+          {% for point in series.points %}<circle cx="{{ point.x }}" cy="{{ point.y }}" r="{% if point.flagged %}4.5{% else %}4{% endif %}" class="{% if point.flagged %}is-flagged{% endif %}"><title>{{ point.label }}</title></circle>{% endfor %}
           {% if series.end %}<text class="chart__label" x="{{ series.end.x|add:'10' }}" y="{{ series.label_y }}" dominant-baseline="middle">{{ series.alpha2 }}</text>{% endif %}
         </g>
       {% endfor %}

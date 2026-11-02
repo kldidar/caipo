@@ -2,6 +2,8 @@
 
 import uuid
 
+from django.utils.translation import gettext as _
+
 from caipo.accounts.selectors import AuthenticationContext
 from caipo.core.data_class import DataClass
 from caipo.core.entry import InvalidEntryError, RecordNotFoundError
@@ -27,13 +29,15 @@ def gather(
     lies in the range.
     """
     if data_class not in DataClass.values:
-        raise InvalidEntryError("The data class is not one of those listed.")
+        raise InvalidEntryError(_("The data class is not one of those listed."))
     if not 1900 <= start_year < end_year <= 2100:
         raise InvalidEntryError(
-            "The first year is before the last, and both are between 1900 and 2100."
+            _("The first year is before the last, and both are between 1900 and 2100.")
         )
     if not 1 <= len(set(indicators)) <= MAX_INDICATORS:
-        raise InvalidEntryError(f"Choose between 1 and {MAX_INDICATORS} indicators.")
+        raise InvalidEntryError(
+            _("Choose between 1 and %(limit)d indicators.") % {"limit": MAX_INDICATORS}
+        )
     rows = indicators_selectors.analysis_inputs(
         actor,
         indicators=sorted(set(indicators)),
@@ -42,7 +46,7 @@ def gather(
         end_year=end_year,
     )
     if not rows:
-        raise RecordNotFoundError("No value of these indicators lies in the range.")
+        raise RecordNotFoundError(_("No value of these indicators lies in the range."))
     return [
         InputValue(
             indicator=row.indicator,

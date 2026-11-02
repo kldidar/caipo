@@ -890,7 +890,7 @@ th.num {
 
 dl {
   display: grid;
-  grid-template-columns: minmax(8rem, max-content) 1fr;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
   gap: var(--s-2) var(--s-5);
   font-size: var(--text-sm);
 }
@@ -903,6 +903,8 @@ dt {
 dd {
   margin: 0;
   color: var(--ink);
+  /* A long address, path, or hash wraps rather than leaving its panel. */
+  overflow-wrap: anywhere;
 }
 
 /* ---------- Forms ---------- */
@@ -2009,10 +2011,10 @@ details.disclosure > .disclosure__body {
   stroke: var(--series);
 }
 
-.chart__series circle:hover,
-.chart__series circle:focus-visible {
+/* The points are not focusable: keyboard and screen-reader users read the
+   same values in the table below each chart. */
+.chart__series circle:hover {
   r: 6;
-  outline: none;
 }
 
 .chart__label {
@@ -2234,7 +2236,7 @@ code.hash {
   }
 
   dl {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--s-1);
   }
 

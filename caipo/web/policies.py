@@ -18,6 +18,7 @@ from django.forms import Form
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_POST, require_safe
@@ -64,7 +65,7 @@ def browse(request: HttpRequest) -> HttpResponse:
     policy_type = _chosen(request.GET.get("type", ""), PolicyType.values)
     coverage = selectors.coverage(actor)
     countries = [(row.alpha2, row.name) for row in coverage]
-    country = _chosen(request.GET.get("country", ""), [code for code, _ in countries])
+    country = _chosen(request.GET.get("country", ""), [code for code, _name in countries])
     entries = selectors.policies(
         actor,
         corpus_assignment=corpus,
@@ -190,7 +191,7 @@ def create(request: HttpRequest) -> HttpResponse:
             language = parse_uuid(data["title_language"])
             try:
                 if country is None or language is None:
-                    raise InvalidEntryError("Choose a country and a language.")
+                    raise InvalidEntryError(_("Choose a country and a language."))
                 public_id = services.create_policy(
                     actor=actor,
                     data_class=data["data_class"],
@@ -251,7 +252,7 @@ def _change(
 def _document(data: dict[str, Any]) -> uuid.UUID:
     document = parse_uuid(data["document"])
     if document is None:
-        raise InvalidEntryError("Choose a document.")
+        raise InvalidEntryError(_("Choose a document."))
     return document
 
 

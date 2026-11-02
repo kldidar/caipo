@@ -15,6 +15,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
+from django.utils.translation import gettext as _
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts import services as accounts_services
@@ -58,7 +59,7 @@ class ObservationRow:
 def _source(public_id: uuid.UUID) -> sources_selectors.SourceReference:
     source = sources_selectors.source_reference(public_id)
     if source is None:
-        raise RecordNotFoundError("The source does not exist.")
+        raise RecordNotFoundError(_("The source does not exist."))
     return source
 
 
@@ -101,33 +102,33 @@ def create_indicator(
     """
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
     if layer not in Layer.values:
-        raise InvalidEntryError("The layer is A, B, or C.")
+        raise InvalidEntryError(_("The layer is A, B, or C."))
     provider = _source(source)
-    clean_code = clean_text(code, field="code", max_length=64)
+    clean_code = clean_text(code, field=_("code"), max_length=64)
     try:
         with transaction.atomic():
             indicator = Indicator.objects.create(
                 data_class=provider.data_class,
                 source_id=provider.pk,
                 code=clean_code,
-                name=clean_text(name, field="name", max_length=300),
+                name=clean_text(name, field=_("name"), max_length=300),
                 definition=clean_text(
-                    definition, field="definition", max_length=5000, required=False
+                    definition, field=_("definition"), max_length=5000, required=False
                 ),
-                unit=clean_text(unit, field="unit", max_length=100),
+                unit=clean_text(unit, field=_("unit"), max_length=100),
                 layer=layer,
                 layer_reason=clean_text(
-                    layer_reason, field="reason for the layer", max_length=5000
+                    layer_reason, field=_("reason for the layer"), max_length=5000
                 ),
                 original_provider=clean_text(
-                    original_provider, field="original provider", max_length=500, required=False
+                    original_provider, field=_("original provider"), max_length=500, required=False
                 ),
             )
             _record(actor, AuditTargetType.INDICATOR, indicator.public_id)
     except IntegrityError as error:
         if "indicators_indicator_code_unique" in str(error):
             raise InvalidEntryError(
-                "The provider already has an indicator with this code."
+                _("The provider already has an indicator with this code.")
             ) from error
         raise
     logger.info(
@@ -143,10 +144,12 @@ def create_indicator(
 
 def _value(row: ObservationRow) -> Decimal | None:
     if row.status not in ObservationStatus.values:
-        raise InvalidEntryError(f"The status {row.status!r} is not one of those listed.")
+        raise InvalidEntryError(
+            _("The status %(status)s is not one of those listed.") % {"status": repr(row.status)}
+        )
     if (row.status == ObservationStatus.MISSING) != (row.value is None):
         raise InvalidEntryError(
-            "A missing value holds nothing, and a value that is held is not missing."
+            _("A missing value holds nothing, and a value that is held is not missing.")
         )
     if row.value is not None:
         exponent = row.value.as_tuple().exponent
@@ -157,11 +160,13 @@ def _value(row: ObservationRow) -> Decimal | None:
             or exponent < -_DECIMALS
         ):
             raise InvalidEntryError(
-                "A value is a finite number of at most 18 digits before the point and 18 "
-                "after it, so that it is stored exactly as given."
+                _(
+                    "A value is a finite number of at most 18 digits before the point and 18 "
+                    "after it, so that it is stored exactly as given."
+                )
             )
     if not 1900 <= row.year <= 2100:
-        raise InvalidEntryError("A year is between 1900 and 2100.")
+        raise InvalidEntryError(_("A year is between 1900 and 2100."))
     return row.value
 
 
@@ -198,7 +203,7 @@ def import_release(
     accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
     provider = _source(source)
     if not _SHA256.match(sha256):
-        raise InvalidEntryError("The hash is 64 lower-case hexadecimal digits.")
+        raise InvalidEntryError(_("The hash is 64 lower-case hexadecimal digits."))
     indicators = dict(Indicator.objects.filter(source_id=provider.pk).values_list("code", "pk"))
     countries = {country.alpha2: country for country in registry_selectors.country_choices()}
     seen: set[tuple[str, str, int]] = set()
@@ -206,17 +211,23 @@ def import_release(
     for row in rows:
         key = (row.indicator_code, row.country_alpha2, row.year)
         if key in seen:
-            raise InvalidEntryError(f"{key} occurs twice in the release.")
+            raise InvalidEntryError(_("%(entry)s occurs twice in the release.") % {"entry": key})
         seen.add(key)
         if row.indicator_code not in indicators:
-            raise RecordNotFoundError(f"The source has no indicator {row.indicator_code!r}.")
+            raise RecordNotFoundError(
+                _("The source has no indicator %(code)s.") % {"code": repr(row.indicator_code)}
+            )
         country = countries.get(row.country_alpha2)
         if country is None:
-            raise RecordNotFoundError(f"No active country has the code {row.country_alpha2!r}.")
+            raise RecordNotFoundError(
+                _("No active country has the code %(code)s.") % {"code": repr(row.country_alpha2)}
+            )
         if not country_fits(provider.data_class, country.alpha2):
             raise DataClassError(
-                "Demonstration values belong only to synthetic countries, "
-                "and reference values never do."
+                _(
+                    "Demonstration values belong only to synthetic countries, "
+                    "and reference values never do."
+                )
             )
         prepared.append(
             Observation(
@@ -225,7 +236,9 @@ def import_release(
                 year=row.year,
                 value=_value(row),
                 status=row.status,
-                footnote=clean_text(row.footnote, field="footnote", max_length=500, required=False),
+                footnote=clean_text(
+                    row.footnote, field=_("footnote"), max_length=500, required=False
+                ),
             )
         )
     try:
@@ -233,9 +246,9 @@ def import_release(
             release = DatasetRelease.objects.create(
                 data_class=provider.data_class,
                 source_id=provider.pk,
-                label=clean_text(label, field="release label", max_length=100),
+                label=clean_text(label, field=_("release label"), max_length=100),
                 retrieved_on=retrieved_on,
-                file_name=clean_text(file_name, field="file", max_length=300),
+                file_name=clean_text(file_name, field=_("file"), max_length=300),
                 sha256=sha256,
             )
             for observation in prepared:
@@ -244,7 +257,7 @@ def import_release(
             _record(actor, AuditTargetType.DATASET_RELEASE, release.public_id)
     except IntegrityError as error:
         if "indicators_release_file_once" in str(error):
-            raise DuplicateReleaseError("This file has already been imported.") from error
+            raise DuplicateReleaseError(_("This file has already been imported.")) from error
         raise
     logger.info(
         "Demonstrator record created",

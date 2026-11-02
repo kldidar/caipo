@@ -10,6 +10,7 @@ import uuid
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_safe
@@ -132,7 +133,7 @@ def create_document(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
             language = parse_uuid(data["title_language"])
             try:
                 if country is None or language is None:
-                    raise RecordNotFoundError("Choose a country and a language.")
+                    raise RecordNotFoundError(_("Choose a country and a language."))
                 services.create_document(
                     actor=actor,
                     source=public_id,

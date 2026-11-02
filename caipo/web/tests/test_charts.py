@@ -75,3 +75,15 @@ def test_values_are_shown_rounded_and_never_changed() -> None:
     assert format_value(Decimal("100")) == "100"
     assert format_value(Decimal("1234.5")) == "1,234.5"
     assert value == Decimal("22.2215537100341")
+
+
+def test_chart_points_are_not_tab_stops() -> None:
+    """A chart is one image to assistive technology; its values are in the table beside it."""
+    from pathlib import Path
+
+    template = (
+        Path(__file__).resolve().parents[1] / "templates" / "web" / "includes" / "line_chart.html"
+    ).read_text()
+
+    assert "tabindex" not in template
+    assert 'role="img"' in template
