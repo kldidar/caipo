@@ -18,6 +18,8 @@ pytestmark = [pytest.mark.services, pytest.mark.django_db(transaction=True)]
 
 BEFORE = ("accounts", "0008_account_recovery_foundation")
 AFTER = ("accounts", "0009_audit_event")
+# Widens the lists of target types and fields (ADR-0020); it adds no table.
+WIDENING = ("accounts", "0010_audit_demonstrator_targets")
 
 TABLES = {"accounts_auditevent", "accounts_auditeventchange"}
 FUNCTIONS = {"accounts_auditevent_refuse_change", "accounts_auditeventchange_refuse_change"}
@@ -48,6 +50,11 @@ def _migrate(target: tuple[str, str]) -> Apps:
     executor = MigrationExecutor(connection)
     executor.migrate([target])
     return MigrationExecutor(connection).loader.project_state([target]).apps
+
+
+def _migrate_to_latest() -> None:
+    executor = MigrationExecutor(connection)
+    executor.migrate(executor.loader.graph.leaf_nodes())
 
 
 def _applied() -> set[tuple[str, str]]:
@@ -95,14 +102,15 @@ def earlier() -> Iterator[Apps]:
     try:
         yield _migrate(BEFORE)
     finally:
-        _migrate(AFTER)
+        _migrate_to_latest()
 
 
-def test_it_is_the_latest_migration_and_follows_the_one_before_it() -> None:
+def test_it_follows_the_one_before_it_and_only_a_widening_follows_it() -> None:
     loader = MigrationExecutor(connection).loader
 
-    assert loader.graph.leaf_nodes("accounts") == [AFTER]
     assert loader.get_migration(*AFTER).dependencies == [BEFORE]
+    assert loader.graph.leaf_nodes("accounts") == [WIDENING]
+    assert loader.get_migration(*WIDENING).dependencies == [AFTER]
 
 
 def test_applied_it_has_made_the_tables_their_constraints_and_their_triggers() -> None:

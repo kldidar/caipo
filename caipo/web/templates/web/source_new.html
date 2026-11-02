@@ -1,0 +1,20 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Register a source" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'sources' %}">{% translate "Sources" %}</a></nav>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Sources" %}</p>
+    <h1>{% translate "Register a source" %}</h1>
+    <p class="lede">{% translate "Record where material comes from and what its terms allow. The address is recorded, never fetched. Call a licence verified only after reading its terms." %}</p>
+  </header>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{% url 'source-create' %}" class="card" novalidate>
+    {% csrf_token %}
+    {% include "web/includes/fields.html" %}
+    <div class="actions"><button type="submit">{% translate "Register the source" %}</button> <a class="button button--ghost" href="{% url 'sources' %}">{% translate "Cancel" %}</a></div>
+  </form>
+{% endblock %}

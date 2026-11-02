@@ -10,6 +10,36 @@
     <p class="lede">{% translate "What this workspace holds, and where to go next." %}</p>
   </header>
 
+  {% if workspace %}
+    <section class="section" aria-labelledby="policy-title">
+      <div class="section-header">
+        <h2 id="policy-title">{% translate "Policy evidence" %}</h2>
+        <a href="{% url 'policies' %}">{% translate "Open the policies" %}</a>
+      </div>
+      <div class="grid grid--4">
+        <a class="card card--link stat" href="{% url 'policies' %}?corpus=core">
+          <span class="stat__value">{{ workspace.core }}</span>
+          <span class="stat__label">{% translate "Core AI policies" %}</span>
+          <span class="stat__note">{% translate "Provisional assignments" %}</span>
+        </a>
+        <a class="card card--link stat" href="{% url 'policies' %}?corpus=contextual">
+          <span class="stat__value">{{ workspace.contextual }}</span>
+          <span class="stat__label">{% translate "Contextual entries" %}</span>
+          <span class="stat__note">{% translate "Never counted as AI policy" %}</span>
+        </a>
+        <div class="card stat">
+          <span class="stat__value">{{ workspace.provisions }}</span>
+          <span class="stat__label">{% translate "AI-related provisions" %}</span>
+        </div>
+        <a class="card card--link stat" href="{% url 'sources' %}">
+          <span class="stat__value">{{ workspace.sources_reference|add:workspace.sources_demonstration }}</span>
+          <span class="stat__label">{% translate "Sources" %}</span>
+          <span class="stat__note">{% blocktranslate with r=workspace.sources_reference d=workspace.sources_demonstration %}{{ r }} reference · {{ d }} demonstration{% endblocktranslate %}</span>
+        </a>
+      </div>
+    </section>
+  {% endif %}
+
   {% if registry %}
     <section class="section" aria-labelledby="registry-title">
       <div class="section-header">
@@ -41,6 +71,20 @@
   <section class="section" aria-labelledby="shortcuts-title">
     <h2 id="shortcuts-title">{% translate "Go to" %}</h2>
     <div class="grid grid--3">
+      {% if workspace %}
+        <a class="card card--link" href="{% url 'policies' %}">
+          <span class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/></svg></span>
+          <span class="card__title">{% translate "Policies" %}</span>
+          <span class="card__body">{% translate "The core AI policy corpus and the contextual registry, each policy with its documents, formal events, and AI-related provisions." %}</span>
+          <span class="card__arrow">{% translate "Explore" %} →</span>
+        </a>
+        <a class="card card--link" href="{% url 'sources' %}">
+          <span class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="card__title">{% translate "Sources" %}</span>
+          <span class="card__body">{% translate "Where each record comes from: publisher, address, access date, terms of use, and what they allow." %}</span>
+          <span class="card__arrow">{% translate "Browse" %} →</span>
+        </a>
+      {% endif %}
       {% if registry %}
         <a class="card card--link" href="{% url 'registry' %}">
           <span class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg></span>

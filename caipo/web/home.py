@@ -7,7 +7,9 @@ from django.views.decorators.http import require_safe
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts.selectors import Permission
+from caipo.policies import selectors as policies_selectors
 from caipo.registry import selectors as registry_selectors
+from caipo.sources import selectors as sources_selectors
 from caipo.web import sessions
 from caipo.web.access import public
 
@@ -34,7 +36,18 @@ def home(request: HttpRequest) -> HttpResponse:
             "institutions": len(institutions),
             "names": sum(len(institution.names) for institution in institutions),
         }
+    workspace = None
+    if accounts_selectors.can(actor, Permission.WORKSPACE_READ):
+        coverage = policies_selectors.coverage(actor)
+        workspace = {
+            "core": sum(row.core for row in coverage),
+            "contextual": sum(row.contextual for row in coverage),
+            "provisions": sum(row.provisions for row in coverage),
+            "coverage": coverage,
+            **sources_selectors.counts(actor),
+        }
     context = {
+        "workspace": workspace,
         "registry": registry,
         "may_enter_registry": accounts_selectors.can(
             actor, Permission.REGISTRY_INSTITUTIONS_MANAGE

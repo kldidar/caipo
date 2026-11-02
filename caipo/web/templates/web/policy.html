@@ -1,0 +1,130 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ policy.display_title }}{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'policies' %}?corpus={{ policy.corpus_assignment }}">{% if policy.is_core %}{% translate "Core AI policy corpus" %}{% else %}{% translate "Contextual policy registry" %}{% endif %}</a></nav>
+  <header class="page-header">
+    <p class="policy-card__meta">
+      <span class="code-chip">{{ policy.country_alpha2 }}</span>
+      <span>{{ policy.country_name }}</span>
+      <span>{{ policy.type_label }}</span>
+      {% include "web/includes/data_class.html" with data_class=policy.data_class %}
+    </p>
+    <h1>{{ policy.display_title }}</h1>
+    {% if policy.title_en and policy.title_en != policy.title %}<p class="policy-card__original">{{ policy.title }}</p>{% endif %}
+    {% if policy.summary %}<p class="lede">{{ policy.summary }}</p>{% endif %}
+  </header>
+
+  {% if error %}<p role="alert">{{ error }}</p>{% elif saved %}<p role="status">{% translate "The change was saved and recorded." %}</p>{% endif %}
+  {% if policy.data_class == "demonstration" %}{% include "web/includes/demo_notice.html" %}{% endif %}
+
+  <div class="detail-grid">
+    <div class="detail-grid__main">
+      <section class="panel" aria-labelledby="events-title">
+        <div class="panel__header"><h2 id="events-title">{% translate "Formal status and events" %}</h2></div>
+        <div class="panel__body">
+          <p class="status-line">{% translate "Derived status:" %} <span class="status status--{{ policy.status }}">{{ policy.status_label }}</span></p>
+          <p class="muted"><small>{% translate "Status is never stored. It is derived from the formal events below: adoption, amendment, entry into force, expiry, repeal. Implementation is not a formal event." %}</small></p>
+          {% if detail.events %}
+            <ol class="timeline">
+              {% for event in detail.events %}
+                <li><time datetime="{{ event.effective_date|date:'Y-m-d' }}">{{ event.effective_date|date:"Y-m-d" }}</time> · <strong>{{ event.label }}</strong> — <a href="#document-{{ event.document_public_id }}">{{ event.document_title }}</a>{% if event.locator %}, {{ event.locator }}{% endif %}</li>
+              {% endfor %}
+            </ol>
+          {% else %}
+            <div class="empty"><p class="empty__title">{% translate "No formal event recorded." %}</p><p>{% translate "The formal status is therefore unknown, and is shown as such." %}</p></div>
+          {% endif %}
+        </div>
+      </section>
+
+      {% if policy.is_core %}
+        <section class="panel" aria-labelledby="provisions-title">
+          <div class="panel__header"><h2 id="provisions-title">{% translate "AI-related provisions" %}</h2></div>
+          <div class="panel__body">
+            {% for provision in detail.provisions %}
+              <article class="provision">
+                <p class="provision__meta"><span class="badge badge--brand badge--plain">{{ provision.type_label }}</span> <span class="muted">{{ provision.document_title }}, {{ provision.locator }}</span></p>
+                <p class="provision__label">{{ provision.label }}</p>
+                {% if provision.quoted_text %}<blockquote class="provision__quote">{{ provision.quoted_text }}<footer>{% translate "Synthetic text of a demonstration document." %}</footer></blockquote>{% endif %}
+              </article>
+            {% empty %}
+              <div class="empty"><p class="empty__title">{% translate "No AI-related provision recorded." %}</p><p>{% translate "Provisions are coded only from a located passage of a document of the policy." %}</p></div>
+            {% endfor %}
+            {% if policy.data_class == "reference" %}<p class="muted"><small>{% translate "The text of a reference document is not held while its rights are undecided, so a provision is described and located, never quoted." %}</small></p>{% endif %}
+          </div>
+        </section>
+      {% else %}
+        <p class="notice"><span>{% translate "Contextual material is recorded and examined, not coded: no AI-related provision is recorded for it, and it is not counted in core results." %}</span></p>
+      {% endif %}
+
+      <section class="panel" aria-labelledby="documents-title">
+        <div class="panel__header"><h2 id="documents-title">{% translate "Documents and provenance" %}</h2></div>
+        <div class="panel__body">
+          {% for item in detail.documents %}
+            <article class="document" id="document-{{ item.document.public_id }}">
+              <p class="provision__meta"><span class="badge badge--plain">{{ item.role_label }}</span> <span class="badge badge--plain">{{ item.document.type_label }}</span></p>
+              <h3 class="document__title">{{ item.document.display_title }}</h3>
+              {% if item.document.title_en and item.document.title_en != item.document.title %}<p class="policy-card__original">{{ item.document.title }}{% if not item.document.title_en_official %} <small class="muted">({% translate "English title unofficial" %})</small>{% endif %}</p>{% endif %}
+              {% translate "Not recorded" as not_recorded %}
+              <dl>
+                <dt>{% translate "Official identifier" %}</dt><dd>{{ item.document.official_identifier|default:not_recorded }}</dd>
+                <dt>{% translate "Date of issue" %}</dt><dd>{{ item.document.date_of_issue|date:"Y-m-d"|default:not_recorded }}</dd>
+                <dt>{% translate "Official address" %}</dt><dd>{% if item.document.official_url %}<a href="{{ item.document.official_url }}" rel="noopener noreferrer nofollow" target="_blank">{{ item.document.official_url }}</a>{% else %}{{ not_recorded }}{% endif %}</dd>
+                <dt>{% translate "Accessed on" %}</dt><dd>{{ item.document.accessed_on|date:"Y-m-d"|default:not_recorded }}</dd>
+                <dt>{% translate "Source" %}</dt><dd><a href="{% url 'source' item.document.source_public_id %}">{{ item.document.source_name }}</a> · {{ item.document.source_publisher }} · {% translate "tier" %} {{ item.document.source_tier }}</dd>
+                <dt>{% translate "Terms" %}</dt><dd>{{ item.document.source_licence|default:not_recorded }}{% if item.document.source_licence_verified %} <span class="badge badge--ok">{% translate "verified" %}</span>{% else %} <span class="badge badge--warn">{% translate "not verified" %}</span>{% endif %}</dd>
+              </dl>
+              {% if item.document.notes %}<p class="muted"><small>{{ item.document.notes }}</small></p>{% endif %}
+            </article>
+          {% empty %}
+            <div class="empty"><p class="empty__title">{% translate "No document is linked yet." %}</p></div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <aside class="detail-grid__side">
+      <section class="panel" aria-labelledby="assignment-title">
+        <div class="panel__header"><h2 id="assignment-title">{% translate "Assignment" %}</h2></div>
+        <div class="panel__body">
+          <p><strong>{{ policy.corpus_label }}</strong> <span class="badge badge--provisional">{% translate "Provisional" %}</span></p>
+          <p>{{ policy.focus_label }}</p>
+          <p class="muted"><small>{% translate "Reason:" %} {{ policy.assignment_reason }}</small></p>
+          <p class="muted"><small>{% translate "A provisional working assignment, not an eligibility decision under the research protocol." %}</small></p>
+          {% if detail.lead_institution_label %}<p><small>{% translate "Lead institution:" %} {{ detail.lead_institution_label }}</small></p>{% endif %}
+        </div>
+      </section>
+
+      {% if may_contribute %}
+        <details class="disclosure"{% if link_form.errors %} open{% endif %}>
+          <summary>{% translate "Link a document" %}</summary>
+          <div class="disclosure__body">
+            <form method="post" action="{% url 'policy-document-link' policy.public_id %}" novalidate>{% csrf_token %}{% include "web/includes/fields.html" with form=link_form %}<button type="submit">{% translate "Link the document" %}</button></form>
+          </div>
+        </details>
+        <details class="disclosure"{% if event_form.errors %} open{% endif %}>
+          <summary>{% translate "Record a formal event" %}</summary>
+          <div class="disclosure__body">
+            <form method="post" action="{% url 'policy-event-add' policy.public_id %}" novalidate>{% csrf_token %}{% include "web/includes/fields.html" with form=event_form %}<button type="submit">{% translate "Record the event" %}</button></form>
+          </div>
+        </details>
+        {% if policy.is_core %}
+          <details class="disclosure"{% if provision_form.errors %} open{% endif %}>
+            <summary>{% translate "Record an AI-related provision" %}</summary>
+            <div class="disclosure__body">
+              <form method="post" action="{% url 'policy-provision-add' policy.public_id %}" novalidate>{% csrf_token %}{% include "web/includes/fields.html" with form=provision_form %}<button type="submit">{% translate "Record the provision" %}</button></form>
+            </div>
+          </details>
+        {% endif %}
+        <details class="disclosure"{% if reassign_form.errors %} open{% endif %}>
+          <summary>{% translate "Change the assignment" %}</summary>
+          <div class="disclosure__body">
+            <form method="post" action="{% url 'policy-reassign' policy.public_id %}" novalidate>{% csrf_token %}{% include "web/includes/fields.html" with form=reassign_form %}<button type="submit">{% translate "Change the assignment" %}</button></form>
+          </div>
+        </details>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

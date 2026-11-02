@@ -1,0 +1,108 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Policies" %}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Workspace" %}</p>
+    <div class="section-header">
+      <h1 class="flush-bottom">{% translate "Policies" %}</h1>
+      {% if may_contribute %}<a class="button" href="{% url 'policy-create' %}">{% translate "Add a policy" %}</a>{% endif %}
+    </div>
+    <p class="lede">{% translate "The core AI policy corpus and the contextual policy registry are kept apart. Contextual material is never counted as AI policy. Every assignment shown here is provisional, with its reason, until the research protocol's eligibility rules are settled." %}</p>
+  </header>
+
+  <nav class="tabs" aria-label="{% translate 'Corpus' %}">
+    <a href="?corpus=core" {% if corpus == "core" %}aria-current="page"{% endif %}>{% translate "Core AI policy corpus" %}</a>
+    <a href="?corpus=contextual" {% if corpus == "contextual" %}aria-current="page"{% endif %}>{% translate "Contextual policy registry" %}</a>
+  </nav>
+
+  <form method="get" class="filters" role="search" aria-label="{% translate 'Filter policies' %}">
+    <input type="hidden" name="corpus" value="{{ corpus }}">
+    <p class="field">
+      <label for="filter-country">{% translate "Country" %}</label>
+      <select id="filter-country" name="country">
+        <option value="">{% translate "All countries" %}</option>
+        {% for code, name in countries %}<option value="{{ code }}"{% if code == country %} selected{% endif %}>{{ name }}</option>{% endfor %}
+      </select>
+    </p>
+    <p class="field">
+      <label for="filter-class">{% translate "Data class" %}</label>
+      <select id="filter-class" name="class">
+        <option value="">{% translate "All data" %}</option>
+        {% for value, label in data_classes %}<option value="{{ value }}"{% if value == data_class %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </p>
+    <p class="field">
+      <label for="filter-type">{% translate "Kind" %}</label>
+      <select id="filter-type" name="type">
+        <option value="">{% translate "All kinds" %}</option>
+        {% for value, label in policy_types %}<option value="{{ value }}"{% if value == policy_type %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </p>
+    <div class="filters__actions">
+      <button type="submit" class="button--secondary">{% translate "Apply" %}</button>
+      {% if filtered %}<a href="?corpus={{ corpus }}">{% translate "Clear" %}</a>{% endif %}
+    </div>
+  </form>
+
+  {% if has_demonstration %}{% include "web/includes/demo_notice.html" %}{% endif %}
+
+  {% if entries %}
+    <div class="policy-list">
+      {% for entry in entries %}
+        <a class="card card--link policy-card" href="{% url 'policy' entry.public_id %}">
+          <span class="policy-card__meta">
+            <span class="code-chip">{{ entry.country_alpha2 }}</span>
+            <span>{{ entry.type_label }}</span>
+            {% include "web/includes/data_class.html" with data_class=entry.data_class %}
+            <span class="badge badge--provisional">{% translate "Provisional" %}</span>
+          </span>
+          <span class="card__title">{{ entry.display_title }}</span>
+          {% if entry.title_en and entry.title_en != entry.title %}<span class="policy-card__original" lang="">{{ entry.title }}</span>{% endif %}
+          <span class="policy-card__facts">
+            <span>{{ entry.focus_label }}</span>
+            <span class="status status--{{ entry.status }}">{{ entry.status_label }}</span>
+            <span>{% blocktranslate count n=entry.document_count %}{{ n }} document{% plural %}{{ n }} documents{% endblocktranslate %}</span>
+            {% if entry.is_core %}<span>{% blocktranslate count n=entry.provision_count %}{{ n }} AI-related provision{% plural %}{{ n }} AI-related provisions{% endblocktranslate %}</span>{% endif %}
+          </span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty__title">{% if filtered %}{% translate "No policy matches these filters." %}{% elif corpus == "core" %}{% translate "No policy is in the core corpus yet." %}{% else %}{% translate "No policy is in the contextual registry yet." %}{% endif %}</p>
+      <p>{% translate "An empty list says only that nothing has been recorded here. It is not evidence that no such policy exists." %}</p>
+    </div>
+  {% endif %}
+
+  {% if coverage %}
+    <section class="section" aria-labelledby="coverage-title">
+      <h2 id="coverage-title">{% translate "What is recorded, by country" %}</h2>
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th scope="col">{% translate "Country" %}</th>
+          <th scope="col">{% translate "Data" %}</th>
+          <th scope="col" class="num">{% translate "Core policies" %}</th>
+          <th scope="col" class="num">{% translate "Contextual entries" %}</th>
+          <th scope="col" class="num">{% translate "AI-related provisions" %}</th>
+          <th scope="col" class="num">{% translate "Formal events" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for row in coverage %}
+            <tr>
+              <th scope="row">{{ row.name }} <span class="code-chip">{{ row.alpha2 }}</span></th>
+              <td>{% include "web/includes/data_class.html" with data_class=row.data_class %}</td>
+              <td class="num">{{ row.core }}</td>
+              <td class="num">{{ row.contextual }}</td>
+              <td class="num">{{ row.provisions }}</td>
+              <td class="num">{{ row.events }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      <p class="muted"><small>{% translate "Counts describe what has been recorded in this workspace from a bounded search. They are not a measure of policy activity and are never used as an outcome indicator." %}</small></p>
+    </section>
+  {% endif %}
+{% endblock %}

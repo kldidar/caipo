@@ -1,0 +1,20 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Register a document" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'source' source.public_id %}">{{ source.name }}</a></nav>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Register a document" %}</p>
+    <h1>{{ source.name }}</h1>
+    <p class="lede">{% translate "A document is registered by its metadata only: no file and no text is taken. It takes the data class of its source." %}</p>
+  </header>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{% url 'source-document-create' source.public_id %}" class="card" novalidate>
+    {% csrf_token %}
+    {% include "web/includes/fields.html" %}
+    <div class="actions"><button type="submit">{% translate "Register the document" %}</button> <a class="button button--ghost" href="{% url 'source' source.public_id %}">{% translate "Cancel" %}</a></div>
+  </form>
+{% endblock %}

@@ -1,0 +1,678 @@
+{
+  "_about": "The demonstration environment of ADR-0020. 'demonstration' records are synthetic and belong only to the synthetic countries XA and XB; 'reference' records are real public documents, by metadata only, read from the address given on the access date. See caipo/demo/catalogue.py.",
+  "accessed": "2026-11-02",
+  "countries": [
+    [
+      "TM",
+      "TKM",
+      "Turkmenistan"
+    ],
+    [
+      "UZ",
+      "UZB",
+      "Uzbekistan"
+    ],
+    [
+      "XA",
+      "XAA",
+      "DEMO Northland"
+    ],
+    [
+      "XB",
+      "XBB",
+      "DEMO Southland"
+    ]
+  ],
+  "languages": [
+    [
+      "eng",
+      "Latn",
+      "English"
+    ],
+    [
+      "rus",
+      "Cyrl",
+      "Russian"
+    ],
+    [
+      "uzb",
+      "Latn",
+      "Uzbek"
+    ],
+    [
+      "uzb",
+      "Cyrl",
+      "Uzbek"
+    ],
+    [
+      "tuk",
+      "Latn",
+      "Turkmen"
+    ]
+  ],
+  "institutions": [
+    [
+      "xa-digital",
+      "ministry",
+      "XA",
+      "DEMO Ministry of Digital Affairs of Northland"
+    ],
+    [
+      "xb-innovation",
+      "regulator",
+      "XB",
+      "DEMO Southland Agency for Innovation"
+    ]
+  ],
+  "sources": [
+    {
+      "key": "xa-portal",
+      "data_class": "demonstration",
+      "name": "DEMO Northland Legal Information Portal",
+      "publisher": "DEMO Ministry of Justice of Northland",
+      "url": "https://legal.northland.example/",
+      "tier": "A",
+      "permitted_use": "store",
+      "country": "XA",
+      "licence": "Synthetic demonstration content created for CAIPO",
+      "licence_verified": true,
+      "coverage": "Synthetic legal acts of the synthetic country Northland.",
+      "limitations": "Synthetic. Not evidence about any real country."
+    },
+    {
+      "key": "xb-gazette",
+      "data_class": "demonstration",
+      "name": "DEMO Southland Official Gazette",
+      "publisher": "DEMO Office of the Government of Southland",
+      "url": "https://gazette.southland.example/",
+      "tier": "A",
+      "permitted_use": "store",
+      "country": "XB",
+      "licence": "Synthetic demonstration content created for CAIPO",
+      "licence_verified": true,
+      "coverage": "Synthetic acts of the synthetic country Southland.",
+      "limitations": "Synthetic. Not evidence about any real country."
+    },
+    {
+      "key": "lex-uz",
+      "data_class": "reference",
+      "name": "LEX.UZ National Database of Legislation of the Republic of Uzbekistan",
+      "publisher": "Ministry of Justice of the Republic of Uzbekistan",
+      "url": "https://lex.uz/",
+      "tier": "A",
+      "permitted_use": "reference_only",
+      "country": "UZ",
+      "licence": "",
+      "licence_verified": false,
+      "coverage": "Legal acts of the Republic of Uzbekistan, in Uzbek and Russian, with some English translations marked as unofficial.",
+      "limitations": "Terms of reuse not verified for this project, so only metadata and the address are recorded. The publisher is recorded as the Ministry of Justice on the strength of the e-government portal dgov.uz; one aggregator names another operator."
+    },
+    {
+      "key": "oilgas-tm",
+      "data_class": "reference",
+      "name": "Nebitgaz newspaper website (oilgas.gov.tm)",
+      "publisher": "State Concern Türkmengaz",
+      "url": "https://oilgas.gov.tm/",
+      "tier": "B",
+      "permitted_use": "reference_only",
+      "country": "TM",
+      "licence": "",
+      "licence_verified": false,
+      "coverage": "News of the oil and gas sector of Turkmenistan, including reports of state acts.",
+      "limitations": "A government news report about an act, not the act itself; it does not give the date the act was signed. Terms of reuse not verified."
+    }
+  ],
+  "documents": [
+    {
+      "key": "xa-decree-101",
+      "source": "xa-portal",
+      "country": "XA",
+      "document_type": "decree",
+      "title": "DEMO Decree No. 101 on the National Strategy for Artificial Intelligence",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "",
+      "title_en_official": false,
+      "identifier": "DEMO-101",
+      "issued": "2025-03-14",
+      "url": "https://legal.northland.example/acts/101",
+      "issuer": "xa-digital",
+      "notes": ""
+    },
+    {
+      "key": "xa-egov-law",
+      "source": "xa-portal",
+      "country": "XA",
+      "document_type": "law",
+      "title": "DEMO Law on Electronic Government",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "",
+      "title_en_official": false,
+      "identifier": "DEMO-L-44",
+      "issued": "2019-06-01",
+      "url": "https://legal.northland.example/acts/l-44",
+      "issuer": null,
+      "notes": ""
+    },
+    {
+      "key": "xa-egov-amendment",
+      "source": "xa-portal",
+      "country": "XA",
+      "document_type": "law",
+      "title": "DEMO Law amending the Law on Electronic Government",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "",
+      "title_en_official": false,
+      "identifier": "DEMO-L-210",
+      "issued": "2025-05-10",
+      "url": "https://legal.northland.example/acts/l-210",
+      "issuer": null,
+      "notes": ""
+    },
+    {
+      "key": "xa-digital-concept",
+      "source": "xa-portal",
+      "country": "XA",
+      "document_type": "resolution",
+      "title": "DEMO Resolution approving the Digital Economy Concept 2021–2026",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "",
+      "title_en_official": false,
+      "identifier": "DEMO-R-9",
+      "issued": "2021-02-01",
+      "url": "",
+      "issuer": null,
+      "notes": ""
+    },
+    {
+      "key": "xa-data-law",
+      "source": "xa-portal",
+      "country": "XA",
+      "document_type": "law",
+      "title": "DEMO Law on Personal Data",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "",
+      "title_en_official": false,
+      "identifier": "DEMO-L-61",
+      "issued": "2020-04-15",
+      "url": "",
+      "issuer": null,
+      "notes": ""
+    },
+    {
+      "key": "xa-data-repeal",
+      "source": "xa-portal",
+      "country": "XA",
+      "document_type": "law",
+      "title": "DEMO Law repealing the Law on Personal Data",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "",
+      "title_en_official": false,
+      "identifier": "DEMO-L-305",
+      "issued": "2024-12-02",
+      "url": "",
+      "issuer": null,
+      "notes": ""
+    },
+    {
+      "key": "xb-roadmap",
+      "source": "xb-gazette",
+      "country": "XB",
+      "document_type": "resolution",
+      "title": "DEMO Government Resolution on the Roadmap for AI in Public Administration",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "",
+      "title_en_official": false,
+      "identifier": "DEMO-GR-77",
+      "issued": "2024-11-20",
+      "url": "",
+      "issuer": "xb-innovation",
+      "notes": ""
+    },
+    {
+      "key": "xb-telecom",
+      "source": "xb-gazette",
+      "country": "XB",
+      "document_type": "programme",
+      "title": "DEMO Telecommunications Development Programme 2023–2027",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "",
+      "title_en_official": false,
+      "identifier": "DEMO-P-12",
+      "issued": "2023-01-09",
+      "url": "",
+      "issuer": null,
+      "notes": ""
+    },
+    {
+      "key": "uz-rp-358",
+      "source": "lex-uz",
+      "country": "UZ",
+      "document_type": "resolution",
+      "title": "On the approval of the Strategy for the Development of Artificial Intelligence Technologies until 2030",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "On the approval of the Strategy for the Development of Artificial Intelligence Technologies until 2030",
+      "title_en_official": false,
+      "identifier": "RP-358",
+      "issued": "2024-10-14",
+      "url": "https://lex.uz/ru/docs/7159258",
+      "issuer": null,
+      "notes": "Resolution of the President of the Republic of Uzbekistan. Title, number, date of adoption, and date of entry into force (17.10.2024) as shown on lex.uz on 2026-11-02; the title is lex.uz's English rendering, marked unofficial, because the original-language title was not recorded. No text is held."
+    },
+    {
+      "key": "tm-digital-2026",
+      "source": "oilgas-tm",
+      "country": "TM",
+      "document_type": "resolution",
+      "title": "Resolution approving the State Program for the Development of the Digital Economy of Turkmenistan for 2026–2028",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "title_en": "",
+      "title_en_official": false,
+      "identifier": "",
+      "issued": null,
+      "url": "https://oilgas.gov.tm/index.php/en/posts/habarlar/16205/the-president-approved-the-state-program-for-the-development-of-the-digital-economy-of-turkmenistan-for-20262028",
+      "issuer": null,
+      "notes": "Known from a news report of 2 February 2026 that the President signed a resolution approving the programme and an action plan. The report gives no signing date or number, so none is recorded. The title is a description in English, not the official title. No text is held."
+    }
+  ],
+  "policies": [
+    {
+      "data_class": "demonstration",
+      "country": "XA",
+      "policy_type": "strategy",
+      "title": "DEMO National Strategy for Artificial Intelligence 2025–2030",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "corpus": "core",
+      "reason": "Synthetic example: the strategy's subject is artificial intelligence.",
+      "ai_focus": "ai_focused",
+      "category": "",
+      "title_en": "",
+      "lead": "xa-digital",
+      "summary": "A synthetic AI strategy used to show coded provisions and formal events.",
+      "documents": [
+        [
+          "xa-decree-101",
+          "enacting_text"
+        ]
+      ],
+      "events": [
+        [
+          "adopted",
+          "2025-03-14",
+          "xa-decree-101",
+          "Art. 1"
+        ],
+        [
+          "entered_into_force",
+          "2025-04-01",
+          "xa-decree-101",
+          "Art. 12"
+        ]
+      ],
+      "provisions": [
+        {
+          "provision_type": "institutional",
+          "document": "xa-decree-101",
+          "locator": "Art. 2",
+          "label": "Creates a National Council for Artificial Intelligence",
+          "quoted_text": "A National Council for Artificial Intelligence is established to coordinate the implementation of this Strategy."
+        },
+        {
+          "provision_type": "objective",
+          "document": "xa-decree-101",
+          "locator": "Art. 4(1)",
+          "label": "Sets a target of five public AI research laboratories by 2028",
+          "quoted_text": "By 2028, five public research laboratories in artificial intelligence shall be established."
+        },
+        {
+          "provision_type": "instrument",
+          "document": "xa-decree-101",
+          "locator": "Art. 7",
+          "label": "Provides a grant programme for AI start-ups",
+          "quoted_text": "A competitive grant programme shall support start-ups developing artificial intelligence products."
+        }
+      ]
+    },
+    {
+      "data_class": "demonstration",
+      "country": "XA",
+      "policy_type": "law",
+      "title": "DEMO Law on Electronic Government",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "corpus": "core",
+      "reason": "Synthetic example: a broader law whose 2025 amendment adds one AI-related provision; only that provision is coded.",
+      "ai_focus": "ai_provisions",
+      "category": "",
+      "title_en": "",
+      "lead": null,
+      "summary": "",
+      "documents": [
+        [
+          "xa-egov-law",
+          "enacting_text"
+        ],
+        [
+          "xa-egov-amendment",
+          "amendment"
+        ]
+      ],
+      "events": [
+        [
+          "adopted",
+          "2019-06-01",
+          "xa-egov-law",
+          ""
+        ],
+        [
+          "entered_into_force",
+          "2019-09-01",
+          "xa-egov-law",
+          "Art. 30"
+        ],
+        [
+          "amended",
+          "2025-05-10",
+          "xa-egov-amendment",
+          "Art. 1"
+        ]
+      ],
+      "provisions": [
+        {
+          "provision_type": "instrument",
+          "document": "xa-egov-amendment",
+          "locator": "Art. 1, new Art. 12-1",
+          "label": "Allows automated decision support in public services, with human review",
+          "quoted_text": "Public bodies may use automated decision-support systems, including systems based on artificial intelligence, provided that a civil servant reviews each decision."
+        }
+      ]
+    },
+    {
+      "data_class": "demonstration",
+      "country": "XA",
+      "policy_type": "concept",
+      "title": "DEMO Digital Economy Concept 2021–2026",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "corpus": "contextual",
+      "reason": "Synthetic example: broader digital-economy material with no explicitly AI-related provision identified.",
+      "ai_focus": "",
+      "category": "digital_economy",
+      "title_en": "",
+      "lead": null,
+      "summary": "",
+      "documents": [
+        [
+          "xa-digital-concept",
+          "enacting_text"
+        ]
+      ],
+      "events": [
+        [
+          "adopted",
+          "2021-02-01",
+          "xa-digital-concept",
+          ""
+        ],
+        [
+          "entered_into_force",
+          "2021-02-01",
+          "xa-digital-concept",
+          ""
+        ]
+      ],
+      "provisions": []
+    },
+    {
+      "data_class": "demonstration",
+      "country": "XA",
+      "policy_type": "law",
+      "title": "DEMO Law on Personal Data",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "corpus": "contextual",
+      "reason": "Synthetic example: data-governance material, later repealed.",
+      "ai_focus": "",
+      "category": "data_governance",
+      "title_en": "",
+      "lead": null,
+      "summary": "",
+      "documents": [
+        [
+          "xa-data-law",
+          "enacting_text"
+        ],
+        [
+          "xa-data-repeal",
+          "amendment"
+        ]
+      ],
+      "events": [
+        [
+          "adopted",
+          "2020-04-15",
+          "xa-data-law",
+          ""
+        ],
+        [
+          "entered_into_force",
+          "2020-07-01",
+          "xa-data-law",
+          ""
+        ],
+        [
+          "repealed",
+          "2024-12-02",
+          "xa-data-repeal",
+          "Art. 1"
+        ]
+      ],
+      "provisions": []
+    },
+    {
+      "data_class": "demonstration",
+      "country": "XB",
+      "policy_type": "action_plan",
+      "title": "DEMO Roadmap for AI in Public Administration 2024–2025",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "corpus": "core",
+      "reason": "Synthetic example: an AI-focused roadmap whose term has ended.",
+      "ai_focus": "ai_focused",
+      "category": "",
+      "title_en": "",
+      "lead": "xb-innovation",
+      "summary": "",
+      "documents": [
+        [
+          "xb-roadmap",
+          "enacting_text"
+        ]
+      ],
+      "events": [
+        [
+          "adopted",
+          "2024-11-20",
+          "xb-roadmap",
+          ""
+        ],
+        [
+          "entered_into_force",
+          "2024-11-20",
+          "xb-roadmap",
+          ""
+        ],
+        [
+          "expired",
+          "2026-01-01",
+          "xb-roadmap",
+          "Para. 9"
+        ]
+      ],
+      "provisions": [
+        {
+          "provision_type": "instrument",
+          "document": "xb-roadmap",
+          "locator": "Annex, item 3",
+          "label": "Pilots an AI assistant for citizen enquiries in two ministries",
+          "quoted_text": "Pilot an AI-based assistant for citizen enquiries in two ministries."
+        }
+      ]
+    },
+    {
+      "data_class": "demonstration",
+      "country": "XB",
+      "policy_type": "programme",
+      "title": "DEMO Telecommunications Development Programme 2023–2027",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "corpus": "contextual",
+      "reason": "Synthetic example: telecommunications material, adopted with no entry into force.",
+      "ai_focus": "",
+      "category": "telecommunications",
+      "title_en": "",
+      "lead": null,
+      "summary": "",
+      "documents": [
+        [
+          "xb-telecom",
+          "enacting_text"
+        ]
+      ],
+      "events": [
+        [
+          "adopted",
+          "2023-01-09",
+          "xb-telecom",
+          ""
+        ]
+      ],
+      "provisions": []
+    },
+    {
+      "data_class": "demonstration",
+      "country": "XB",
+      "policy_type": "other",
+      "title": "DEMO Code of Ethics for Artificial Intelligence (draft)",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "corpus": "core",
+      "reason": "Synthetic example: no formal text recorded, so its status is unknown.",
+      "ai_focus": "ai_focused",
+      "category": "",
+      "title_en": "",
+      "lead": null,
+      "summary": "",
+      "documents": [],
+      "events": [],
+      "provisions": []
+    },
+    {
+      "data_class": "reference",
+      "country": "UZ",
+      "policy_type": "strategy",
+      "title": "Strategy for the Development of Artificial Intelligence Technologies until 2030",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "corpus": "core",
+      "reason": "Provisional: the title of the approving resolution names artificial intelligence technologies as the subject of the strategy (lex.uz metadata, 2026-11-02). The text has not been examined. This is not an eligibility decision under the research protocol (B22 open).",
+      "ai_focus": "ai_focused",
+      "category": "",
+      "title_en": "",
+      "lead": null,
+      "summary": "",
+      "documents": [
+        [
+          "uz-rp-358",
+          "enacting_text"
+        ]
+      ],
+      "events": [
+        [
+          "adopted",
+          "2024-10-14",
+          "uz-rp-358",
+          ""
+        ],
+        [
+          "entered_into_force",
+          "2024-10-17",
+          "uz-rp-358",
+          ""
+        ]
+      ],
+      "provisions": []
+    },
+    {
+      "data_class": "reference",
+      "country": "TM",
+      "policy_type": "programme",
+      "title": "State Program for the Development of the Digital Economy of Turkmenistan for 2026–2028",
+      "language": [
+        "eng",
+        "Latn"
+      ],
+      "corpus": "contextual",
+      "reason": "Provisional: a broader digital-economy programme known only from a news report. Its text has not been examined, so it is not presented as having or lacking any AI-related provision. Recorded as contextual until it is examined.",
+      "ai_focus": "",
+      "category": "digital_economy",
+      "title_en": "",
+      "lead": null,
+      "summary": "",
+      "documents": [
+        [
+          "tm-digital-2026",
+          "enacting_text"
+        ]
+      ],
+      "events": [],
+      "provisions": []
+    }
+  ]
+}

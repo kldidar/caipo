@@ -68,7 +68,8 @@ def test_a_signed_in_reader_of_the_registry_is_shown_its_counts(
 
     assert "<h1>Overview</h1>" in page
     counts = re.findall(r'<span class="stat__value">(\d+)</span>', page)
-    assert counts == ["2", "1", "0", "0"]
+    # The policy evidence first (nothing recorded), then the registry.
+    assert counts == ["0", "0", "0", "0", "2", "1", "0", "0"]
     assert 'href="/registry/"' in page
 
 
@@ -100,8 +101,14 @@ def test_a_verified_administrator_is_offered_account_administration(
 @pytest.mark.parametrize(
     ("role", "expected"),
     [
-        (Role.READER, {"/", "/registry/", "/account/second-factor/", "/login/"}),
-        (Role.RESEARCHER, {"/", "/registry/", "/account/second-factor/", "/login/"}),
+        (
+            Role.READER,
+            {"/", "/policies/", "/sources/", "/registry/", "/account/second-factor/", "/login/"},
+        ),
+        (
+            Role.RESEARCHER,
+            {"/", "/policies/", "/sources/", "/registry/", "/account/second-factor/", "/login/"},
+        ),
     ],
 )
 def test_the_navigation_offers_exactly_the_pages_a_role_may_open(

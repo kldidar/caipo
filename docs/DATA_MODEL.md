@@ -525,6 +525,23 @@ Nothing else may be redacted. Observations, claims, reviews, audit events, and r
 
 The retention period and the rights policy that trigger these are undecided (blockers B19, B7).
 
+## 7a. The demonstrator's forms (ADR-0020)
+
+The delivery sprint builds reduced forms of some entities of §3 ahead of their phase gates ([ADR-0020](adr/0020-demonstrator-track.md)). They are not the research-grade model, which the F-points and the gates of Phases 2 to 6 still decide, and their records are never migrated into it automatically.
+
+**Data class.** Every record below holds `data_class`, `demonstration` or `reference`, by a database check. A demonstration record belongs only to a country whose code is in the ISO 3166-1 user-assigned range (AA, QM to QZ, XA to XZ, ZZ); a reference record never does. The services refuse a mix: a document takes its source's class, and a policy's documents, events, and provisions are of the policy's class.
+
+| Entity | Demonstrator form | Differs from §3 |
+|---|---|---|
+| Source (`sources`) | Name, publisher, address, source tier, country (optional), licence or terms with whether they were verified, permitted use (store, process, reference only), access date, coverage, limitations | Allowed hosts are not held: nothing is fetched |
+| Document (`sources`) | Source, country, issuing institution, form, title as written with its language, English title (official or not), official identifier, date of issue, official address, access date, notes | Metadata only. No DocumentVersion, Artifact, AcquisitionRecord, review, rights determination, Extraction, Segment, or Passage |
+| Policy (`policies`) | Country, lead institution, kind, title with language, English title, **provisional corpus assignment** (core with an AI focus, or contextual with a category) and its reason, summary | The assignment is a field with a reason (gaps F-1, F-3), not an eligibility decision. No codebook version (B11). **No status column** |
+| PolicyDocumentLink (`policies`) | Policy, document, role | Unchanged in substance |
+| PolicyEvent (`policies`) | The five formal event types, effective date, the establishing document, a locator. Append-only by trigger | Cites a document and a locator instead of a Passage (I-13), because no Segment exists. The document must be linked as enacting text, amendment, or implementing act |
+| PolicyProvision (`policies`) | An AI-related provision of a **core** policy: kind (objective, instrument, institutional arrangement, other), document, locator, description, quoted text | Stands in for PolicyObjective and PolicyInstrument, which need the codebook. Quoted text is allowed only for demonstration data, by a database check: the text of a reference document is not held |
+
+Formal status is derived as in §4.4. Sources, documents, policies, links, and provisions refuse DELETE by trigger; policy events refuse UPDATE and DELETE. Each creation and each change of a policy's assignment writes an audit event (target types `sources.source`, `sources.document`, `policies.policy`, `policies.policy_document_link`, `policies.policy_event`, `policies.policy_provision`; fields `corpus_assignment`, `ai_focus`, `contextual_category`).
+
 ## 8. Changes from the initial entity list
 
 | Initial | In this model | Reason |

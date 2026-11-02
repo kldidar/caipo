@@ -36,6 +36,8 @@ PUBLIC_INTERFACE = {"services", "selectors"}
 # one fails the test below until it has been looked at and is added here.
 SHORT_WORDS = {
     "GET", "Lax", "NFC", "UTC", "can", "en", "id", "mfa", "off", "ok", "on", "pk", "url", "web",
+    # The form of a document or a kind of policy (DATA_MODEL.md §7a).
+    "law", "Law",
 }  # fmt: skip
 
 
@@ -70,7 +72,17 @@ def _imports(path: Path) -> set[str]:
 def test_the_registry_has_a_layer_of_its_own_directly_above_accounts() -> None:
     (layering,) = [contract for contract in _contracts() if contract["type"] == "layers"]
 
-    assert layering["layers"] == ["config", "web", "registry", "accounts", "core"]
+    # The demonstrator's apps sit above the registry (ADR-0020 point 2).
+    assert layering["layers"] == [
+        "config",
+        "demo",
+        "web",
+        "policies",
+        "sources",
+        "registry",
+        "accounts",
+        "core",
+    ]
     assert layering["exhaustive"] is True
     assert layering["containers"] == ["caipo"]
     assert "ignore_imports" not in layering
@@ -78,7 +90,11 @@ def test_the_registry_has_a_layer_of_its_own_directly_above_accounts() -> None:
 
 def test_the_boundary_contract_closes_every_module_of_accounts_but_its_two_interfaces() -> None:
     """A module added to accounts later is closed to the registry until this list names it."""
-    (boundary,) = [contract for contract in _contracts() if contract["type"] == "forbidden"]
+    (boundary,) = [
+        contract
+        for contract in _contracts()
+        if contract["type"] == "forbidden" and contract["source_modules"] == ["caipo.registry"]
+    ]
     modules = {module.name for module in pkgutil.iter_modules(caipo.accounts.__path__)}
 
     assert PUBLIC_INTERFACE <= modules
@@ -90,7 +106,11 @@ def test_the_boundary_contract_closes_every_module_of_accounts_but_its_two_inter
 
 
 def test_the_boundary_contract_has_the_one_exception_and_no_other() -> None:
-    (boundary,) = [contract for contract in _contracts() if contract["type"] == "forbidden"]
+    (boundary,) = [
+        contract
+        for contract in _contracts()
+        if contract["type"] == "forbidden" and contract["source_modules"] == ["caipo.registry"]
+    ]
 
     assert boundary["ignore_imports"] == ["caipo.registry.tests.** -> caipo.accounts.models"]
 
@@ -283,6 +303,17 @@ def test_the_registry_offers_exactly_these_operations_and_reads() -> None:
         "countries",
         "languages",
         "institutions",
+        # References and choices for the services and forms of the
+        # demonstrator's apps (ADR-0020 point 2). They read only.
+        "CountryReference",
+        "LanguageReference",
+        "InstitutionKey",
+        "country_reference",
+        "language_reference",
+        "institution_key",
+        "country_choices",
+        "language_choices",
+        "institution_choices",
     }
 
 

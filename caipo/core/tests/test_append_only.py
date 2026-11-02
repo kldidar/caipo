@@ -60,6 +60,8 @@ def test_the_three_event_models_and_the_two_audit_models_are_built_on_it() -> No
         "AccountEvent",
         "AuditEvent",
         "AuditEventChange",
+        # The formal lifecycle events of a policy (ADR-0020, DATA_MODEL.md §7a).
+        "PolicyEvent",
     }
     for model in apps.get_models():
         if issubclass(model, AppendOnlyModel):
