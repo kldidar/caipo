@@ -73,9 +73,8 @@ Counted from the packages in §4. No percentage is estimated.
 | Sprint packages (S1 to S8) | 8 |
 | DONE | 6 (A1, H1, H6, S1, S2, E1) |
 | AWAITING OWNER MERGE | 2 (S3 and S4, together in Day 4, #31: CI passed on `184fec4`, `4674 passed`) |
-| IN PROGRESS | 1 (S7, Day 7) |
-| AWAITING OWNER MERGE, stacked | 2 (S5, Day 5, #32; S6, Day 6, #33) |
-| Sprint packages NOT STARTED or BLOCKED on another sprint package | 1 (S8) |
+| AWAITING OWNER MERGE, stacked | 4 (S5 #32, S6 #33, S7 #34, S8 Day 8) |
+| Sprint packages NOT STARTED or BLOCKED on another sprint package | 0 |
 | Master-roadmap packages NOT STARTED, nothing preventing them | 2 (E2, G4, within sprint packages) |
 | Master-roadmap packages PARTIAL | 1 (A3) |
 | Master-roadmap packages BLOCKED | 46 |
@@ -96,8 +95,8 @@ The owner's mandates of 2026-10-30 add these packages. Each is built under [ADR-
 | S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | AWAITING OWNER MERGE (#31, merged into Day 4) | 4 |
 | S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | AWAITING OWNER MERGE (#32) | 5 |
 | S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | AWAITING OWNER MERGE (#33) | 6 |
-| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | IN PROGRESS | 7 |
-| S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | BLOCKED: S7 | 8 |
+| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | AWAITING OWNER MERGE (#34) | 7 |
+| S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | AWAITING OWNER MERGE (Day 8; [DEMO.md](DEMO.md)) | 8 |
 
 ### 4.2 Master roadmap
 
@@ -230,7 +229,8 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 4 | Sources and policies: backend, pages, seed data | S3, S4 | 2026-11-02 | AWAITING OWNER MERGE | #31 |
 | 5 | Indicators in three layers, comparison, coverage | S5, F4 | 2026-11-02 | AWAITING OWNER MERGE (stacked on #31; CI runs when it is retargeted to `main`) | #32 |
 | 6 | Analysis runs, search runs, exports | S6, F2 | 2026-11-02 | AWAITING OWNER MERGE (stacked on #32) | #33 |
-| 7 | Polish, accessibility, journey tests | S7, E2, G4 | 2026-11-02 | IN PROGRESS (stacked on #33) | The pull request that changes this file |
+| 7 | Polish, accessibility, journey tests | S7, E2, G4 | 2026-11-02 | AWAITING OWNER MERGE (stacked on #33) | #34 |
+| 8 | Professor-ready delivery: README with screenshots, demonstration guide, clean-setup check | S8, J1 (demonstrator) | 2026-11-02 | AWAITING OWNER MERGE (stacked on #34) | The pull request that changes this file |
 
 ### Planned Days
 
@@ -238,7 +238,6 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 
 | Day | Sprint day | Objective | Packages | Ready when |
 |---|---|---|---|---|
-| 8 | Deadline day | Professor-ready delivery | S8, J1 (demonstrator) | Day 7 open or merged |
 
 **Post-sprint queue (unnumbered).** Recording the research governance decisions (A2, when Q-2 to Q-5, Q-7, Q-8 are answered); the job-system and isolation spike (C1, Q-9); the Blueprint revision (H5); the ADR-0004 and ADR-0011 decisions (C2); the Phase 1 exit and account-administration pages (A5, D0, Q-11); status consolidation and the self-review practice (H2 to H4, Q-12); CI reliability (G2, G3, Q-13); the ADR for registry name sources (C4); then the research-grade phases behind their gates.
 
@@ -313,6 +312,6 @@ Recommended defaults are recommendations, not decisions. Only Q-13 can affect th
 
 ## 11. Next executable Day
 
-- **Day 4** (sources and policies) is in progress; its pull request is the one that changes this file.
-- **Day 5** (indicators) starts as soon as Day 4's pull request is open, stacked on it.
-- **Q-13** (CI timeout headroom) is still open and is the one decision that can affect the sprint: the test job took 642 s of its 900 s on `5ba91c8`.
+- **Every sprint Day has a pull request** (#31 to #34 and Day 8's). They form one stack: #31 → #32 → #33 → #34 → Day 8. Merged in that order, each is retargeted to `main` by GitHub and its CI runs then.
+- After the merges: verify each merge on `origin/main` with its CI, then the remaining provisional items (translation of service refusal messages; screen-reader and 400 % zoom checks) and the post-sprint queue (§5).
+- **Q-13** (CI timeout headroom) is still open: the test job took 623 s of its 900 s on #31, and the stack adds about 110 tests.
