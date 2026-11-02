@@ -33,13 +33,13 @@ Fri 2026-11-06 is the buffer for review, CI, and merges. A Day whose pull reques
 
 ## 1. Verified repository state
 
-Verified on 2026-11-02.
+Verified on 2026-11-02, after the owner's merges of #31 to #35.
 
 | Item | Value | How verified |
 |---|---|---|
-| `origin/main` | `5ba91c8`, the merge of #30 (Day 3), after `7904e36`, the merge of #29 (Day 2) | `git fetch`; `gh pr list` |
-| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s` | `gh run view`; job logs |
-| Pull requests | 30 merged (#1 to #30), none closed without merging. Open: only the one that changes this file (Day 4) | `gh pr list` |
+| `origin/main` | `9e5e9ea`, the merge of #31 (Day 4), after `5ba91c8` (#30, Day 3) and `7904e36` (#29, Day 2) | `git fetch`; `gh pr list` |
+| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s`. `9e5e9ea`: run 41405637271, all four checks passed, `4674 passed in 631.67s` | `gh run view`; job logs |
+| Pull requests | 35 merged, none closed without merging. #1 to #31 were merged into `main`. **#32 to #35 were merged into the branches they were stacked on** (`feat/sources-policies`, `feat/indicators`, `feat/research-workspace`, `feat/polish-quality`), not into `main`, on 2026-11-02 between 07:20 and 07:23 UTC; no CI ran on them, because CI runs only for pull requests into `main`. Open: only the one that changes this file, which brings Days 5 to 8 to `main` | `gh pr list`; merge bases |
 | Protection of `main` | Ruleset "Protect main": pull request required, the four checks required with strict status checks, no bypass | GitHub API, 2026-10-30 |
 | Phase and gate | Phase 1. Gate READY for Phase 1, NOT READY for Phase 2 and later. Unchanged by ADR-0020 | [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 (authoritative) |
 | CI time headroom | The test job took 480 s to 699 s in the runs from 2026-10-25 to 2026-10-30, with 4,494 tests. Its timeout is 900 s. The sprint adds tests, so this is a risk (Q-13) | Job start and end times of those runs |
@@ -71,9 +71,8 @@ Counted from the packages in §4. No percentage is estimated.
 |---|---|
 | Master-roadmap packages | 56 (57 listed, of which G1 is REMOVED) |
 | Sprint packages (S1 to S8) | 8 |
-| DONE | 6 (A1, H1, H6, S1, S2, E1) |
-| AWAITING OWNER MERGE | 2 (S3 and S4, together in Day 4, #31: CI passed on `184fec4`, `4674 passed`) |
-| AWAITING OWNER MERGE, stacked | 4 (S5 #32, S6 #33, S7 #34, S8 Day 8) |
+| DONE | 8 (A1, H1, H6, S1, S2, E1, S3, S4) |
+| AWAITING OWNER MERGE into `main` | 4 (S5 to S8: approved and merged in #32 to #35 into the stack branches; reaching `main` through the pull request that changes this file) |
 | Sprint packages NOT STARTED or BLOCKED on another sprint package | 0 |
 | Master-roadmap packages NOT STARTED, nothing preventing them | 2 (E2, G4, within sprint packages) |
 | Master-roadmap packages PARTIAL | 1 (A3) |
@@ -91,12 +90,12 @@ The owner's mandates of 2026-10-30 add these packages. Each is built under [ADR-
 |---|---|---|---|---|
 | S1 | Record the mandate, the sprint plan, ADR-0020, and the single-operator facts | MUST | **DONE** (#29, `7904e36`) | 2 |
 | S2 | Design system and application shell: tokens, typography, navigation, signed-in home, every existing page restyled; accessibility target (G4, provisional) | MUST | **DONE** (#30, `5ba91c8`) | 3 |
-| S3 | Sources and policies backend: Source, Document (metadata only), Policy, AI-related provisions, formal events, corpus assignment; permissions, services, selectors, audit; seed command | MUST | AWAITING OWNER MERGE (#31) | 4 |
-| S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | AWAITING OWNER MERGE (#31, merged into Day 4) | 4 |
-| S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | AWAITING OWNER MERGE (#32) | 5 |
-| S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | AWAITING OWNER MERGE (#33) | 6 |
-| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | AWAITING OWNER MERGE (#34) | 7 |
-| S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | AWAITING OWNER MERGE (Day 8; [DEMO.md](DEMO.md)) | 8 |
+| S3 | Sources and policies backend: Source, Document (metadata only), Policy, AI-related provisions, formal events, corpus assignment; permissions, services, selectors, audit; seed command | MUST | **DONE** (#31, `9e5e9ea`) | 4 |
+| S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | **DONE** (#31, `9e5e9ea`; merged into Day 4) | 4 |
+| S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | AWAITING OWNER MERGE into `main` (merged into its stack branch by #32) | 5 |
+| S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | AWAITING OWNER MERGE into `main` (merged into its stack branch by #33) | 6 |
+| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | AWAITING OWNER MERGE into `main` (merged into its stack branch by #34) | 7 |
+| S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | AWAITING OWNER MERGE into `main` (merged into its stack branch by #35; [DEMO.md](DEMO.md)) | 8 |
 
 ### 4.2 Master roadmap
 
@@ -226,11 +225,11 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 1 | Reconcile the project state; establish this tracker and the workflow rules | H6 | 2026-10-30 | **DONE**: merged as `ac32fc8`; CI run 41084731032 passed all four checks; `4494 passed` | #28 |
 | 2 | Record the delivery mandate, the sprint plan, and ADR-0020 | S1 | 2026-10-30 | **DONE**: merged as `7904e36`; CI run 41352450005 passed all four checks; `4494 passed` | #29 |
 | 3 | Design system, application shell, home page | S2, E1 | 2026-10-30 | **DONE**: merged as `5ba91c8`; CI run 41353530141 passed all four checks; `4511 passed` | #30 |
-| 4 | Sources and policies: backend, pages, seed data | S3, S4 | 2026-11-02 | AWAITING OWNER MERGE | #31 |
-| 5 | Indicators in three layers, comparison, coverage | S5, F4 | 2026-11-02 | AWAITING OWNER MERGE (stacked on #31; CI runs when it is retargeted to `main`) | #32 |
-| 6 | Analysis runs, search runs, exports | S6, F2 | 2026-11-02 | AWAITING OWNER MERGE (stacked on #32) | #33 |
-| 7 | Polish, accessibility, journey tests | S7, E2, G4 | 2026-11-02 | AWAITING OWNER MERGE (stacked on #33) | #34 |
-| 8 | Professor-ready delivery: README with screenshots, demonstration guide, clean-setup check | S8, J1 (demonstrator) | 2026-11-02 | AWAITING OWNER MERGE (stacked on #34) | The pull request that changes this file |
+| 4 | Sources and policies: backend, pages, seed data | S3, S4 | 2026-11-02 | **DONE**: merged as `9e5e9ea`; CI run 41405637271 passed all four checks; `4674 passed` | #31 |
+| 5 | Indicators in three layers, comparison, coverage | S5, F4 | 2026-11-02 | AWAITING OWNER MERGE into `main`: #32 was merged into `feat/sources-policies`, not `main`; brought to `main` by the pull request that changes this file | #32 |
+| 6 | Analysis runs, search runs, exports | S6, F2 | 2026-11-02 | As Day 5: #33 was merged into `feat/indicators` | #33 |
+| 7 | Polish, accessibility, journey tests | S7, E2, G4 | 2026-11-02 | As Day 5: #34 was merged into `feat/research-workspace` | #34 |
+| 8 | Professor-ready delivery: README with screenshots, demonstration guide, clean-setup check | S8, J1 (demonstrator) | 2026-11-02 | As Day 5: #35 was merged into `feat/polish-quality` | #35 |
 
 ### Planned Days
 
@@ -261,7 +260,7 @@ Days 5 to 8 get full checklists when they start; their deliverables are in §4.1
 
 | Pull request | Day | Head | Status |
 |---|---|---|---|
-| The pull request that changes this file | 4 | Reported when it is opened | Awaiting CI, then the owner's merge |
+| The pull request that changes this file | 5 to 8 | Reported when it is opened | Brings the four commits of Days 5 to 8 to `main` unchanged (cherry-picked onto `9e5e9ea`; the resulting tree equals `feat/polish-quality`, where #32 to #35 were merged). Awaiting CI, then the owner's merge |
 
 ## 8. Blockers and dependencies
 
@@ -312,6 +311,8 @@ Recommended defaults are recommendations, not decisions. Only Q-13 can affect th
 
 ## 11. Next executable Day
 
-- **Every sprint Day has a pull request** (#31 to #34 and Day 8's). They form one stack: #31 → #32 → #33 → #34 → Day 8. Merged in that order, each is retargeted to `main` by GitHub and its CI runs then.
-- After the merges: verify each merge on `origin/main` with its CI, then the remaining provisional items (translation of service refusal messages; screen-reader and 400 % zoom checks) and the post-sprint queue (§5).
-- **Q-13** (CI timeout headroom) is still open: the test job took 623 s of its 900 s on #31, and the stack adds about 110 tests.
+- **Correction of 2026-11-02.** This file and the pull requests said that, once #31 was merged, GitHub would retarget each stacked pull request to `main`. That was wrong: GitHub retargets a stacked pull request only when the branch it is based on is deleted, and this repository keeps merged branches. #32 to #35 were therefore merged into their stack branches. Nothing was lost: `feat/polish-quality` holds all of Days 4 to 8, and Day 4 on `main` is identical to the commit it was stacked on.
+- **Now:** the pull request that changes this file brings Days 5 to 8 to `main`, with the four commits as they were reviewed. Its CI is the first CI run on that code.
+- **Rule from now on:** no more stacked pull requests unless each is retargeted to `main` by hand before it is merged.
+- After this merge: verify it on `origin/main` with its CI; then the remaining provisional items (translation of service refusal messages; screen-reader and 400 % zoom checks) and the post-sprint queue (§5).
+- **Q-13** (CI timeout headroom) is still open: the test job took 632 s of its 900 s on `9e5e9ea`, and this pull request adds about 110 tests.
