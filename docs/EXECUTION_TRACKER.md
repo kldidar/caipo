@@ -33,16 +33,16 @@ Fri 2026-11-06 is the buffer for review, CI, and merges. A Day whose pull reques
 
 ## 1. Verified repository state
 
-Verified on 2026-11-02, after the owner's merges of #31 to #35.
+Verified on 2026-11-02, after the owner's merge of #36.
 
 | Item | Value | How verified |
 |---|---|---|
-| `origin/main` | `9e5e9ea`, the merge of #31 (Day 4), after `5ba91c8` (#30, Day 3) and `7904e36` (#29, Day 2) | `git fetch`; `gh pr list` |
-| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s`. `9e5e9ea`: run 41405637271, all four checks passed, `4674 passed in 631.67s` | `gh run view`; job logs |
-| Pull requests | 35 merged, none closed without merging. #1 to #31 were merged into `main`. **#32 to #35 were merged into the branches they were stacked on** (`feat/sources-policies`, `feat/indicators`, `feat/research-workspace`, `feat/polish-quality`), not into `main`, on 2026-11-02 between 07:20 and 07:23 UTC; no CI ran on them, because CI runs only for pull requests into `main`. Open: only the one that changes this file, which brings Days 5 to 8 to `main` | `gh pr list`; merge bases |
+| `origin/main` | `2f42d68`, the merge of #36 (Days 5 to 8), after `9e5e9ea` (#31, Day 4), `5ba91c8` (#30, Day 3), and `7904e36` (#29, Day 2) | `git fetch`; `gh pr view 36` |
+| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s`. `9e5e9ea`: run 41405637271, all four checks passed, `4674 passed in 631.67s`. `2f42d68`: run 41409027896, all four checks passed, `4787 passed in 682.99s` | `gh run view`; job logs |
+| Pull requests | 36 merged, none closed without merging. #1 to #31 and #36 were merged into `main`. **#32 to #35 were merged into the branches they were stacked on** (`feat/sources-policies`, `feat/indicators`, `feat/research-workspace`, `feat/polish-quality`), not into `main`, on 2026-11-02 between 07:20 and 07:23 UTC; no CI ran on them, because CI runs only for pull requests into `main`. #36 brought Days 5 to 8 to `main`, merged as `2f42d68`. Open: only the one that changes this file (Day 9) | `gh pr list`; merge bases |
 | Protection of `main` | Ruleset "Protect main": pull request required, the four checks required with strict status checks, no bypass | GitHub API, 2026-10-30 |
 | Phase and gate | Phase 1. Gate READY for Phase 1, NOT READY for Phase 2 and later. Unchanged by ADR-0020 | [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 (authoritative) |
-| CI time headroom | The test job took 480 s to 699 s in the runs from 2026-10-25 to 2026-10-30, with 4,494 tests. Its timeout is 900 s. The sprint adds tests, so this is a risk (Q-13) | Job start and end times of those runs |
+| CI time headroom | The test job took 480 s to 738 s in the 25 successful runs from 2026-10-24 to 2026-11-02; runs of the same 4,494 tests ranged from 480 s to 699 s. Its limit was 900 s; Day 9 raises it to 1,500 s with the owner's approval (§9) | Job start and end times of those runs (`gh run view`) |
 
 ## 2. Historical completed work
 
@@ -71,12 +71,11 @@ Counted from the packages in §4. No percentage is estimated.
 |---|---|
 | Master-roadmap packages | 56 (57 listed, of which G1 is REMOVED) |
 | Sprint packages (S1 to S8) | 8 |
-| DONE | 8 (A1, H1, H6, S1, S2, E1, S3, S4) |
-| AWAITING OWNER MERGE into `main` | 4 (S5 to S8: approved and merged in #32 to #35 into the stack branches; reaching `main` through the pull request that changes this file) |
+| DONE | 14 (A1, H1, H6, E1, F2 and F4 in their demonstrator forms, S1 to S8) |
+| AWAITING OWNER MERGE | 1 (G3, Day 9) |
 | Sprint packages NOT STARTED or BLOCKED on another sprint package | 0 |
-| Master-roadmap packages NOT STARTED, nothing preventing them | 2 (E2, G4, within sprint packages) |
-| Master-roadmap packages PARTIAL | 1 (A3) |
-| Master-roadmap packages BLOCKED | 46 |
+| Master-roadmap packages PARTIAL | 5 (A3, E2, E4, G4, J1; §12 says what is missing) |
+| Master-roadmap packages BLOCKED | 41 |
 | DEFERRED | 3 (D6, G6, G7) |
 | Owner decisions pending | 11 (§10) |
 
@@ -92,10 +91,10 @@ The owner's mandates of 2026-10-30 add these packages. Each is built under [ADR-
 | S2 | Design system and application shell: tokens, typography, navigation, signed-in home, every existing page restyled; accessibility target (G4, provisional) | MUST | **DONE** (#30, `5ba91c8`) | 3 |
 | S3 | Sources and policies backend: Source, Document (metadata only), Policy, AI-related provisions, formal events, corpus assignment; permissions, services, selectors, audit; seed command | MUST | **DONE** (#31, `9e5e9ea`) | 4 |
 | S4 | Policy research pages: core corpus and contextual registry kept apart, lists, filters, detail, provenance, forms; bounded discovery of reference metadata for the two study countries | MUST | **DONE** (#31, `9e5e9ea`; merged into Day 4) | 4 |
-| S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | AWAITING OWNER MERGE into `main` (merged into its stack branch by #32) | 5 |
-| S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | AWAITING OWNER MERGE into `main` (merged into its stack branch by #33) | 6 |
-| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | AWAITING OWNER MERGE into `main` (merged into its stack branch by #34) | 7 |
-| S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | AWAITING OWNER MERGE into `main` (merged into its stack branch by #35; [DEMO.md](DEMO.md)) | 8 |
+| S5 | Indicators: three layers, series, releases, observations; openly licensed provider snapshot; comparison with server-rendered charts; coverage and missingness per layer and country | MUST | **DONE** (#32 into its stack branch; on `main` by #36, `2f42d68`) | 5 |
+| S6 | Research workspace: reproducible descriptive analysis runs with fingerprints, search runs, CSV and JSON exports with methodology notes | MUST | **DONE** (#33 into its stack branch; on `main` by #36, `2f42d68`) | 6 |
+| S7 | Polish and quality: responsive layout, accessibility checks, empty, error, and loading states, journey tests, defects | MUST | **DONE** (#34 into its stack branch; on `main` by #36, `2f42d68`) | 7 |
+| S8 | Professor-ready delivery: clean-setup check, README with screenshots, architecture overview, 5 to 10 minute demonstration script, implemented / simulated / future list | MUST | **DONE** (#35 into its stack branch; on `main` by #36, `2f42d68`; [DEMO.md](DEMO.md)) | 8 |
 
 ### 4.2 Master roadmap
 
@@ -158,18 +157,18 @@ All research work; the owner does it as the researcher. None is needed for the d
 | ID | Package | Class | Status | Waits for | Executor |
 |---|---|---|---|---|---|
 | E1 | Design foundation on the existing pages (P-13) | MUST, as S2 | **DONE** (#30) | — | Day |
-| E2 | Browser checks of the existing pages (diagnostic §12, items 1 to 7) | MUST, within S7 | NOT STARTED | Claude Code checks what it can in a local browser; checks that need the owner's authenticator are listed for the owner | Day, Owner |
+| E2 | Browser checks of the existing pages (diagnostic §12, items 1 to 7) | MUST, within S7 | PARTIAL: every page checked in a headless browser at three widths and both themes (Days 3 to 8); the checks that need an authenticator in hand are not done | Claude Code checks what it can in a local browser; checks that need the owner's authenticator are listed for the owner | Day, Owner |
 | E3 | Interface text style guide (P-14) | POST | BLOCKED | A3, B11 | Day |
-| E4 | Journeys J1 to J9, workspace and public pages | MUST for the workspace journeys of S3 to S6; POST for the public site | BLOCKED: S3 to S6 | The public site needs P-2 and B7 | Day |
+| E4 | Journeys J1 to J9, workspace and public pages | MUST for the workspace journeys of S3 to S6; POST for the public site | PARTIAL: the workspace journeys are built and tested end to end (`test_journeys.py`); the public site is not | The public site needs P-2 and B7 | Day |
 
 #### F. Analysis and reproducibility
 
 | ID | Package | Class | Status | Waits for | Executor |
 |---|---|---|---|---|---|
 | F1 | FR-42 shared time axis, with the non-causation notice and the wording check | SHOULD, within S6 if time allows | BLOCKED | S5, S6 | Day |
-| F2 | AnalysisRun with observation counts | MUST, as S6 (demonstrator form) | IN PROGRESS (Day 6) | — | Day |
+| F2 | AnalysisRun with observation counts | MUST, as S6 (demonstrator form) | **DONE** in the demonstrator form (#33, #36) | — | Day |
 | F3 | Corpus manifest, data snapshot, rebuild test (FR-61, NFR-05) | POST | BLOCKED | D1, B7 | Day |
-| F4 | Coverage per country and layer on every comparison | MUST, as S5 | BLOCKED | S5 | Day |
+| F4 | Coverage per country and layer on every comparison | MUST, as S5 | **DONE** in the demonstrator form (#32, #36) | — | Day |
 
 #### G. Security, testing, accessibility, performance
 
@@ -177,8 +176,8 @@ All research work; the owner does it as the researcher. None is needed for the d
 |---|---|---|---|---|---|
 | G1 | Coverage measurement, or correct CONTRIBUTING | — | **REMOVED**: H1 corrected CONTRIBUTING | — | — |
 | G2 | Scheduled dependency audit, or Dependabot alerts | POST | BLOCKED | Q-13 | Day |
-| G3 | CI time headroom | SHOULD: the sprint adds tests | BLOCKED | Q-13 (any change to the workflow) | Day |
-| G4 | Accessibility target and checks (P-1) | MUST, within S2 and S7 | NOT STARTED. Target provisional (§9) | — | Day |
+| G3 | CI time headroom | SHOULD: the sprint adds tests | AWAITING OWNER MERGE (Day 9): test job limit 900 s → 1,500 s, by a stated rule. Sharding not needed yet | — | Day |
+| G4 | Accessibility target and checks (P-1) | MUST, within S2 and S7 | PARTIAL: automated checks and contrast done (§9); screen-reader use and 400 % zoom not checked | — | Day |
 | G5 | Phase 2 security tests (fetch guard, parser limits) | POST | BLOCKED | D1 | Day |
 | G6 | First performance measurements (NFR-07) | POST | DEFERRED | Real data | Day |
 | G7 | Optional: database check for L5; `pre-commit` | POST | DEFERRED | An owner decision, if ever wanted | Day |
@@ -210,7 +209,7 @@ All POST: the demonstrator runs locally (ADR-0020 point 3).
 
 | ID | Package | Class | Status | Waits for | Executor |
 |---|---|---|---|---|---|
-| J1 | Acceptance audit at each completion milestone | MUST for the demonstrator (within S8, against the owner's final acceptance list); POST for the research milestones | BLOCKED | S7 | Day |
+| J1 | Acceptance audit at each completion milestone | MUST for the demonstrator (within S8, against the owner's final acceptance list); POST for the research milestones | PARTIAL: the demonstrator is checked against the owner's acceptance list in §12 | — | Day |
 
 **Critical path of the sprint.** S1 → S3 → S4; S1 → S5; S3 and S5 → S6 → S7 → S8. S2 runs in parallel from the start. **Critical path of the research build** (unchanged, after the sprint): A2 → B1 → B2 → B3 → (B4 → B5) → B6 → C3 → C5 → D1, with B20 before B6 (F-15) and C1 → C2 before C5.
 
@@ -226,10 +225,11 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 2 | Record the delivery mandate, the sprint plan, and ADR-0020 | S1 | 2026-10-30 | **DONE**: merged as `7904e36`; CI run 41352450005 passed all four checks; `4494 passed` | #29 |
 | 3 | Design system, application shell, home page | S2, E1 | 2026-10-30 | **DONE**: merged as `5ba91c8`; CI run 41353530141 passed all four checks; `4511 passed` | #30 |
 | 4 | Sources and policies: backend, pages, seed data | S3, S4 | 2026-11-02 | **DONE**: merged as `9e5e9ea`; CI run 41405637271 passed all four checks; `4674 passed` | #31 |
-| 5 | Indicators in three layers, comparison, coverage | S5, F4 | 2026-11-02 | AWAITING OWNER MERGE into `main`: #32 was merged into `feat/sources-policies`, not `main`; brought to `main` by the pull request that changes this file | #32 |
-| 6 | Analysis runs, search runs, exports | S6, F2 | 2026-11-02 | As Day 5: #33 was merged into `feat/indicators` | #33 |
-| 7 | Polish, accessibility, journey tests | S7, E2, G4 | 2026-11-02 | As Day 5: #34 was merged into `feat/research-workspace` | #34 |
-| 8 | Professor-ready delivery: README with screenshots, demonstration guide, clean-setup check | S8, J1 (demonstrator) | 2026-11-02 | As Day 5: #35 was merged into `feat/polish-quality` | #35 |
+| 5 | Indicators in three layers, comparison, coverage | S5, F4 | 2026-11-02 | **DONE**: merged into `feat/sources-policies` by #32, brought to `main` by #36 as `2f42d68`; CI run 41409027896 passed all four checks; `4787 passed` | #32 |
+| 6 | Analysis runs, search runs, exports | S6, F2 | 2026-11-02 | **DONE**: merged into `feat/indicators` by #33, brought to `main` by #36 as `2f42d68`; CI run 41409027896 passed all four checks; `4787 passed` | #33 |
+| 7 | Polish, accessibility, journey tests | S7, E2, G4 | 2026-11-02 | **DONE**: merged into `feat/research-workspace` by #34, brought to `main` by #36 as `2f42d68`; CI run 41409027896 passed all four checks; `4787 passed` | #34 |
+| 8 | Professor-ready delivery: README with screenshots, demonstration guide, clean-setup check | S8, J1 (demonstrator) | 2026-11-02 | **DONE**: merged into `feat/polish-quality` by #35, brought to `main` by #36 as `2f42d68`; CI run 41409027896 passed all four checks; `4787 passed` | #35 |
+| 9 | CI headroom, sprint records, acceptance check | G3, J1 | 2026-11-02 | AWAITING OWNER MERGE | The pull request that changes this file |
 
 ### Planned Days
 
@@ -260,7 +260,7 @@ Days 5 to 8 get full checklists when they start; their deliverables are in §4.1
 
 | Pull request | Day | Head | Status |
 |---|---|---|---|
-| The pull request that changes this file | 5 to 8 | Reported when it is opened | Brings the four commits of Days 5 to 8 to `main` unchanged (cherry-picked onto `9e5e9ea`; the resulting tree equals `feat/polish-quality`, where #32 to #35 were merged). Awaiting CI, then the owner's merge |
+| The pull request that changes this file | 9 | Reported when it is opened | Awaiting CI, then the owner's merge |
 
 ## 8. Blockers and dependencies
 
@@ -288,11 +288,12 @@ Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 
 | 2026-11-02 | **Provisional**, for the demonstrator only: `seed_demo` grants its two accounts their roles through a seeding account that cannot sign in, and writes countries and languages directly, because no verified Administrator exists in a fresh development database. Development only (`DEBUG`) | Claude Code, under the owner's delegation | `caipo/demo`; [DEVELOPMENT.md](DEVELOPMENT.md) |
 | 2026-11-02 | **Provisional**: the reasons the demonstrator's services give for a refusal are shown in English and are not yet marked for translation; the page around them is | Claude Code, under the owner's delegation | This file; to be closed in Day 7 or after the sprint |
 | 2026-11-02 | Accessibility evidence for the provisional P-1 target (WCAG 2.2 AA): axe-core 4.10.2, run locally from a scratch environment and not added to the project, found **no violation** of the WCAG 2.0, 2.1, and 2.2 A and AA rules or of its best-practice rules on 17 pages in light and in dark mode; text colour pairs were computed at 4.9:1 or more, chart lines at 3.2:1 or more (graphical objects). Keyboard focus is visible; charts have a text alternative in a table. Not checked: screen-reader use by a person, zoom to 400 % on every page | Claude Code | This file |
+| 2026-11-02 | Q-13, first part: raise the CI test job's time limit, by as much as is needed and for a stated reason. Set to 25 minutes by the rule "twice the longest successful run, rounded up to five minutes" (738 s), to be recomputed when a run takes more than 1,000 s; written in `.github/workflows/ci.yml` | Owner (approval); Claude Code (the rule and the value) | This file; the workflow |
 | 2026-10-30 | P-1 (part of Q-10), **provisional**: WCAG 2.2 level AA as the accessibility target of the demonstrator's pages, checked in S2 and S7 | Claude Code, under the owner's delegation to choose a reasonable default and record it as provisional | This file. The owner may replace it |
 
 ## 10. Decisions awaiting the owner
 
-Recommended defaults are recommendations, not decisions. Only Q-13 can affect the sprint.
+Recommended defaults are recommendations, not decisions. None of them blocks the demonstrator.
 
 | ID | Decision | Why it matters | Recommended default | Alternatives and consequences | Blocks |
 |---|---|---|---|---|---|
@@ -306,13 +307,49 @@ Recommended defaults are recommendations, not decisions. Only Q-13 can affect th
 | Q-10 (rest) | P-11 (sources of names), P-14 (text style guide); confirm or replace the provisional P-1 | C4 and E3 depend on them | The Blueprint's recommended options | Reject or defer each | A3, C4, E3 |
 | Q-11 | Phase 1 exit: declare it met, with D0 as a residual item? | No document declares Phase 1 complete | Declare the exit met, with D0 residual | Keep Phase 1 open until D0 is built | A5, D0 |
 | Q-12 | Status consolidation, freezing the diagnostic report, a pull request template | Status is narrated in about seven places | Approve all three after the sprint | Approve some | H2, H3, H4 |
-| Q-13 | CI timeout headroom; dependency audit between changes | The test job reached 78% of its 900 s timeout, and the sprint adds tests. A timed-out job fails a required check | Raise the test job's timeout to 1,500 s now (one line of `.github/workflows/ci.yml`); a weekly scheduled dependency audit after the sprint | Leave it and accept the risk that a sprint pull request's CI fails on time alone | G2, G3, the sprint's CI |
+| Q-13 (rest) | A dependency audit between changes | No scheduled audit exists; vulnerabilities published between pull requests are found only at the next one | A weekly scheduled run of the existing dependency audit in CI | Dependabot alerts (a repository setting) | G2 |
 | Q-14 | Housekeeping | Clutter and stored account data | Item by item; nothing deleted without the owner's word | Keep everything | A6 |
 
 ## 11. Next executable Day
 
-- **Correction of 2026-11-02.** This file and the pull requests said that, once #31 was merged, GitHub would retarget each stacked pull request to `main`. That was wrong: GitHub retargets a stacked pull request only when the branch it is based on is deleted, and this repository keeps merged branches. #32 to #35 were therefore merged into their stack branches. Nothing was lost: `feat/polish-quality` holds all of Days 4 to 8, and Day 4 on `main` is identical to the commit it was stacked on.
-- **Now:** the pull request that changes this file brings Days 5 to 8 to `main`, with the four commits as they were reviewed. Its CI is the first CI run on that code.
-- **Rule from now on:** no more stacked pull requests unless each is retargeted to `main` by hand before it is merged.
-- After this merge: verify it on `origin/main` with its CI; then the remaining provisional items (translation of service refusal messages; screen-reader and 400 % zoom checks) and the post-sprint queue (§5).
-- **Q-13** (CI timeout headroom) is still open: the test job took 632 s of its 900 s on `9e5e9ea`, and this pull request adds about 110 tests.
+- **Day 9** (CI headroom, these records, the acceptance check of §12) is the pull request that changes this file.
+- **Correction of 2026-11-02, kept for the record.** The stacked pull requests #32 to #35 were merged into their stack branches, not `main`, because GitHub retargets a stacked pull request only when its base branch is deleted. #36 brought their four commits to `main` unchanged. No pull request is stacked from now on unless it is retargeted to `main` by hand before it is merged.
+- **Before the demonstration:** the owner reads [DEMO.md](DEMO.md) and runs `seed_demo` on an empty development database.
+- **After Day 9:** the items that are partial in §12 (translation of service refusal messages; screen-reader and 400 % zoom checks), then the post-sprint queue (§5).
+
+## 12. The owner's acceptance list for the demonstrator
+
+The list of the owner's mandate of 2026-10-30, §11, checked on 2026-11-02 against `2f42d68`. **Met** means it can be shown working, with the evidence named; **partial** says what is missing.
+
+| Item | State | Evidence or what is missing |
+|---|---|---|
+| A. Clean installation instructions | Met | [README.md](../README.md), "Getting started"; [DEVELOPMENT.md](DEVELOPMENT.md) |
+| A. Reproducible local environment | Met | `uv.lock`; Python and service versions pinned; Docker Compose services |
+| A. Database setup and migrations | Met | Every migration applied, reversed, and applied again on scratch databases (Days 4 to 6) |
+| A. Seeded demonstration environment | Met | `seed_demo` on an empty database in under 3 seconds (Day 8) |
+| A. Working authentication | Met | Phase 1, with TOTP for Reviewers and Administrators; demonstration accounts for Researcher and Reader |
+| A. Complete primary user journeys | Met | `caipo/web/tests/test_journeys.py`, through the sign-in form on the seeded environment |
+| A. Functional backend and frontend | Met | 61 routes, each with a declared access; 4,787 tests passing in CI |
+| A. Error, empty, and loading states | Met for error and empty states | Error pages; empty states that say an empty list is not evidence of absence. Pages are rendered on the server, so there is no asynchronous loading to show |
+| B. Source and provenance management | Met | Sources and documents with publisher, address, access date, terms, permitted use, tier; releases with SHA-256 |
+| B. Policy instrument and provision records | Met | Policies, formal events, AI-related provisions with locators |
+| B. Core/contextual separation | Met | Separate tabs, a database check on the assignment, a separate export column |
+| B. Indicator management with three layers | Partial | Indicators in layers A, B, C with values, coverage, and charts. No page adds an indicator or imports a release: imports run through the services from committed files, because ADR-0020 point 3 builds no upload of datasets |
+| B. Country comparison | Met | `/indicators/`, one data class at a time, with coverage per layer and country |
+| B. Transparent missingness | Met | Gaps shown as gaps in charts and tables, "n of N years", layer C reported as having no indicator |
+| B. Reproducible analytical runs | Met | Fingerprints of inputs and result; the reproducibility check |
+| B. Source-linked results | Met | Every input value of a run with its release hash and source |
+| B. Export | Met | Analysis CSV and JSON, policy register CSV, with provenance notes; formula injection neutralised |
+| C. Unit and integration tests | Met | 4,787 tests |
+| C. Critical end-to-end journeys tested | Met, through the Django test client | Not driven through a real browser in CI; the pages were checked in a headless browser by hand |
+| C. Four required CI checks passing | Met | Run 41409027896 on `2f42d68` |
+| C. Accessibility and responsive layout | Partial | axe-core: no WCAG 2.2 A/AA violation on 17 pages in both themes; widths from 390 px to 1440 px checked. Screen-reader use and 400 % zoom not checked |
+| C. Security review | Met, as a targeted review of the sprint's code on 2026-11-02 | No unescaped output, no raw SQL, no outbound network call, no CSRF exemption in the new code; every route declares its access; stored addresses limited to `http(s)` by the service and a database check; CSV formula injection neutralised; snapshot files hash-checked and validated; `seed_demo` refuses to run without `DEBUG`. Not a penetration test |
+| C. No known critical defects | Met | None known. Known minor item: refusal messages of the new services are not marked for translation (§9) |
+| D. Professional interface | Met | The design system; screenshots in the README |
+| D. README with screenshots | Met | [README.md](../README.md) |
+| D. Architecture explanation | Met | The README diagram; [ARCHITECTURE.md](ARCHITECTURE.md) |
+| D. Data and source limitations documented | Met | [LIMITATIONS.md](LIMITATIONS.md) §4.5; [DEMO.md](DEMO.md) |
+| D. Demonstration accounts or safe local setup | Met | `seed_demo`, development only |
+| D. A 5 to 10 minute demonstration script | Met | [DEMO.md](DEMO.md) |
+| D. What is implemented, simulated, and future | Met | [DEMO.md](DEMO.md), "What is real, what is simulated, what is future" |

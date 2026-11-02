@@ -93,7 +93,13 @@ jobs:
   tests:
     name: Django checks and tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # A guard against a hung run, not a speed target. Set to twice the
+    # longest successful run observed, rounded up to five minutes: 738 s on
+    # 2026-11-02 (4,787 tests), so 25 minutes. Runs of the same tests have
+    # taken from 480 s to 699 s on these runners, and the suite grows. Owner
+    # approval of 2026-11-02 (docs/EXECUTION_TRACKER.md, Q-13). Recompute by
+    # the same rule when a run takes more than two thirds of it (1,000 s).
+    timeout-minutes: 25
     env:
       DJANGO_SETTINGS_MODULE: caipo.config.settings.testing
       # Names and addresses of the throwaway services started below. The two
