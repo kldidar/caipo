@@ -1932,6 +1932,10 @@ details.disclosure > .disclosure__body {
   font-weight: 550;
 }
 
+.grid + p {
+  margin-top: var(--s-4);
+}
+
 /* ---------- Charts ---------- */
 
 /* Categorical slots 1 and 2 of the validated reference palette of the
@@ -2123,9 +2127,17 @@ code.hash {
   border-top: 1px solid var(--line);
 }
 
+.release:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 /* ---------- Responsive ---------- */
 
-@media (max-width: 960px) {
+/* The navigation has nine sections; it collapses behind the menu before it
+   would crowd the masthead. */
+@media (max-width: 1180px) {
   .masthead__inner {
     flex-wrap: wrap;
     gap: var(--s-3);
@@ -2183,6 +2195,9 @@ code.hash {
     border-top: 1px solid var(--line);
   }
 
+}
+
+@media (max-width: 960px) {
   .auth {
     grid-template-columns: 1fr;
   }
