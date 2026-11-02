@@ -103,11 +103,31 @@ def test_a_verified_administrator_is_offered_account_administration(
     [
         (
             Role.READER,
-            {"/", "/policies/", "/sources/", "/registry/", "/account/second-factor/", "/login/"},
+            {
+                "/",
+                "/policies/",
+                "/indicators/",
+                "/analysis/",
+                "/searches/",
+                "/sources/",
+                "/registry/",
+                "/account/second-factor/",
+                "/login/",
+            },
         ),
         (
             Role.RESEARCHER,
-            {"/", "/policies/", "/sources/", "/registry/", "/account/second-factor/", "/login/"},
+            {
+                "/",
+                "/policies/",
+                "/indicators/",
+                "/analysis/",
+                "/searches/",
+                "/sources/",
+                "/registry/",
+                "/account/second-factor/",
+                "/login/",
+            },
         ),
     ],
 )

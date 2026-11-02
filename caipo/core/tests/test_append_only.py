@@ -62,6 +62,12 @@ def test_the_three_event_models_and_the_two_audit_models_are_built_on_it() -> No
         "AuditEventChange",
         # The formal lifecycle events of a policy (ADR-0020, DATA_MODEL.md §7a).
         "PolicyEvent",
+        # Indicator releases and their values (ADR-0020, DATA_MODEL.md §7a).
+        "DatasetRelease",
+        "Observation",
+        # Analysis runs and search runs (ADR-0020, DATA_MODEL.md §7a).
+        "AnalysisRun",
+        "SearchRun",
     }
     for model in apps.get_models():
         if issubclass(model, AppendOnlyModel):

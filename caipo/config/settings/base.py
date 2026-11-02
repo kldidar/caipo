@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     "caipo.registry",
     "caipo.sources",
     "caipo.policies",
+    "caipo.indicators",
+    "caipo.research",
     "caipo.demo",
     "caipo.web",
 ]

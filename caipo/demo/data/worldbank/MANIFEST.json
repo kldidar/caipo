@@ -1,0 +1,25 @@
+{
+  "about": "Responses of the World Bank Indicators API (v2), kept exactly as received. Each data file holds one indicator for Turkmenistan and Uzbekistan, 2010 to 2024; each .meta.json file holds that indicator's description.",
+  "retrieved_on": "2026-11-02",
+  "release_label": "World Development Indicators, last updated 2026-10-08",
+  "request": "https://api.worldbank.org/v2/country/TKM;UZB/indicator/<code>?format=json&date=2010:2024&per_page=200",
+  "licence": "Creative Commons Attribution 4.0 International (CC BY 4.0), with the World Bank's additional terms: attribution as 'The World Bank: <dataset name>: <data source>', and no claim or implication that the World Bank endorses the use. https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets",
+  "files": {
+    "BX.GSR.CCIS.ZS.json": "51fb53e3eb5e8820682ba5130a4495be713cc42500005e2ed06d23ec059e2294",
+    "BX.GSR.CCIS.ZS.meta.json": "b01a9d66f99515c7c26effc5c30e4f04301821c662960cf524d0e7792cdd465a",
+    "IT.CEL.SETS.P2.json": "05a0275db7a19bab7df8e6fe0cd47131eefa6469c13acb0fd8e85b497c8dd7c5",
+    "IT.CEL.SETS.P2.meta.json": "f624bcfad4bd1b64f7791bddece4bef2f0a9024b048badd90f76048453804ea4",
+    "IT.NET.BBND.P2.json": "5099bcfdcb9f0d3ca5ba0106b3fd8649673deeb54becc57688ca1b6c3ba2c7dc",
+    "IT.NET.BBND.P2.meta.json": "60cc834eefb84a39625796fd1709d7cce852dca105004eb913f15e6a11e2888c",
+    "IT.NET.USER.ZS.json": "b751acf7ef5f87c5e217d488c441217ae492c8039c62b5c0f762da2bdc6ea0c0",
+    "IT.NET.USER.ZS.meta.json": "6e6fc76f94bda17bd30c3303f1e8965698c93d344c26a556ea6ee18a86c3cc32",
+    "NV.AGR.TOTL.ZS.json": "d9ac160950a08b4303df920f32f705123a65f4d4f46a9edf06dd2904287cc60f",
+    "NV.AGR.TOTL.ZS.meta.json": "fe7405bdb44e1600d98e44cc0edb61a4cc77b9d8d2ce534bed46309ac173a117",
+    "NV.IND.TOTL.ZS.json": "5c84f476c9bf87807cbabc65a0449323576f2699d8cd9ffcae48a7ea3b05a277",
+    "NV.IND.TOTL.ZS.meta.json": "989dfa43e4289f3b70735cd07f08fbbba8b2c76e89a6f0d19ded866027736c9b",
+    "NV.SRV.TOTL.ZS.json": "5ebd8e96ec7dc3ea927a4b7089e4eb101df41d3aca07e3a52b902d049b47cc0c",
+    "NV.SRV.TOTL.ZS.meta.json": "55d203ff83eb44bd8a39d3fd48042f3473c75f3ce2c6364cfb44da0454661fb6",
+    "SL.AGR.EMPL.ZS.json": "fb1d83a26ea05e3cb4fc9c70b638651c164a808b373d4bcf658373b67ed66742",
+    "SL.AGR.EMPL.ZS.meta.json": "c57a5d67bf62cb9f83bf1a34ef6f0acc9c20edc0ca810e3da24c5cdc9b69c6d1"
+  }
+}

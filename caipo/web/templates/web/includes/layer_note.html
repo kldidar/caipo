@@ -1,0 +1,7 @@
+{% load i18n %}{% if layer == "A" %}
+  <p><strong>{% translate "Represents:" %}</strong> {% translate "change in the composition of economic output, employment, and trade." %} <strong>{% translate "Does not establish:" %}</strong> {% translate "that digital technology or AI drove the change, or that a policy caused it. Structural change can follow from prices, reforms, external events, and other causes this design cannot separate." %}</p>
+{% elif layer == "B" %}
+  <p><strong>{% translate "Represents:" %}</strong> {% translate "the adoption and spread of digital technologies." %} <strong>{% translate "Does not establish:" %}</strong> {% translate "AI adoption or AI activity, since digital adoption is not AI adoption; nor that structural change followed from it, or that a policy caused it." %}</p>
+{% else %}
+  <p><strong>{% translate "Represents:" %}</strong> {% translate "observable measures specifically related to AI, where reliable and comparable evidence exists." %} <strong>{% translate "Does not establish:" %}</strong> {% translate "that AI policy caused them, or that they represent change in the whole economy. Counts of policies are never used as a layer C measure." %}</p>
+{% endif %}

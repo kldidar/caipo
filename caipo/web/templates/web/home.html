@@ -40,6 +40,28 @@
     </section>
   {% endif %}
 
+  {% if workspace %}
+    <section class="section" aria-labelledby="economy-title">
+      <div class="section-header">
+        <h2 id="economy-title">{% translate "Economic transformation, study countries" %}</h2>
+        <a href="{% url 'indicators' %}">{% translate "Compare the countries" %}</a>
+      </div>
+      <div class="grid grid--3">
+        {% for layer in workspace.layers %}
+          <a class="card card--link" href="{% url 'indicators' %}?layer={{ layer.layer }}">
+            <span class="card__title">{{ layer.label }}</span>
+            {% if layer.indicators %}
+              {% for country in layer.countries %}<span class="card__body">{{ country.country }}: {% blocktranslate with held=country.with_values total=layer.indicators %}{{ held }} of {{ total }} indicators with values{% endblocktranslate %}{% if country.latest_year %}, {% blocktranslate with year=country.latest_year %}latest {{ year }}{% endblocktranslate %}{% endif %}</span>{% endfor %}
+            {% else %}
+              <span class="card__body"><em>{% translate "No indicator recorded for this layer." %}</em></span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+      <p class="muted"><small>{% blocktranslate with a=workspace.analyses s=workspace.searches %}{{ a }} recorded analysis runs and {{ s }} recorded searches in the research workspace.{% endblocktranslate %} <a href="{% url 'analyses' %}">{% translate "Analysis" %}</a> · <a href="{% url 'searches' %}">{% translate "Searches" %}</a></small></p>
+    </section>
+  {% endif %}
+
   {% if registry %}
     <section class="section" aria-labelledby="registry-title">
       <div class="section-header">
@@ -77,6 +99,12 @@
           <span class="card__title">{% translate "Policies" %}</span>
           <span class="card__body">{% translate "The core AI policy corpus and the contextual registry, each policy with its documents, formal events, and AI-related provisions." %}</span>
           <span class="card__arrow">{% translate "Explore" %} →</span>
+        </a>
+        <a class="card card--link" href="{% url 'indicators' %}">
+          <span class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg></span>
+          <span class="card__title">{% translate "Economic transformation" %}</span>
+          <span class="card__body">{% translate "Indicators in three separate layers, country by country, with every gap in the data shown." %}</span>
+          <span class="card__arrow">{% translate "Compare" %} →</span>
         </a>
         <a class="card card--link" href="{% url 'sources' %}">
           <span class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>

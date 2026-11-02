@@ -47,6 +47,9 @@ type _Entry = tuple[str, str | Promise, frozenset[str]]
 _WORKSPACE: tuple[_Entry, ...] = (
     ("home", _("Overview"), frozenset({"home"})),
     ("policies", _("Policies"), frozenset({"polic*"})),
+    ("indicators", _("Indicators"), frozenset({"indicator*"})),
+    ("analyses", _("Analysis"), frozenset({"analys*"})),
+    ("searches", _("Searches"), frozenset({"search*"})),
     ("sources", _("Sources"), frozenset({"source*"})),
     ("registry", _("Registry"), frozenset({"registry*"})),
 )

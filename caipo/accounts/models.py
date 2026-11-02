@@ -832,6 +832,10 @@ class AuditTargetType(models.TextChoices):
     POLICY_DOCUMENT_LINK = "policies.policy_document_link", _("Policy document")
     POLICY_EVENT = "policies.policy_event", _("Policy event")
     POLICY_PROVISION = "policies.policy_provision", _("AI-related provision")
+    INDICATOR = "indicators.indicator", _("Indicator")
+    DATASET_RELEASE = "indicators.dataset_release", _("Dataset release")
+    ANALYSIS_RUN = "research.analysis_run", _("Analysis run")
+    SEARCH_RUN = "research.search_run", _("Search run")
 
 
 class AuditField(models.TextChoices):
