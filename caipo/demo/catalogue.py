@@ -102,6 +102,32 @@ class DemoRelease:
 
 
 @dataclass(frozen=True)
+class AnalysisSpec:
+    title: str
+    data_class: str
+    layer: str
+    start_year: int
+    end_year: int
+
+
+@dataclass(frozen=True)
+class SearchSpec:
+    data_class: str
+    title: str
+    layer: str
+    countries: str
+    searched_on: date
+    queries: str
+    source_universe: str
+    inclusion_criteria: str
+    sources_examined: str
+    method: str
+    outcome: str
+    summary: str
+    exclusion_criteria: str = ""
+
+
+@dataclass(frozen=True)
 class Catalogue:
     accessed: date
     countries: tuple[tuple[str, str, str], ...]
@@ -114,6 +140,8 @@ class Catalogue:
     demo_release: DemoRelease
     # (indicator code, country, year, value as text or None, status)
     demo_observations: tuple[tuple[str, str, int, str | None, str], ...]
+    analyses: tuple[AnalysisSpec, ...]
+    searches: tuple[SearchSpec, ...]
 
     @property
     def english(self) -> tuple[str, str]:
@@ -170,5 +198,10 @@ def load(path: Path = PATH) -> Catalogue:
         demo_observations=tuple(
             (code, country, int(year), value, status)
             for code, country, year, value, status in data["demo_observations"]
+        ),
+        analyses=tuple(AnalysisSpec(**item) for item in data["analyses"]),
+        searches=tuple(
+            SearchSpec(**{**item, "searched_on": date.fromisoformat(item["searched_on"])})
+            for item in data["searches"]
         ),
     )

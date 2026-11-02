@@ -30,11 +30,13 @@ from caipo.accounts.models import RoleEvent, RoleEventType, User
 from caipo.accounts.selectors import Role, authentication_context
 from caipo.demo.catalogue import Catalogue, load
 from caipo.demo.worldbank import read_snapshot
+from caipo.indicators import selectors as indicators_selectors
 from caipo.indicators import services as indicators_services
 from caipo.indicators.services import ObservationRow
 from caipo.policies import services as policies_services
 from caipo.registry.models import Country, Language
 from caipo.registry.services import NewName, create_institution
+from caipo.research import services as research_services
 from caipo.sources import services as sources_services
 from caipo.sources.models import Source
 
@@ -148,6 +150,7 @@ class Command(BaseCommand):
             for spec in catalogue.documents
         }
         self._indicators(actor, catalogue, sources)
+        self._research(actor, catalogue)
         for policy in catalogue.policies:
             public_id = policies_services.create_policy(
                 actor=actor,
@@ -237,3 +240,37 @@ class Command(BaseCommand):
                 for code, country, year, value, status in catalogue.demo_observations
             ],
         )
+
+    def _research(self, actor: Any, catalogue: Catalogue) -> None:
+        for spec in catalogue.analyses:
+            research_services.run_analysis(
+                actor=actor,
+                title=spec.title,
+                data_class=spec.data_class,
+                indicators=[
+                    public_id
+                    for public_id, _name, layer in indicators_selectors.indicator_choices(
+                        actor, data_class=spec.data_class
+                    )
+                    if layer == spec.layer
+                ],
+                start_year=spec.start_year,
+                end_year=spec.end_year,
+            )
+        for search in catalogue.searches:
+            research_services.record_search(
+                actor=actor,
+                data_class=search.data_class,
+                title=search.title,
+                layer=search.layer,
+                countries=search.countries,
+                searched_on=search.searched_on,
+                queries=search.queries,
+                source_universe=search.source_universe,
+                inclusion_criteria=search.inclusion_criteria,
+                exclusion_criteria=search.exclusion_criteria,
+                sources_examined=search.sources_examined,
+                method=search.method,
+                outcome=search.outcome,
+                summary=search.summary,
+            )

@@ -8,7 +8,10 @@
     <p class="eyebrow">{% translate "Workspace" %}</p>
     <div class="section-header">
       <h1 class="flush-bottom">{% translate "Policies" %}</h1>
-      {% if may_contribute %}<a class="button" href="{% url 'policy-create' %}">{% translate "Add a policy" %}</a>{% endif %}
+      <span class="cluster">
+        <a class="button button--secondary" href="{% url 'policies-csv' %}">{% translate "Export the register (CSV)" %}</a>
+        {% if may_contribute %}<a class="button" href="{% url 'policy-create' %}">{% translate "Add a policy" %}</a>{% endif %}
+      </span>
     </div>
     <p class="lede">{% translate "The core AI policy corpus and the contextual policy registry are kept apart. Contextual material is never counted as AI policy. Every assignment shown here is provisional, with its reason, until the research protocol's eligibility rules are settled." %}</p>
   </header>

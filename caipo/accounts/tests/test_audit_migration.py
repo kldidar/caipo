@@ -21,6 +21,7 @@ AFTER = ("accounts", "0009_audit_event")
 # Widens the lists of target types and fields (ADR-0020); it adds no table.
 WIDENING = ("accounts", "0010_audit_demonstrator_targets")
 SECOND_WIDENING = ("accounts", "0011_audit_indicator_targets")
+THIRD_WIDENING = ("accounts", "0012_audit_research_targets")
 
 TABLES = {"accounts_auditevent", "accounts_auditeventchange"}
 FUNCTIONS = {"accounts_auditevent_refuse_change", "accounts_auditeventchange_refuse_change"}
@@ -111,8 +112,9 @@ def test_it_follows_the_one_before_it_and_only_a_widening_follows_it() -> None:
 
     assert loader.get_migration(*AFTER).dependencies == [BEFORE]
     assert loader.get_migration(*WIDENING).dependencies == [AFTER]
-    assert loader.graph.leaf_nodes("accounts") == [SECOND_WIDENING]
     assert loader.get_migration(*SECOND_WIDENING).dependencies == [WIDENING]
+    assert loader.graph.leaf_nodes("accounts") == [THIRD_WIDENING]
+    assert loader.get_migration(*THIRD_WIDENING).dependencies == [SECOND_WIDENING]
 
 
 def test_applied_it_has_made_the_tables_their_constraints_and_their_triggers() -> None:

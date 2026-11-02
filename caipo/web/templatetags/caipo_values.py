@@ -19,3 +19,9 @@ def value(number: Decimal | None) -> str:
 def index(sequence: tuple[object, ...], position: int) -> object:
     """Return the item at a position of a sequence."""
     return sequence[position]
+
+
+@register.filter
+def value_text(number: str | None) -> str:
+    """Show a value stored as text with at most two decimals, or nothing if there is none."""
+    return "" if number is None else format_value(Decimal(number))
