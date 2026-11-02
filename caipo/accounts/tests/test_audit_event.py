@@ -42,6 +42,8 @@ TARGET_TYPES = [
     "policies.policy_document_link",
     "policies.policy_event",
     "policies.policy_provision",
+    "indicators.indicator",
+    "indicators.dataset_release",
 ]
 FIELDS = [
     "name_en",

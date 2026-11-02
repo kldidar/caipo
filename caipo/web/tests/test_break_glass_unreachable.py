@@ -67,8 +67,9 @@ def test_no_route_is_a_break_glass_route() -> None:
     # institutions and their names (Increment 3). None has anything to do
     # with a second factor. One more is the home page, which only reads
     # (Day 3 of the execution tracker). Eleven more are the demonstrator's
-    # source and policy pages (ADR-0020, Day 4).
-    assert len(routes) == 52
+    # source and policy pages (ADR-0020, Day 4), and two more its
+    # indicator pages (Day 5).
+    assert len(routes) == 54
     for route in routes:
         described = f"{route.name} {route.pattern} {route.callback.__module__}"
         assert "break" not in described.lower()
