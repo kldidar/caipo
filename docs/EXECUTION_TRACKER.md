@@ -242,6 +242,7 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 
 | Day | Sprint day | Objective | Packages | Ready when |
 |---|---|---|---|---|
+| 12 | 2026-11-04 | Contributed articles: a registered Reader writes an article and sends it for review; the owner reads it and publishes or declines it, with a reason; published articles are labelled as their author's, not as CAIPO's findings. A further ADR | Owner request of 2026-11-03 | Day 11 merged; Q-15 (licence of a contributed text) answered |
 
 **Post-sprint queue (unnumbered).** Recording the research governance decisions (A2, when Q-2 to Q-5, Q-7, Q-8 are answered); the job-system and isolation spike (C1, Q-9); the Blueprint revision (H5); the ADR-0004 and ADR-0011 decisions (C2); the Phase 1 exit and account-administration pages (A5, D0, Q-11); status consolidation and the self-review practice (H2 to H4, Q-12); CI reliability (G2, G3, Q-13); the ADR for registry name sources (C4); then the research-grade phases behind their gates.
 
@@ -322,6 +323,7 @@ Recommended defaults are recommendations, not decisions. None of them blocks the
 | Q-11 | Phase 1 exit: declare it met, with D0 as a residual item? | No document declares Phase 1 complete | Declare the exit met, with D0 residual | Keep Phase 1 open until D0 is built | A5, D0 |
 | Q-12 | Status consolidation, freezing the diagnostic report, a pull request template | Status is narrated in about seven places | Approve all three after the sprint | Approve some | H2, H3, H4 |
 | Q-13 (rest) | A dependency audit between changes | No scheduled audit exists; vulnerabilities published between pull requests are found only at the next one | A weekly scheduled run of the existing dependency audit in CI | Dependabot alerts (a repository setting) | G2 |
+| Q-15 | Under which licence is a contributed article published? | A published text is used by others; CAIPO needs the author's permission in a stated form before it shows the text to anyone | The author keeps the copyright and publishes under CC BY 4.0, accepted by a checkbox when the article is sent; the article page shows the licence and the author's name | CC BY-NC 4.0 (no commercial reuse); or all rights reserved with a licence to CAIPO to show it only, which allows no reuse by readers | Day 12 |
 | Q-14 | Housekeeping | Clutter and stored account data | Item by item; nothing deleted without the owner's word | Keep everything | A6 |
 
 ## 11. Next executable Day
