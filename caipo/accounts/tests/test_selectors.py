@@ -31,6 +31,8 @@ OWN_MFA = Permission.MFA_MANAGE_OWN
 REGISTRY_READ = Permission.REGISTRY_READ
 REGISTRY_REFERENCE = Permission.REGISTRY_REFERENCE_MANAGE
 REGISTRY_INSTITUTIONS = Permission.REGISTRY_INSTITUTIONS_MANAGE
+SUBMIT_ARTICLES = Permission.ARTICLES_SUBMIT
+REVIEW_ARTICLES = Permission.ARTICLES_REVIEW
 
 
 def _record(user: User, role: Role, event_type: RoleEventType) -> None:
@@ -92,8 +94,11 @@ def test_roles_belong_to_one_user_only(user_with_roles: UserFactory) -> None:
 @pytest.mark.parametrize(
     ("role", "expected"),
     [
-        (Role.READER, {READ, OWN_MFA, REGISTRY_READ}),
-        (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS}),
+        (Role.READER, {READ, OWN_MFA, REGISTRY_READ, SUBMIT_ARTICLES}),
+        (
+            Role.RESEARCHER,
+            {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS, SUBMIT_ARTICLES},
+        ),
         # On a password alone these two roles allow enrolling a second factor
         # and nothing else.
         (Role.REVIEWER, {OWN_MFA}),
@@ -114,11 +119,23 @@ def test_what_each_role_can_do_on_a_password_alone(
 @pytest.mark.parametrize(
     ("role", "expected"),
     [
-        (Role.READER, {READ, OWN_MFA, REGISTRY_READ}),
-        (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS}),
+        (Role.READER, {READ, OWN_MFA, REGISTRY_READ, SUBMIT_ARTICLES}),
+        (
+            Role.RESEARCHER,
+            {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS, SUBMIT_ARTICLES},
+        ),
         (
             Role.REVIEWER,
-            {READ, CONTRIBUTE, REVIEW, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS},
+            {
+                READ,
+                CONTRIBUTE,
+                REVIEW,
+                OWN_MFA,
+                REGISTRY_READ,
+                REGISTRY_INSTITUTIONS,
+                SUBMIT_ARTICLES,
+                REVIEW_ARTICLES,
+            },
         ),
         (
             Role.ADMINISTRATOR,
@@ -133,6 +150,7 @@ def test_what_each_role_can_do_on_a_password_alone(
                 REGISTRY_READ,
                 REGISTRY_REFERENCE,
                 REGISTRY_INSTITUTIONS,
+                REVIEW_ARTICLES,
             },
         ),
     ],
@@ -155,6 +173,7 @@ def test_a_reviewer_who_is_also_a_researcher_works_as_a_researcher_on_a_password
         OWN_MFA,
         REGISTRY_READ,
         REGISTRY_INSTITUTIONS,
+        SUBMIT_ARTICLES,
     }
 
 
@@ -176,7 +195,12 @@ def test_revoking_one_role_leaves_the_others(user_with_roles: UserFactory) -> No
     _record(user, Role.RESEARCHER, RoleEventType.REVOKED)
 
     assert selectors.roles_of(user) == {Role.READER}
-    assert selectors.permissions_of(signed_in(user)) == {READ, OWN_MFA, REGISTRY_READ}
+    assert selectors.permissions_of(signed_in(user)) == {
+        READ,
+        OWN_MFA,
+        REGISTRY_READ,
+        SUBMIT_ARTICLES,
+    }
 
 
 def test_a_deactivated_account_keeps_its_record_but_holds_no_permission(

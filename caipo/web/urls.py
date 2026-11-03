@@ -3,6 +3,7 @@ from django.urls import path
 from caipo.web import (
     accounts,
     activation,
+    articles,
     authentication,
     health,
     home,
@@ -32,6 +33,12 @@ urlpatterns = [
     path("register/", registration.register, name="register"),
     path("password-reset/", password_reset.request_reset, name="password-reset"),
     path("password-reset/confirm/", password_reset.confirm_reset, name="password-reset-confirm"),
+    path("articles/", articles.articles, name="articles"),
+    path("articles/new/", articles.article_new, name="article-new"),
+    path("articles/mine/", articles.articles_mine, name="articles-mine"),
+    path("articles/review/", articles.articles_review, name="articles-review"),
+    path("articles/review/<uuid:public_id>/", articles.article_review, name="article-review"),
+    path("articles/<uuid:public_id>/", articles.article, name="article"),
     path("administration/accounts/", accounts.overview, name="accounts"),
     path("administration/accounts/create/", accounts.create, name="account-create"),
     path(

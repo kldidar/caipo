@@ -1,0 +1,25 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Write an article" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'articles' %}">{% translate "Articles" %}</a></nav>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Contribute" %}</p>
+    <h1>{% translate "Write an article" %}</h1>
+    <p class="lede">{% translate "Your article is sent for review. A reviewer reads it and publishes it, or declines it and tells you why. Once sent, it is not changed: to correct it, send a new one." %}</p>
+  </header>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  <section class="panel">
+    <div class="panel__body">
+      <form method="post" action="{% url 'article-new' %}" novalidate>
+        {% csrf_token %}
+        {% include "web/includes/fields.html" %}
+        <p class="muted"><small>{% translate "Write in plain text; a blank line starts a new paragraph. Do not include anyone's personal data, or text that you did not write." %}</small></p>
+        <button type="submit">{% translate "Send for review" %}</button>
+      </form>
+    </div>
+  </section>
+{% endblock %}

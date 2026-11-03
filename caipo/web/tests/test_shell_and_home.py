@@ -109,6 +109,7 @@ def test_a_verified_administrator_is_offered_account_administration(
                 "/indicators/",
                 "/analysis/",
                 "/searches/",
+                "/articles/",
                 "/sources/",
                 "/registry/",
                 "/account/second-factor/",
@@ -123,6 +124,7 @@ def test_a_verified_administrator_is_offered_account_administration(
                 "/indicators/",
                 "/analysis/",
                 "/searches/",
+                "/articles/",
                 "/sources/",
                 "/registry/",
                 "/account/second-factor/",
@@ -151,6 +153,7 @@ def test_a_verified_administrator_sees_the_administration_pages(
         "/administration/second-factor-requests/",
         "/administration/recovery-requests/",
         "/administration/recoveries/",
+        "/articles/review/",
         "/account/second-factor/",
         "/login/",
     }

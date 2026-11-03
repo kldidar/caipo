@@ -81,6 +81,9 @@ ADMINISTRATOR_REGISTRY = {
     Permission.REGISTRY_READ,
     Permission.REGISTRY_REFERENCE_MANAGE,
     Permission.REGISTRY_INSTITUTIONS_MANAGE,
+    # Reviewing contributed articles (ADR-0022), which is not registry
+    # maintenance either, but is held with it by every verified Administrator.
+    Permission.ARTICLES_REVIEW,
 }
 
 PACKAGE_ROOT = Path(inspect.getfile(caipo)).parent
@@ -456,6 +459,7 @@ def test_an_enrolment_not_confirmed_in_time_is_void(
         OWN_MFA,
         Permission.WORKSPACE_READ,
         Permission.REGISTRY_READ,
+        Permission.ARTICLES_SUBMIT,
     }
     assert _events() == ["mfa_enrollment_started"]
 
@@ -1032,6 +1036,8 @@ def test_wrong_passwords_at_sign_in_and_when_asked_again_count_together(
                 Permission.RESEARCH_REVIEW,
                 Permission.REGISTRY_READ,
                 Permission.REGISTRY_INSTITUTIONS_MANAGE,
+                Permission.ARTICLES_SUBMIT,
+                Permission.ARTICLES_REVIEW,
             },
         ),
         (Role.ADMINISTRATOR, ADMINISTRATIVE | ADMINISTRATOR_REGISTRY),

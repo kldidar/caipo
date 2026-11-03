@@ -29,7 +29,7 @@ Sprint days are calendar milestones. Execution Days (§5) keep their own sequent
 
 **Re-plan of 2026-11-02.** Two calendar days passed without a merge, so the plan was compressed: the backend and the pages of sources and policies are one Day (former Days 4 and 5), and every later Day moves up by one. The delivery Day runs on the deadline day itself, so it has no buffer; each Day's pull request may be stacked on the one before it.
 
-**Addition of 2026-11-03.** After trying the demonstrator, the owner asked for two things it did not have: registration on the site, with read-only access at once, and articles that registered people send for the owner's review before publication. Day 11 builds registration ([ADR-0021](adr/0021-registration-for-the-reader-role.md)); Day 12, contributed articles, waits for the owner's choice of licence for a contributed text (Q-15, §10).
+**Addition of 2026-11-03.** After trying the demonstrator, the owner asked for two things it did not have: registration on the site, with read-only access at once, and articles that registered people send for the owner's review before publication. Day 11 builds registration ([ADR-0021](adr/0021-registration-for-the-reader-role.md)); Day 12 builds contributed articles ([ADR-0022](adr/0022-contributed-articles.md)), under the licence the owner chose the same day, CC BY 4.0 (Q-15).
 
 Fri 2026-11-06 is the buffer for review, CI, and merges. A Day whose pull request is not merged by its sprint day does not stop the next one: during the sprint, the next Day's branch may be based on the open pull request (ADR-0020 point 17).
 
@@ -233,7 +233,8 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 8 | Professor-ready delivery: README with screenshots, demonstration guide, clean-setup check | S8, J1 (demonstrator) | 2026-11-02 | **DONE**: merged into `feat/polish-quality` by #35, brought to `main` by #36 as `2f42d68`; CI run 41409027896 passed all four checks; `4787 passed` | #35 |
 | 9 | CI headroom, sprint records, acceptance check | G3, J1 | 2026-11-02 | **DONE**: merged as `c66e2d4`; CI run 41413845532 passed all four checks; `4787 passed` | #37 |
 | 10 | Translatable refusal messages, reflow at 400 % zoom, accessibility tree | G4 | 2026-11-02 | **DONE**: merged as `bcb9806`; CI run 41426022585 passed all four checks; `4807 passed` | #38 |
-| 11 | Registration on the site for the Reader role, and where development messages go | Owner request of 2026-11-03 | 2026-11-03 | AWAITING OWNER MERGE | The pull request that changes this file |
+| 11 | Registration on the site for the Reader role, and where development messages go | Owner request of 2026-11-03 | 2026-11-03 | AWAITING OWNER MERGE: CI run 41657119179 on `de796ec` passed all four checks; `4876 passed` | #39 |
+| 12 | Contributed articles, published after review | Owner request of 2026-11-03 | 2026-11-03 | AWAITING OWNER MERGE. Based on #39 and opened against `main`, so it holds Day 11's commit until #39 is merged | The pull request that changes this file |
 
 ### Planned Days
 
@@ -241,7 +242,6 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 
 | Day | Sprint day | Objective | Packages | Ready when |
 |---|---|---|---|---|
-| 12 | 2026-11-04 | Contributed articles: a registered Reader writes an article and sends it for review; the owner reads it and publishes or declines it, with a reason; published articles are labelled as their author's, not as CAIPO's findings. A further ADR | Owner request of 2026-11-03 | Day 11 merged; Q-15 (licence of a contributed text) answered |
 
 **Post-sprint queue (unnumbered).** Recording the research governance decisions (A2, when Q-2 to Q-5, Q-7, Q-8 are answered); the job-system and isolation spike (C1, Q-9); the Blueprint revision (H5); the ADR-0004 and ADR-0011 decisions (C2); the Phase 1 exit and account-administration pages (A5, D0, Q-11); status consolidation and the self-review practice (H2 to H4, Q-12); CI reliability (G2, G3, Q-13); the ADR for registry name sources (C4); then the research-grade phases behind their gates.
 
@@ -265,7 +265,8 @@ Days 5 to 8 get full checklists when they start; their deliverables are in §4.1
 
 | Pull request | Day | Head | Status |
 |---|---|---|---|
-| The pull request that changes this file | 11 | Reported when it is opened | Awaiting CI, then the owner's merge |
+| #39 | 11 | `de796ec` | CI passed; awaiting the owner's merge. Merge it first |
+| The pull request that changes this file | 12 | Reported when it is opened | Awaiting CI, then the owner's merge after #39 |
 
 ## 8. Blockers and dependencies
 
@@ -297,7 +298,11 @@ Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 
 | 2026-11-02 | Further accessibility evidence (Day 10): at a 320 CSS px viewport, the equivalent of 400 % zoom (WCAG 1.4.10), all 21 pages tried and the open menu reflow without horizontal scrolling, tables and charts excepted, and axe-core finds no violation on any of them. One defect found and fixed: long values in definition lists overflowed their panel by 25 px. The accessibility tree of 13 pages has one banner, one main, one contentinfo, named navigation, one `h1`, no skipped heading level, and no unnamed link, button, image, or field. Chart points no longer take keyboard focus (they were up to about 120 tab stops on a page inside an image); their values are in the table beside each chart. Scrollable table containers take focus so they can be scrolled from the keyboard. Not done: a person using a screen reader | Claude Code | This file |
 | 2026-11-03 | Registration on the site: anyone can create an account, which reads the workspace once its email address is verified; to add something, such as an article, a registered person sends it for review, and the owner reads it and decides whether it is published. The owner chose contributed articles written by the person, over proposed sources | Owner | [ADR-0021](adr/0021-registration-for-the-reader-role.md) (registration); Day 12 (articles) |
 | 2026-11-03 | Change of CLAUDE.md, "Security requirements": self-registration gives only the Reader role after the email address is verified (ADR-0021); every other role is given by an Administrator. ADR-0021 is added to its list of Accepted ADRs | Owner (approval of that change) | CLAUDE.md |
+| 2026-11-03 | Q-15: a contributed article is published under CC BY 4.0; its author keeps the copyright | Owner | [ADR-0022](adr/0022-contributed-articles.md); [RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md) §3 |
+| 2026-11-03 | Change of CLAUDE.md, "Current phase": contributed articles (ADR-0022) are a second exception to the Phase 1 gate, beside ADR-0020; ADR-0022 is added to the list of Accepted ADRs | Owner (approval of that change) | CLAUDE.md |
+| 2026-11-03 | **Provisional**, within ADR-0022: who may send (Reader, Researcher, Reviewer) and who may review (Reviewer and Administrator, with a second factor); five articles a day from one account; the length of each part; a withdrawal after publication; reviewers' own pages, because an Administrator does not read the workspace | Claude Code, under the owner's delegation | ADR-0022; `caipo/accounts/authorization.py` |
 | 2026-11-03 | **Provisional**, within ADR-0021: the limits (ten registrations an hour from one source; three verification messages an hour to one waiting account), the three account event types, the Reader grant without an actor, and the note about `data/outbox/` on the registration and password reset pages in development | Claude Code, under the owner's delegation | ADR-0021; `caipo/config/settings/base.py` |
+| 2026-11-03 | Accessibility evidence for Days 11 and 12: axe-core 4.10.2 (scratch environment, not added to the project) finds no violation on the registration, sign-in, and home pages at 1280 and 390 CSS px in light and dark mode, nor on the six article pages, including the review pages of a verified Administrator. One defect found and fixed: the navigation of a signed-in account ran past the right edge at 1280 px once "Articles" was added, and an Administrator's already did at 1366 px. Its items now wrap onto a second line, and the tag line under the name gives way beside a navigation below 1500 px; no role's page scrolls sideways at 1181, 1280, 1366, or 1440 px | Claude Code | This file; `caipo/web/static/web/caipo.css` |
 | 2026-10-30 | P-1 (part of Q-10), **provisional**: WCAG 2.2 level AA as the accessibility target of the demonstrator's pages, checked in S2 and S7 | Claude Code, under the owner's delegation to choose a reasonable default and record it as provisional | This file. The owner may replace it |
 
 ## 10. Decisions awaiting the owner
@@ -317,13 +322,13 @@ Recommended defaults are recommendations, not decisions. None of them blocks the
 | Q-11 | Phase 1 exit: declare it met, with D0 as a residual item? | No document declares Phase 1 complete | Declare the exit met, with D0 residual | Keep Phase 1 open until D0 is built | A5, D0 |
 | Q-12 | Status consolidation, freezing the diagnostic report, a pull request template | Status is narrated in about seven places | Approve all three after the sprint | Approve some | H2, H3, H4 |
 | Q-13 (rest) | A dependency audit between changes | No scheduled audit exists; vulnerabilities published between pull requests are found only at the next one | A weekly scheduled run of the existing dependency audit in CI | Dependabot alerts (a repository setting) | G2 |
-| Q-15 | Under which licence is a contributed article published? | A published text is used by others; CAIPO needs the author's permission in a stated form before it shows the text to anyone | The author keeps the copyright and publishes under CC BY 4.0, accepted by a checkbox when the article is sent; the article page shows the licence and the author's name | CC BY-NC 4.0 (no commercial reuse); or all rights reserved with a licence to CAIPO to show it only, which allows no reuse by readers | Day 12 |
 | Q-14 | Housekeeping | Clutter and stored account data | Item by item; nothing deleted without the owner's word | Keep everything | A6 |
 
 ## 11. Next executable Day
 
-- **Day 11** (registration on the site for the Reader role, ADR-0021) is the pull request that changes this file. Day 10 is DONE (`bcb9806`).
-- **Day 12** (contributed articles with the owner's review) starts when Day 11 is merged and Q-15 is answered.
+- **Day 11** (#39, registration, ADR-0021): CI passed; the owner merges it first. Day 10 is DONE (`bcb9806`).
+- **Day 12** (contributed articles, ADR-0022) is the pull request that changes this file, opened against `main` on top of #39.
+- **After both merges:** the owner runs `migrate` on the development database (accounts 0013 and 0014, articles 0001).
 - **Correction of 2026-11-02, kept for the record.** The stacked pull requests #32 to #35 were merged into their stack branches, not `main`, because GitHub retargets a stacked pull request only when its base branch is deleted. #36 brought their four commits to `main` unchanged. No pull request is stacked from now on unless it is retargeted to `main` by hand before it is merged.
 - **Before the demonstration:** the owner reads [DEMO.md](DEMO.md) and runs `seed_demo` on an empty development database.
 - **What remains of the owner's acceptance list (§12):** a page to add an indicator (an import of values stays out of the demonstrator by ADR-0020 point 3), and a check by a person using a screen reader. Then the post-sprint queue (§5).
@@ -340,7 +345,7 @@ The list of the owner's mandate of 2026-10-30, §11, checked on 2026-11-02 again
 | A. Seeded demonstration environment | Met | `seed_demo` on an empty database in under 3 seconds (Day 8) |
 | A. Working authentication | Met | Phase 1, with TOTP for Reviewers and Administrators; demonstration accounts for Researcher and Reader; registration on the site for the Reader role (Day 11) |
 | A. Complete primary user journeys | Met | `caipo/web/tests/test_journeys.py`, through the sign-in form on the seeded environment |
-| A. Functional backend and frontend | Met | 62 routes, each with a declared access; 4,807 tests passing in CI on `bcb9806` |
+| A. Functional backend and frontend | Met | 68 routes, each with a declared access; 4,807 tests passing in CI on `bcb9806` |
 | A. Error, empty, and loading states | Met for error and empty states | Error pages; empty states that say an empty list is not evidence of absence. Pages are rendered on the server, so there is no asynchronous loading to show |
 | B. Source and provenance management | Met | Sources and documents with publisher, address, access date, terms, permitted use, tier; releases with SHA-256 |
 | B. Policy instrument and provision records | Met | Policies, formal events, AI-related provisions with locators |

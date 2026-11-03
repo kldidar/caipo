@@ -50,6 +50,7 @@ _WORKSPACE: tuple[_Entry, ...] = (
     ("indicators", _("Indicators"), frozenset({"indicator*"})),
     ("analyses", _("Analysis"), frozenset({"analys*"})),
     ("searches", _("Searches"), frozenset({"search*"})),
+    ("articles", _("Articles"), frozenset({"articles", "article", "article-new", "articles-mine"})),
     ("sources", _("Sources"), frozenset({"source*"})),
     ("registry", _("Registry"), frozenset({"registry*"})),
 )
@@ -76,6 +77,7 @@ _ADMINISTRATION: tuple[_Entry, ...] = (
         frozenset({"recovery-requests", "recovery-request-authorize", "recovery-request-reject"}),
     ),
     ("recoveries", _("Recoveries"), frozenset({"recoveries"})),
+    ("articles-review", _("Article review"), frozenset({"articles-review", "article-review"})),
 )
 _ACCOUNT: tuple[_Entry, ...] = (
     (

@@ -1,0 +1,7 @@
+{% load i18n %}
+<a class="card card--link" href="{{ href }}">
+  <span class="policy-card__meta"><span class="badge badge--plain">{% translate "Contributed" %}</span>{% if show_status %} <span class="badge {% if entry.status == 'published' %}badge--ok{% elif entry.status == 'awaiting_review' %}badge--provisional{% else %}badge--warn{% endif %}">{{ entry.status_label }}</span>{% endif %} <span>{{ entry.author_name }}</span> <span>{% if entry.published_at and not show_status %}{{ entry.published_at|date:"Y-m-d" }}{% else %}{% translate "sent" %} {{ entry.submitted_at|date:"Y-m-d" }}{% endif %}</span></span>
+  <span class="card__title">{{ entry.title }}</span>
+  <span class="card__body">{{ entry.summary }}</span>
+  {% if show_status and entry.latest_reason %}<span class="card__body muted">{% translate "Reason given:" %} {{ entry.latest_reason }}</span>{% endif %}
+</a>

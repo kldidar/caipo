@@ -1,0 +1,20 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Your articles" %}{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'articles' %}">{% translate "Articles" %}</a></nav>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Contribute" %}</p>
+    <h1>{% translate "Your articles" %}</h1>
+    <p class="lede">{% translate "Every article you have sent, with what was decided and why. Only you and reviewers see an article that is not published." %}</p>
+  </header>
+  <p class="actions"><a class="button" href="{% url 'article-new' %}">{% translate "Write an article" %}</a></p>
+  {% for entry in entries %}
+    {% url 'article' entry.public_id as href %}
+    {% include "web/includes/article_card.html" with entry=entry href=href show_status=True %}
+  {% empty %}
+    <div class="empty"><p class="empty__title">{% translate "You have not sent an article yet." %}</p></div>
+  {% endfor %}
+{% endblock %}

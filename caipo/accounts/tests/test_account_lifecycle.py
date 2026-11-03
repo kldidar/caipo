@@ -512,6 +512,7 @@ def test_the_token_verifies_the_address_and_activates_the_account(clock: Clock) 
         Permission.WORKSPACE_READ,
         Permission.MFA_MANAGE_OWN,
         Permission.REGISTRY_READ,
+        Permission.ARTICLES_SUBMIT,
     }
 
 

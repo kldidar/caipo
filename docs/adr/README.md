@@ -4,7 +4,7 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, and ADR-0021 on 2026-11-03. Five remain Proposed; the last column says what stands between each of those and acceptance.
+Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, and ADR-0021 and ADR-0022 on 2026-11-03. Five remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
@@ -29,6 +29,7 @@ Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-001
 | [0019](0019-phased-registry-implementation.md) | Phased registry implementation | Accepted | — (accepted on 2026-10-11 before its implementation, which the project owner starts increment by increment: Increment 2, Country and Language, and Increment 3, Institution and InstitutionName, are built. It sets the order in which the registry of [ADR-0018](0018-registry-and-general-audit-record.md) is built, Country and Language before Institution and InstitutionName; supersedes one statement of ADR-0018, that the first registry migration creates all four tables; records one test-only exception to its point 2; states the forms of the language code and the script code, which its point 7 requires to be checked and does not specify; and adds the rules for delivering and testing each increment) |
 | [0020](0020-demonstrator-track.md) | Demonstrator track ahead of the research gates | Accepted | — (decided by the project owner on 2026-10-30 for the delivery sprint that ends on 2026-11-06; builds reduced, labelled forms of `sources`, `policies`, `indicators`, and `research` with every record classed `demonstration` or `reference`; changes no gate status and closes no blocker) |
 | [0021](0021-registration-for-the-reader-role.md) | Registration on the site, for the Reader role | Accepted | — (decided by the project owner on 2026-11-03; supersedes ADR-0007 rule 3 and ADR-0015 point 8; email delivery in production waits for ADR-0008) |
+| [0022](0022-contributed-articles.md) | Contributed articles, published after review | Accepted | — (decided by the project owner on 2026-11-03, with CC BY 4.0 as the licence of a contributed text; a second exception to the Phase 1 gate beside ADR-0020; changes no gate status and closes no blocker) |
 
 ## Statuses
 

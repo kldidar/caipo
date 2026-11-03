@@ -1,0 +1,12 @@
+{% load i18n %}
+<section class="panel">
+  <div class="panel__header"><h2>{% translate "Summary" %}</h2></div>
+  <div class="panel__body"><p>{{ article.summary }}</p></div>
+</section>
+<article class="panel section" aria-labelledby="article-text">
+  <div class="panel__header"><h2 id="article-text">{% translate "Text" %}</h2></div>
+  <div class="panel__body">
+    {{ article.body|linebreaks }}
+    <p class="muted"><small>{% blocktranslate with name=article.author_name %}© {{ name }}.{% endblocktranslate %} {% translate "Published by its author under" %} <a href="{{ article.licence_deed }}" rel="license noopener" target="_blank">{{ article.licence_label }}</a>. {% translate "You may share and adapt it, crediting the author." %}</small></p>
+  </div>
+</article>

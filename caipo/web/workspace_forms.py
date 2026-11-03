@@ -1,4 +1,4 @@
-"""Forms of the demonstrator's source and policy pages (ADR-0020).
+"""Forms of the demonstrator's pages (ADR-0020) and of contributed articles (ADR-0022).
 
 Shape only. The choices a form offers come from selectors, and what is
 acceptable is decided by the services, which check everything again.
@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
+from caipo.articles.selectors import ArticleDecisionType
 from caipo.core.data_class import DataClass
 from caipo.policies.selectors import (
     AIFocus,
@@ -166,3 +167,42 @@ class SearchForm(forms.Form):
     method = _area(_("Method, in enough detail to repeat it"), required=True)
     outcome = forms.ChoiceField(label=_("Outcome"), choices=SearchOutcome.choices)
     summary = _area(_("Summary, bounded by what was examined"), required=True)
+
+
+class ArticleForm(forms.Form):
+    """A contributed article (ADR-0022). The limits are checked again by the service."""
+
+    author_name = _text(_("Your name, as it is to appear with the article"), max_length=120)
+    title = _text(_("Title"), max_length=200)
+    summary = forms.CharField(
+        label=_("Summary, in two or three sentences"),
+        max_length=600,
+        strip=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+    body = forms.CharField(
+        label=_("Text"),
+        max_length=20000,
+        strip=False,
+        widget=forms.Textarea(attrs={"rows": 18}),
+    )
+    licence = forms.BooleanField(
+        label=_(
+            "I wrote this text, and I publish it under the Creative Commons Attribution 4.0"
+            " licence (CC BY 4.0) if it is accepted"
+        ),
+        required=False,
+    )
+
+
+class ArticleDecisionForm(forms.Form):
+    """A reviewer's decision about an article. What may follow what is the service's to say."""
+
+    decision = forms.ChoiceField(choices=ArticleDecisionType.choices)
+    reason = forms.CharField(
+        label=_("Reason, shown to the author (required to decline or withdraw)"),
+        required=False,
+        max_length=2000,
+        strip=False,
+        widget=forms.Textarea(attrs={"rows": 4}),
+    )

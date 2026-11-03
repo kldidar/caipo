@@ -18,6 +18,7 @@ A walk-through of 5 to 10 minutes for a professor or a reviewer, and an honest a
 
    Verified on 2026-11-02 on an empty database: `check`, `migrate`, and `seed_demo` together took under 3 seconds, and `/health/ready/` answered `ok`.
 3. Open two browser windows: one signed in as `demo.reader@caipo.test`, one as `demo.researcher@caipo.test`. Keep a third, signed out, on `http://127.0.0.1:8000/`.
+4. To show the review of articles, also sign in as an Administrator with two-step verification: the one `create_first_administrator` created ([DEVELOPMENT.md](DEVELOPMENT.md)). `seed_demo` creates no Administrator, because one cannot exist without a second factor.
 
 ## The walk-through
 
@@ -35,6 +36,7 @@ A walk-through of 5 to 10 minutes for a professor or a reviewer, and an honest a
 | 7:00 | **Searches** → *Formally adopted AI-focused instrument of Turkmenistan* | How absence is recorded: a search with its queries, scope, criteria, the sources examined, and a bounded outcome, *No qualifying source found*. It is not evidence that no such instrument exists. |
 | 7:45 | Researcher window → **Policies → Add a policy**: choose *Demonstration data* and *Turkmenistan* | The service refuses: demonstration records belong only to synthetic countries. Change the country to *DEMO Northland*: the policy is created, with its audit event. |
 | 8:30 | **Analysis → Run an analysis**, demonstration data, layer C indicators | A new run, recorded with its fingerprints. |
+| 8:45 | Reader window → **Articles → Write an article**; then the Administrator → **Article review** → open it → **Publish** | Anyone with an account can contribute an article under CC BY 4.0. Nothing is shown until a reviewer publishes it, and every article is labelled as its author's view, not evidence and not a finding of CAIPO. A decline goes back to the author with its reason. |
 | 9:00 | Phone width, or dark mode | The design system: responsive, light and dark, fonts that cover Turkmen, Uzbek, and Russian. |
 | 9:30 | Close with what is not there yet (below) | The research decisions are open, and the software keeps them visibly open. |
 
@@ -49,6 +51,7 @@ Questions it is worth being ready for:
 
 ### Real and working
 
+- Contributed articles: written by a registered Reader, published or declined by a reviewer with a reason, labelled as the author's view, under CC BY 4.0 ([ADR-0022](adr/0022-contributed-articles.md)).
 - Accounts with four roles and permission checks on every page and every write; sign-in with throttling; TOTP two-step verification required for Reviewers and Administrators; provisioning, registration on the site for the Reader role ([ADR-0021](adr/0021-registration-for-the-reader-role.md)), email verification, password reset, and recovery of a lost second factor ([SECURITY.md](../SECURITY.md)). In development no email is sent: each message, with its link, is written to `data/outbox/`.
 - The registry, and the general audit record of every change.
 - Sources, documents (metadata), policies with formal events and AI-related provisions, indicators, dataset releases, observations, analysis runs, search runs, and their pages, forms, and exports ([DATA_MODEL.md](DATA_MODEL.md) §7a).

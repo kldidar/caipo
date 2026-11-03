@@ -11,6 +11,7 @@ CAIPO records public policy sources with their provenance, keeps the **core AI p
 **A working demonstrator, built on a research platform whose research gates are still closed.**
 
 - The platform foundation (Phase 1) is complete: accounts, roles and permissions, sign-in with TOTP two-step verification, account provisioning, registration on the site for the Reader role ([ADR-0021](docs/adr/0021-registration-for-the-reader-role.md)), and recovery, the registry of countries, languages, and institutions, the general audit record, health endpoints, and structured logging.
+- Anyone can register a Reader account ([ADR-0021](docs/adr/0021-registration-for-the-reader-role.md)) and contribute **articles**, which a reviewer publishes or declines; an article is labelled as its author's view under CC BY 4.0 and is never evidence ([ADR-0022](docs/adr/0022-contributed-articles.md)).
 - On top of it, the **demonstrator track** ([ADR-0020](docs/adr/0020-demonstrator-track.md)) adds working sources, policies, indicators, analysis runs, search runs, and exports, built ahead of the research gates in a reduced, clearly labelled form.
 - The architecture gate stays **NOT READY for Phase 2 and later** ([specification §10](docs/PROJECT_SPECIFICATION.md#10-architecture-gate)). The research decisions it waits for — the domain boundary, the study period, the indicator selection, the rights policy, the ethics review — are open, and nothing in the demonstrator closes them.
 
