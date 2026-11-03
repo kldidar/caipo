@@ -238,22 +238,48 @@ def _insert_without_actor(user: User, role: str, event_type: str) -> None:
 @pytest.mark.parametrize(
     ("role", "event_type"),
     [
-        (Role.READER, RoleEventType.GRANTED),
         (Role.RESEARCHER, RoleEventType.GRANTED),
         (Role.REVIEWER, RoleEventType.GRANTED),
         (Role.ADMINISTRATOR, RoleEventType.REVOKED),
         (Role.READER, RoleEventType.REVOKED),
+        (Role.RESEARCHER, RoleEventType.REVOKED),
+        (Role.REVIEWER, RoleEventType.REVOKED),
     ],
 )
-def test_the_database_rejects_an_event_without_an_actor_unless_it_is_the_bootstrap(
+def test_the_database_rejects_an_event_without_an_actor_unless_bootstrap_or_registration(
     user_with_roles: UserFactory, role: str, event_type: str
 ) -> None:
     user = user_with_roles()
 
-    with pytest.raises(IntegrityError, match="accounts_roleevent_no_actor_only_for_bootstrap"):
+    with pytest.raises(
+        IntegrityError, match="accounts_roleevent_no_actor_only_bootstrap_or_registration"
+    ):
         _insert_without_actor(user, role, event_type)
 
     assert not RoleEvent.objects.filter(user=user).exists()
+
+
+def test_the_database_accepts_one_reader_grant_without_an_actor_for_each_account(
+    user_with_roles: UserFactory,
+) -> None:
+    # The Reader role taken by registering on the site (ADR-0021).
+    first, second = user_with_roles(), user_with_roles()
+
+    _insert_without_actor(first, Role.READER, RoleEventType.GRANTED)
+    _insert_without_actor(second, Role.READER, RoleEventType.GRANTED)
+    with pytest.raises(IntegrityError, match="accounts_roleevent_single_registration"):
+        _insert_without_actor(first, Role.READER, RoleEventType.GRANTED)
+
+    assert RoleEvent.objects.filter(actor__isnull=True, role=Role.READER).count() == 2
+
+
+def test_registrations_do_not_use_up_the_single_bootstrap(user_with_roles: UserFactory) -> None:
+    registered, administrator = user_with_roles(), user_with_roles()
+    _insert_without_actor(registered, Role.READER, RoleEventType.GRANTED)
+
+    _insert_without_actor(administrator, Role.ADMINISTRATOR, RoleEventType.GRANTED)
+
+    assert RoleEvent.objects.filter(actor__isnull=True).count() == 2
 
 
 def test_the_database_accepts_one_bootstrap_event_and_never_a_second(

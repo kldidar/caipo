@@ -158,7 +158,7 @@ uv run --env-file .env python manage.py create_first_administrator
 uv run --env-file .env python manage.py runserver        # then http://127.0.0.1:8000/login/
 ```
 
-`create_first_administrator` creates the first account. Every later account is created by an Administrator on the accounts page ("Creating accounts" below). It is interactive and works once; what it asks for, and why it has no options, is in [SECURITY.md](../SECURITY.md), "The first Administrator". Have an authenticator application at hand (any that implements TOTP: six digits, 30 seconds): after the email address, the password, and the confirmation, the command writes a key to the terminal, once, and asks for the code the application shows for it. The account is created only when a code is accepted. After three codes that are not, nothing has been created and the command can be run again. To start again locally after it has succeeded, recreate the development database, which deletes everything in it ("Deleting the database" above).
+`create_first_administrator` creates the first account. Every later account is created by an Administrator on the accounts page ("Creating accounts" below), or registered by its owner on the site with the Reader role ("Registering an account" below). It is interactive and works once; what it asks for, and why it has no options, is in [SECURITY.md](../SECURITY.md), "The first Administrator". Have an authenticator application at hand (any that implements TOTP: six digits, 30 seconds): after the email address, the password, and the confirmation, the command writes a key to the terminal, once, and asks for the code the application shows for it. The account is created only when a code is accepted. After three codes that are not, nothing has been created and the command can be run again. To start again locally after it has succeeded, recreate the development database, which deletes everything in it ("Deleting the database" above).
 
 During an initial deployment it is run once, by the person installing the system, in a terminal on the server and under the settings of that environment, after `migrate` and before anyone needs to sign in. In a container that means an interactive session, for example `docker compose exec` with a terminal attached. It cannot be put in a start-up script, because it refuses to run without a terminal.
 
@@ -247,6 +247,24 @@ Disabling and enabling an account are `caipo.accounts.services.disable_user` and
 The limits and the lifetime are `ACCOUNT_ACTIVATION_*` in `caipo/config/settings/base.py`. The address used in links is `PUBLIC_BASE_URL`: fixed in development, and read from `CAIPO_PUBLIC_URL` in production, which accepts only `https://host[:port]` and refuses to start without it. In production no email service is configured yet (ADR-0008), so there a message is refused and the page says it could not be sent.
 
 A new Reviewer or Administrator account, once activated, still has to turn on two-step verification with an Administrator's approval before the role gives it anything (see above).
+
+## Registering an account
+
+Decided in [ADR-0021](adr/0021-registration-for-the-reader-role.md); what it protects is in [SECURITY.md](../SECURITY.md), "Registration as implemented".
+
+Somebody who is not signed in opens `/register/` (linked from the home page and the sign-in page) and gives an email address. The page answers the same way whatever the address. For an address that has no account, an account is created awaiting verification, with the Reader role, and the same message as for an account an Administrator creates is written to `data/outbox/`:
+
+```sh
+ls -t data/outbox/ | head -1
+```
+
+Opening the link (`http://127.0.0.1:8000/activate/#<token>`) and choosing a password activates the account, which can then read the workspace and add nothing. Registering again with the address of an account that awaits verification sends the message again with a new link, at most three times an hour; an active or disabled account is sent nothing. At most ten registrations an hour are taken from one source. The limits are `ACCOUNT_REGISTRATION_*` in `caipo/config/settings/base.py`.
+
+| Page | Method | What it does |
+|---|---|---|
+| `/register/` | GET, POST | Public. Takes an email address and, for an address with no account, creates a Reader's account awaiting verification and sends its message. Always the same answer. |
+
+Registering never gives another role. An Administrator grants one with `caipo.accounts.services.grant_role`; there is no page for it yet.
 
 ## Resetting a forgotten password
 

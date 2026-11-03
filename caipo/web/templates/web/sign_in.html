@@ -71,7 +71,8 @@
           <button type="submit">{% translate "Sign in" %}</button>
         </form>
         <p class="auth__links"><a href="{% url 'password-reset' %}">{% translate "Forgotten your password?" %}</a></p>
-        <p class="muted"><small>{% translate "Accounts are created by an Administrator. There is no public registration." %}</small></p>
+        <p class="auth__links"><a href="{% url 'register' %}">{% translate "No account? Create one" %}</a></p>
+        <p class="muted"><small>{% translate "A new account can read the workspace. An Administrator gives the roles that add and review records." %}</small></p>
       </div>
     </div>
   {% endif %}

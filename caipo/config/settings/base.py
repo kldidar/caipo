@@ -128,6 +128,17 @@ ACCOUNT_ACTIVATION_LIFETIME = timedelta(hours=48)
 ACCOUNT_ACTIVATION_THROTTLE_WINDOW = timedelta(minutes=15)
 ACCOUNT_ACTIVATION_THROTTLE_FAILURES = 10
 
+# Registration on the site (ADR-0021). Repository-versioned like the limits
+# above.
+
+# Registrations from one source, whatever the addresses, before further ones
+# are answered alike and do nothing until earlier ones age out.
+ACCOUNT_REGISTRATION_WINDOW = timedelta(hours=1)
+ACCOUNT_REGISTRATION_SOURCE_LIMIT = 10
+# Verification messages sent to one account that awaits verification within
+# that window, before a further registration for its address sends none.
+ACCOUNT_REGISTRATION_MESSAGE_LIMIT = 3
+
 # Password reset (ADR-0016). Repository-versioned like the limits above. The
 # names avoid Django's own PASSWORD_RESET_TIMEOUT, which belongs to a token
 # generator this project does not use.

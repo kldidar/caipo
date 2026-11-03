@@ -4,7 +4,7 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, and ADR-0020 on 2026-10-30. Five remain Proposed; the last column says what stands between each of those and acceptance.
+Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, and ADR-0021 on 2026-11-03. Five remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
@@ -14,7 +14,7 @@ Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-001
 | [0004](0004-asynchronous-jobs.md) | Celery with Redis for asynchronous jobs | Proposed | Job-system spike before Phase 2 (B4, B21); Celery does not yet declare Python 3.14 support |
 | [0005](0005-evidence-and-provenance-model.md) | Evidence and provenance model | Accepted | — (amended before ratification) |
 | [0006](0006-ai-provider-abstraction.md) | AI provider abstraction | Proposed | Provider, model, and budget decisions (B14) |
-| [0007](0007-authentication.md) | Authentication and access model | Accepted | — |
+| [0007](0007-authentication.md) | Authentication and access model | Accepted | — (rule 3, no self-registration, superseded by [ADR-0021](0021-registration-for-the-reader-role.md)) |
 | [0008](0008-deployment-strategy.md) | Deployment strategy | Proposed | Hosting decision (B17); isolation mechanism (ADR-0011). CI on GitHub Actions was approved separately as Phase 1 tooling and does not depend on this ADR. |
 | [0009](0009-untrusted-content-handling.md) | Untrusted content handling: principles | Accepted | — |
 | [0010](0010-web-interface-and-api.md) | Web interface and API style | Accepted | — |
@@ -22,12 +22,13 @@ Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-001
 | [0012](0012-authorization-and-role-event-integrity.md) | Authorization and role event integrity | Accepted | — (amended on 2026-10-02 for the first-Administrator bootstrap) |
 | [0013](0013-authentication-core-and-first-administrator-bootstrap.md) | Authentication core and first-Administrator bootstrap | Accepted | — |
 | [0014](0014-totp-mfa-and-authentication-assurance.md) | TOTP multi-factor authentication and authentication assurance | Accepted | — (amended on 2026-10-03: enrolment for Reviewer and Administrator accounts needs an Administrator's approval, and the first Administrator's second factor is set up by the bootstrap; key management in production waits for ADR-0008) |
-| [0015](0015-account-lifecycle-and-email-verification.md) | Account lifecycle, provisioning by an Administrator, and email verification | Accepted | — (the email delivery service in production waits for ADR-0008) |
+| [0015](0015-account-lifecycle-and-email-verification.md) | Account lifecycle, provisioning by an Administrator, and email verification | Accepted | — (the email delivery service in production waits for ADR-0008; point 8, no registration, superseded by [ADR-0021](0021-registration-for-the-reader-role.md)) |
 | [0016](0016-password-reset.md) | Password reset by email | Accepted | — (accepted before its implementation, which followed; the email delivery service in production waits for ADR-0008) |
 | [0017](0017-account-recovery.md) | Account recovery after loss of the second factor | Accepted | — (accepted before its implementation; it changes points of ADR-0014, which it names; the operational audit trail and instructions for its break-glass command, and email delivery in production, wait for ADR-0008) |
 | [0018](0018-registry-and-general-audit-record.md) | Registry and the general audit record | Accepted | — (accepted on 2026-10-09 before its implementation, which is in increments: the audit foundation is built, and the registry is built: Country and Language, and Institution and InstitutionName; [ADR-0019](0019-phased-registry-implementation.md), accepted on 2026-10-11, built the rest of the registry in two increments, supersedes one statement of this ADR, records one test-only exception to its point 2, and states the code forms its point 7 leaves unspecified) |
 | [0019](0019-phased-registry-implementation.md) | Phased registry implementation | Accepted | — (accepted on 2026-10-11 before its implementation, which the project owner starts increment by increment: Increment 2, Country and Language, and Increment 3, Institution and InstitutionName, are built. It sets the order in which the registry of [ADR-0018](0018-registry-and-general-audit-record.md) is built, Country and Language before Institution and InstitutionName; supersedes one statement of ADR-0018, that the first registry migration creates all four tables; records one test-only exception to its point 2; states the forms of the language code and the script code, which its point 7 requires to be checked and does not specify; and adds the rules for delivering and testing each increment) |
 | [0020](0020-demonstrator-track.md) | Demonstrator track ahead of the research gates | Accepted | — (decided by the project owner on 2026-10-30 for the delivery sprint that ends on 2026-11-06; builds reduced, labelled forms of `sources`, `policies`, `indicators`, and `research` with every record classed `demonstration` or `reference`; changes no gate status and closes no blocker) |
+| [0021](0021-registration-for-the-reader-role.md) | Registration on the site, for the Reader role | Accepted | — (decided by the project owner on 2026-11-03; supersedes ADR-0007 rule 3 and ADR-0015 point 8; email delivery in production waits for ADR-0008) |
 
 ## Statuses
 

@@ -76,7 +76,14 @@ def request_reset(request: HttpRequest) -> HttpResponse:
         else:
             error = INVALID_EMAIL_MESSAGE
 
-    context = {"form": PasswordResetRequestForm(), "error": error, "requested": requested}
+    context = {
+        "form": PasswordResetRequestForm(),
+        "error": error,
+        "requested": requested,
+        # Development writes messages to files instead of sending them
+        # (ADR-0015 point 30), so the page says where to look.
+        "outbox": settings.DEBUG,
+    }
     return render(request, "web/password_reset_request.html", context)
 
 

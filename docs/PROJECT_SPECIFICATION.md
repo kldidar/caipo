@@ -43,7 +43,7 @@ On top of these it provides comparative views and an AI assistant that answers q
 - An API of any kind at launch (deferred until there is a real consumer, ADR-0010); a public write API at any stage without a further decision
 - A separate frontend application
 - Interface translations at launch (the interface is English; translation infrastructure is enabled)
-- Public self-registration at launch
+- Registration for any role but Reader: an account registered on the site is a Reader's ([ADR-0021](adr/0021-registration-for-the-reader-role.md)), and the other roles are given by an Administrator
 - Real-time collaboration features
 
 ## 3. Users and roles
@@ -52,7 +52,7 @@ The access model was decided by the project owner on 2026-10-02 and is recorded 
 
 **Anonymous visitor.** Not a role. Anyone without an account. May read approved, public material on the public research site. May not submit sources, trigger ingestion, create or review claims, call the AI assistant, or see drafts, restricted documents, or any text whose rights do not allow public display.
 
-**Roles.** All are authenticated accounts created by an Administrator; there is no public self-registration at launch. These four are the only roles; documents must not use other role names.
+**Roles.** All are authenticated accounts. An Administrator creates an account with any role; anyone can register an account on the site, and a registered account is a Reader's once its email address is verified ([ADR-0021](adr/0021-registration-for-the-reader-role.md), superseding the earlier rule that there is no self-registration). These four are the only roles; documents must not use other role names.
 
 | Role | Can |
 |---|---|
@@ -175,7 +175,7 @@ Each phase has its own gate check: its blockers in §10 must be closed before it
 
 ## 8. Decisions made and open
 
-Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, and ADR-0020 on 2026-10-30. Five remain Proposed and must not be built on; the last column says what each still needs.
+Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, and ADR-0021 on 2026-11-03. Five remain Proposed and must not be built on; the last column says what each still needs.
 
 | ADR | Topic | Status | Needs |
 |---|---|---|---|
@@ -199,6 +199,7 @@ Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by t
 | 0018 | Registry and the general audit record | Accepted | — (accepted on 2026-10-09 before its implementation, which is in increments: the audit foundation is built, and the registry is built: Country and Language, and Institution and InstitutionName; ADR-0019, accepted on 2026-10-11, built the rest of the registry in two increments, supersedes one statement of this ADR, records one test-only exception to its point 2, and states the code forms its point 7 leaves unspecified) |
 | 0019 | Phased registry implementation | Accepted | — (accepted on 2026-10-11 before its implementation, which the project owner starts increment by increment: Increment 2, Country and Language, and Increment 3, Institution and InstitutionName, are built. It sets the order in which the registry of ADR-0018 is built, Country and Language before Institution and InstitutionName; supersedes one statement of ADR-0018, that the first registry migration creates all four tables; records one test-only exception to its point 2; states the forms of the language code and the script code, which its point 7 requires to be checked and does not specify; and adds the rules for delivering and testing each increment) |
 | 0020 | Demonstrator track ahead of the research gates | Accepted | — (decided by the project owner on 2026-10-30 for the delivery sprint; builds reduced, labelled forms of later-phase apps for a local demonstrator; changes no gate status in §10 and closes no blocker) |
+| 0021 | Registration on the site, for the Reader role | Accepted | — (decided by the project owner on 2026-11-03; supersedes ADR-0007 rule 3 and ADR-0015 point 8; email delivery in production waits for ADR-0008) |
 
 ## 9. Environment baseline
 

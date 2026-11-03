@@ -1,0 +1,31 @@
+{% extends "web/focused.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Create an account" %}{% endblock %}
+
+{% block card %}
+  <p class="eyebrow">{% translate "Research workspace" %}</p>
+  <h1>{% translate "Create an account" %}</h1>
+  {% if registered %}
+    <p role="status">{% translate "If that address can be registered, a message with a link has been sent to it. Open the link to confirm the address and choose your password. It works once and for 48 hours. If the address already has an account, sign in, or reset your password." %}</p>
+    {% if outbox %}
+      <p class="muted"><small>{% translate "Development: no email is sent. Each message is written to a file in data/outbox/." %}</small></p>
+    {% endif %}
+  {% endif %}
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% endif %}
+  <p>{% translate "An account lets you read the research workspace: policies, sources, indicators, analyses, and searches. It cannot add or change records. An Administrator gives the roles that can." %}</p>
+  <form method="post" action="{% url 'register' %}" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <p>
+        {{ field.label_tag }}
+        {{ field }}
+      </p>
+    {% endfor %}
+    <button type="submit">{% translate "Create the account" %}</button>
+  </form>
+  <p class="muted"><small>{% translate "CAIPO keeps your email address and a record of when the account was registered and used. Nothing else is asked for." %}</small></p>
+  <p class="auth__links"><a href="{% url 'login' %}">{% translate "Already have an account? Sign in" %}</a></p>
+{% endblock %}

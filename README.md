@@ -10,7 +10,7 @@ CAIPO records public policy sources with their provenance, keeps the **core AI p
 
 **A working demonstrator, built on a research platform whose research gates are still closed.**
 
-- The platform foundation (Phase 1) is complete: accounts, roles and permissions, sign-in with TOTP two-step verification, account provisioning and recovery, the registry of countries, languages, and institutions, the general audit record, health endpoints, and structured logging.
+- The platform foundation (Phase 1) is complete: accounts, roles and permissions, sign-in with TOTP two-step verification, account provisioning, registration on the site for the Reader role ([ADR-0021](docs/adr/0021-registration-for-the-reader-role.md)), and recovery, the registry of countries, languages, and institutions, the general audit record, health endpoints, and structured logging.
 - On top of it, the **demonstrator track** ([ADR-0020](docs/adr/0020-demonstrator-track.md)) adds working sources, policies, indicators, analysis runs, search runs, and exports, built ahead of the research gates in a reduced, clearly labelled form.
 - The architecture gate stays **NOT READY for Phase 2 and later** ([specification §10](docs/PROJECT_SPECIFICATION.md#10-architecture-gate)). The research decisions it waits for — the domain boundary, the study period, the indicator selection, the rights policy, the ethics review — are open, and nothing in the demonstrator closes them.
 
@@ -76,7 +76,7 @@ uv run --env-file .env python manage.py seed_demo --password "<choose one>"   # 
 uv run --env-file .env python manage.py runserver                            # then open http://127.0.0.1:8000/
 ```
 
-Sign in as `demo.researcher@caipo.test` (can add records and run analyses) or `demo.reader@caipo.test` (reads only), with the password you chose. A 5–10 minute walk-through is in **[docs/DEMO.md](docs/DEMO.md)**.
+Sign in as `demo.researcher@caipo.test` (can add records and run analyses) or `demo.reader@caipo.test` (reads only), with the password you chose, or create your own Reader account at `/register/`. No email is sent in development: the message with the activation link is written to `data/outbox/`. A 5–10 minute walk-through is in **[docs/DEMO.md](docs/DEMO.md)**.
 
 To run the checks:
 

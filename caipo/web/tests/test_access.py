@@ -97,7 +97,8 @@ def test_only_the_health_and_sign_in_endpoints_are_public() -> None:
     # (ADR-0016). Recovery of a lost second factor is asked for from a sign-in
     # that awaits its code, by someone who is therefore not signed in
     # (ADR-0017). The home page tells an anonymous visitor what CAIPO is and
-    # shows no record.
+    # shows no record. Registering is done by someone who has no account yet
+    # (ADR-0021).
     assert public_routes == {
         "home",
         "health-live",
@@ -109,4 +110,5 @@ def test_only_the_health_and_sign_in_endpoints_are_public() -> None:
         "activate",
         "password-reset",
         "password-reset-confirm",
+        "register",
     }
