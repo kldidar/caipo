@@ -147,6 +147,10 @@ The software demonstrator built for the delivery sprint ([ADR-0020](adr/0020-dem
 - Whether a document is core AI policy or contextual, and which layer an indicator belongs to, are provisional working assignments, not the eligibility decisions or indicator selection the protocol requires (B22, B12).
 - Analysis runs are descriptive. They make no correlation, causal, or interpretive statement.
 
+### 4.6 Contributed articles
+
+Articles written by people who use CAIPO ([ADR-0022](adr/0022-contributed-articles.md)) are their authors' views. A reviewer decides whether one is fit to show, not whether its statements are right. An article is not a source, not evidence, not a claim, and not a finding of the study, and it can say what CAIPO itself never says, including that a policy caused an outcome. Nothing in the research records relies on one.
+
 ## 5. How limitations are surfaced
 
 - Comparative views show evidence coverage for each country.

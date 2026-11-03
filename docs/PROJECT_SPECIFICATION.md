@@ -56,10 +56,10 @@ The access model was decided by the project owner on 2026-10-02 and is recorded 
 
 | Role | Can |
 |---|---|
-| Reader | Browse approved content in the research workspace, view comparisons, ask the assistant within quota. Read the registry. |
+| Reader | Browse approved content in the research workspace, view comparisons, ask the assistant within quota. Read the registry. Write articles and send them for review ([ADR-0022](adr/0022-contributed-articles.md)). |
 | Researcher | Reader, plus register sources, submit documents and datasets, code policies, record searches, draft claims. Maintain institutions and their names in the registry. |
-| Reviewer | Researcher, plus approve documents, set rights, change a source's allowed hosts, approve or return claims. Requires TOTP. |
-| Administrator | Manage users, configuration, and operational tasks; perform redaction. Read the registry, maintain its countries and languages, and maintain institutions and their names. Requires TOTP. |
+| Reviewer | Researcher, plus approve documents, set rights, change a source's allowed hosts, approve or return claims. Publish, decline, or withdraw contributed articles. Requires TOTP. |
+| Administrator | Manage users, configuration, and operational tasks; perform redaction. Read the registry, maintain its countries and languages, and maintain institutions and their names. Publish, decline, or withdraw contributed articles, which decides what is shown and nothing about the evidence base. Requires TOTP. |
 
 The registry is the reference records that other records point at: countries, languages, and institutions with their names. Maintaining it is registry maintenance and not research ([ADR-0018](adr/0018-registry-and-general-audit-record.md) points 11 to 14): its three permissions confer no research permission, and no role's line above lost or gained anything else. The list of countries and languages is the "configuration" of the Administrator's line. A Reviewer holds the registry permissions a Researcher holds, and does not maintain countries and languages. Countries, languages, and institutions with their names are built ([ADR-0019](adr/0019-phased-registry-implementation.md)).
 
@@ -175,7 +175,7 @@ Each phase has its own gate check: its blockers in §10 must be closed before it
 
 ## 8. Decisions made and open
 
-Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, and ADR-0021 on 2026-11-03. Five remain Proposed and must not be built on; the last column says what each still needs.
+Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, and ADR-0021 and ADR-0022 on 2026-11-03. Five remain Proposed and must not be built on; the last column says what each still needs.
 
 | ADR | Topic | Status | Needs |
 |---|---|---|---|
@@ -200,6 +200,7 @@ Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by t
 | 0019 | Phased registry implementation | Accepted | — (accepted on 2026-10-11 before its implementation, which the project owner starts increment by increment: Increment 2, Country and Language, and Increment 3, Institution and InstitutionName, are built. It sets the order in which the registry of ADR-0018 is built, Country and Language before Institution and InstitutionName; supersedes one statement of ADR-0018, that the first registry migration creates all four tables; records one test-only exception to its point 2; states the forms of the language code and the script code, which its point 7 requires to be checked and does not specify; and adds the rules for delivering and testing each increment) |
 | 0020 | Demonstrator track ahead of the research gates | Accepted | — (decided by the project owner on 2026-10-30 for the delivery sprint; builds reduced, labelled forms of later-phase apps for a local demonstrator; changes no gate status in §10 and closes no blocker) |
 | 0021 | Registration on the site, for the Reader role | Accepted | — (decided by the project owner on 2026-11-03; supersedes ADR-0007 rule 3 and ADR-0015 point 8; email delivery in production waits for ADR-0008) |
+| 0022 | Contributed articles, published after review | Accepted | — (decided by the project owner on 2026-11-03; an author's own text under CC BY 4.0, labelled as the author's view and never evidence; changes no gate status in §10 and closes no blocker) |
 
 ## 9. Environment baseline
 

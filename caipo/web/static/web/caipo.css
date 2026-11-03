@@ -448,8 +448,11 @@ svg {
   margin-left: auto;
 }
 
+/* The navigation has as many items as the account's roles allow. Rather
+   than run past the edge, its items wrap onto another line. */
 .primary-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--s-1);
   flex: 1;
@@ -458,11 +461,19 @@ svg {
 
 .primary-nav__list {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--s-1);
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+/* Beside a navigation, the tag line gives way first. */
+@media (max-width: 1500px) {
+  .masthead__inner:has(.primary-nav) .brand__tag {
+    display: none;
+  }
 }
 
 .primary-nav__group-label {

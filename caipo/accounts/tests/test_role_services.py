@@ -474,6 +474,7 @@ def test_the_only_administrator_deactivating_themselves_changes_nothing(
         Permission.REGISTRY_READ,
         Permission.REGISTRY_REFERENCE_MANAGE,
         Permission.REGISTRY_INSTITUTIONS_MANAGE,
+        Permission.ARTICLES_REVIEW,
     }
     # Nothing was reported as done.
     assert [record.__dict__.get("event") for record in caplog.records] == []

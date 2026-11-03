@@ -1,0 +1,36 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Review" %}: {{ article.title }}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'articles-review' %}">{% translate "Article review" %}</a></nav>
+  <header class="page-header">
+    <p class="policy-card__meta"><span class="badge badge--plain">{% translate "Contributed article" %}</span> <span class="badge {% if article.status == 'published' %}badge--ok{% elif article.status == 'awaiting_review' %}badge--provisional{% else %}badge--warn{% endif %}">{{ article.status_label }}</span></p>
+    <h1>{{ article.title }}</h1>
+    <p class="lede">{% blocktranslate with name=article.author_name %}By {{ name }}{% endblocktranslate %} · {% translate "sent" %} {{ article.submitted_at|date:"Y-m-d H:i" }}</p>
+  </header>
+  {% if decided %}<p role="status" class="notice notice--success"><span>{% translate "The decision has been recorded." %}</span></p>{% endif %}
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  {% include "web/includes/article_text.html" %}
+  {% include "web/includes/article_decisions.html" %}
+  {% if article.allowed %}
+    <section class="panel section">
+      <div class="panel__header"><h2>{% translate "Your decision" %}</h2></div>
+      <div class="panel__body">
+        <form method="post" action="{% url 'article-review' article.public_id %}" novalidate>
+          {% csrf_token %}
+          <p class="field"><label for="id_reason">{% translate "Reason, shown to the author (required to decline or withdraw)" %}</label><textarea name="reason" id="id_reason" rows="4" maxlength="2000"></textarea></p>
+          <div class="actions">
+            {% if "published" in article.allowed %}<button type="submit" name="decision" value="published">{% translate "Publish" %}</button>{% endif %}
+            {% if "declined" in article.allowed %}<button type="submit" name="decision" value="declined" class="button--secondary">{% translate "Decline" %}</button>{% endif %}
+            {% if "withdrawn" in article.allowed %}<button type="submit" name="decision" value="withdrawn" class="button--danger">{% translate "Withdraw from publication" %}</button>{% endif %}
+          </div>
+        </form>
+      </div>
+    </section>
+  {% elif article.is_own %}
+    <p class="notice notice--warning"><span>{% translate "This is your own article. Another reviewer decides about it." %}</span></p>
+  {% endif %}
+{% endblock %}

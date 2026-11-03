@@ -28,6 +28,8 @@ ENABLE = Permission.ACCOUNTS_ENABLE
 REGISTRY_READ = Permission.REGISTRY_READ
 REGISTRY_REFERENCE = Permission.REGISTRY_REFERENCE_MANAGE
 REGISTRY_INSTITUTIONS = Permission.REGISTRY_INSTITUTIONS_MANAGE
+SUBMIT_ARTICLES = Permission.ARTICLES_SUBMIT
+REVIEW_ARTICLES = Permission.ARTICLES_REVIEW
 
 PASSWORD = Assurance.PASSWORD_AUTHENTICATED
 MFA = Assurance.MFA_VERIFIED
@@ -52,6 +54,8 @@ def test_the_permission_vocabulary_is_exactly_this() -> None:
         "registry.read",
         "registry.reference.manage",
         "registry.institutions.manage",
+        "articles.submit",
+        "articles.review",
     }
 
 
@@ -73,11 +77,23 @@ def test_every_role_has_an_explicit_entry_in_the_policy() -> None:
 @pytest.mark.parametrize(
     ("role", "expected"),
     [
-        (Role.READER, {READ, OWN_MFA, REGISTRY_READ}),
-        (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS}),
+        (Role.READER, {READ, OWN_MFA, REGISTRY_READ, SUBMIT_ARTICLES}),
+        (
+            Role.RESEARCHER,
+            {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS, SUBMIT_ARTICLES},
+        ),
         (
             Role.REVIEWER,
-            {READ, CONTRIBUTE, REVIEW, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS},
+            {
+                READ,
+                CONTRIBUTE,
+                REVIEW,
+                OWN_MFA,
+                REGISTRY_READ,
+                REGISTRY_INSTITUTIONS,
+                SUBMIT_ARTICLES,
+                REVIEW_ARTICLES,
+            },
         ),
         (
             Role.ADMINISTRATOR,
@@ -92,6 +108,7 @@ def test_every_role_has_an_explicit_entry_in_the_policy() -> None:
                 REGISTRY_READ,
                 REGISTRY_REFERENCE,
                 REGISTRY_INSTITUTIONS,
+                REVIEW_ARTICLES,
             },
         ),
     ],
@@ -105,8 +122,11 @@ def test_each_role_confers_exactly_its_permissions_with_a_verified_second_factor
 @pytest.mark.parametrize(
     ("role", "expected"),
     [
-        (Role.READER, {READ, OWN_MFA, REGISTRY_READ}),
-        (Role.RESEARCHER, {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS}),
+        (Role.READER, {READ, OWN_MFA, REGISTRY_READ, SUBMIT_ARTICLES}),
+        (
+            Role.RESEARCHER,
+            {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS, SUBMIT_ARTICLES},
+        ),
         (Role.REVIEWER, {OWN_MFA}),
         (Role.ADMINISTRATOR, {OWN_MFA}),
     ],
@@ -243,13 +263,15 @@ def test_several_roles_confer_the_union_of_their_permissions() -> None:
         REGISTRY_READ,
         REGISTRY_REFERENCE,
         REGISTRY_INSTITUTIONS,
+        SUBMIT_ARTICLES,
+        REVIEW_ARTICLES,
     }
 
 
 def test_on_a_password_an_account_keeps_the_roles_that_need_no_second_factor() -> None:
     held = permissions_for([Role.READER, Role.REVIEWER, Role.ADMINISTRATOR], assurance=PASSWORD)
 
-    assert held == {READ, OWN_MFA, REGISTRY_READ}
+    assert held == {READ, OWN_MFA, REGISTRY_READ, SUBMIT_ARTICLES}
 
 
 def test_no_combination_of_roles_confers_more_than_the_roles_do_separately() -> None:
@@ -276,6 +298,28 @@ def test_the_decision_is_deterministic() -> None:
     roles = [Role.REVIEWER, Role.READER]
 
     assert permissions_for(roles, assurance=MFA) == permissions_for(reversed(roles), assurance=MFA)
+
+
+# --- The article permissions (ADR-0022) ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("permission", "holders"),
+    [
+        (SUBMIT_ARTICLES, {Role.READER, Role.RESEARCHER, Role.REVIEWER}),
+        (REVIEW_ARTICLES, {Role.REVIEWER, Role.ADMINISTRATOR}),
+    ],
+)
+def test_each_article_permission_is_held_by_exactly_these_roles(
+    permission: Permission, holders: set[Role]
+) -> None:
+    assert {role for role in Role if permission in ROLE_PERMISSIONS[role]} == holders
+
+
+@pytest.mark.parametrize("role", [Role.REVIEWER, Role.ADMINISTRATOR])
+def test_reviewing_articles_needs_a_verified_second_factor(role: Role) -> None:
+    assert REVIEW_ARTICLES not in permissions_for([role], assurance=PASSWORD)
+    assert REVIEW_ARTICLES in permissions_for([role], assurance=MFA)
 
 
 # --- The registry permissions (ADR-0018 points 11 to 14) ----------------------

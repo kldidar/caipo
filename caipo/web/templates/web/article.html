@@ -1,0 +1,18 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ article.title }}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'articles' %}">{% translate "Articles" %}</a>{% if article.is_own %} · <a href="{% url 'articles-mine' %}">{% translate "Your articles" %}</a>{% endif %}</nav>
+  <header class="page-header">
+    <p class="policy-card__meta"><span class="badge badge--plain">{% translate "Contributed article" %}</span>{% if article.is_own %} <span class="badge {% if article.status == 'published' %}badge--ok{% elif article.status == 'awaiting_review' %}badge--provisional{% else %}badge--warn{% endif %}">{{ article.status_label }}</span>{% endif %}</p>
+    <h1>{{ article.title }}</h1>
+    <p class="lede">{% blocktranslate with name=article.author_name %}By {{ name }}{% endblocktranslate %}{% if article.published_at %} · {% translate "published" %} {{ article.published_at|date:"Y-m-d" }}{% else %} · {% translate "sent" %} {{ article.submitted_at|date:"Y-m-d" }}{% endif %}</p>
+  </header>
+  {% if sent %}<p role="status" class="notice notice--success"><span>{% translate "Your article has been sent for review. It is shown to others only once a reviewer publishes it." %}</span></p>{% endif %}
+  {% include "web/includes/article_notice.html" %}
+  {% include "web/includes/article_text.html" %}
+  {% if article.is_own %}{% include "web/includes/article_decisions.html" %}{% endif %}
+{% endblock %}

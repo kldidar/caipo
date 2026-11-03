@@ -1,0 +1,13 @@
+{% load i18n %}
+{% if article.decisions %}
+  <section class="panel section">
+    <div class="panel__header"><h2>{% translate "Decisions" %}</h2></div>
+    <div class="panel__body">
+      <ol class="timeline">
+        {% for entry in article.decisions %}
+          <li><strong>{{ entry.label }}</strong> · {{ entry.decided_at|date:"Y-m-d H:i" }}{% if entry.reason %}<br><span class="muted">{{ entry.reason|linebreaksbr }}</span>{% endif %}</li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+{% endif %}

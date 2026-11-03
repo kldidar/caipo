@@ -298,6 +298,15 @@ Decided in [ADR-0021](docs/adr/0021-registration-for-the-reader-role.md), which 
 - At most ten registrations an hour from one source, counted in PostgreSQL under the lock that serializes account changes. A throttled registration stores and sends nothing.
 - Residual risks: anyone who receives mail at an address can read the workspace, which today holds no text of a legal document; email addresses of unknown people are stored with no retention period yet; there is no CAPTCHA, so the throttle is the only bound on automated registrations; behind a reverse proxy the throttle counts every visitor together until ADR-0008 names the header to trust; and in production no message is delivered until ADR-0008 names an email service.
 
+**Contributed articles**
+
+Decided in [ADR-0022](docs/adr/0022-contributed-articles.md). Registered accounts can send text that other accounts read, so the text is untrusted content like any other:
+
+- It is stored as written and rendered escaped, with its paragraphs, never as HTML, Markdown, or a link; a direction-control character is refused; each part has a length limit.
+- Nothing is shown to anybody but its author and reviewers until a reviewer, verified with a second factor, publishes it; nobody decides about their own article. Every page labels it as its author's view, not evidence.
+- At most five articles a day from one account. Sending and each decision are recorded in the audit record.
+- The author is shown by the name they chose; their email address is never shown.
+
 **States**
 
 | State | Meaning |

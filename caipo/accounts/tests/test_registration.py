@@ -152,6 +152,8 @@ def test_from_registration_to_a_reader_who_can_read_and_do_nothing_else() -> Non
         Permission.WORKSPACE_READ,
         Permission.MFA_MANAGE_OWN,
         Permission.REGISTRY_READ,
+        # Writing an article and sending it for review (ADR-0022).
+        Permission.ARTICLES_SUBMIT,
     }
     assert not selectors.can(signed_in(result.user), Permission.RESEARCH_CONTRIBUTE)
 

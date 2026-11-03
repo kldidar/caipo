@@ -699,6 +699,7 @@ def test_a_device_enrolled_before_the_role_was_granted_is_not_trusted(
         OWN_MFA,
         Permission.WORKSPACE_READ,
         Permission.REGISTRY_READ,
+        Permission.ARTICLES_SUBMIT,
     }
 
 

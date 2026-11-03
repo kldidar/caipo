@@ -72,12 +72,13 @@ def _imports(path: Path) -> set[str]:
 def test_the_registry_has_a_layer_of_its_own_directly_above_accounts() -> None:
     (layering,) = [contract for contract in _contracts() if contract["type"] == "layers"]
 
-    # The demonstrator's apps sit above the registry (ADR-0020 point 2).
+    # The demonstrator's apps sit above the registry (ADR-0020 point 2), and
+    # contributed articles beside the research records (ADR-0022).
     assert layering["layers"] == [
         "config",
         "demo",
         "web",
-        "research",
+        "research | articles",
         "policies | indicators",
         "sources",
         "registry",

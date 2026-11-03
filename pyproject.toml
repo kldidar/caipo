@@ -89,7 +89,9 @@ layers = [
     "config",
     "demo",
     "web",
-    "research",
+    # Siblings: contributed articles (ADR-0022) use nothing of the research
+    # records, and the research records nothing of them.
+    "research | articles",
     # Siblings of layer 5: neither imports the other.
     "policies | indicators",
     "sources",
@@ -148,6 +150,29 @@ ignore_imports = [
     "caipo.policies.tests.** -> caipo.accounts.models",
     "caipo.indicators.tests.** -> caipo.registry.models",
     "caipo.sources.tests.** -> caipo.registry.models",
+]
+
+[[tool.importlinter.contracts]]
+name = "Articles boundary (ADR-0022): articles use accounts only through its services and selectors, and no domain record"
+type = "forbidden"
+source_modules = ["caipo.articles"]
+forbidden_modules = [
+    "caipo.accounts.apps",
+    "caipo.accounts.authentication",
+    "caipo.accounts.authorization",
+    "caipo.accounts.management",
+    "caipo.accounts.migrations",
+    "caipo.accounts.models",
+    "caipo.accounts.totp",
+    "caipo.registry",
+    "caipo.sources",
+    "caipo.policies",
+    "caipo.indicators",
+]
+allow_indirect_imports = true
+ignore_imports = [
+    # Tests read the audit records a service wrote.
+    "caipo.articles.tests.** -> caipo.accounts.models",
 ]
 
 [[tool.importlinter.contracts]]

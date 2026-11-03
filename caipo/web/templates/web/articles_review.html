@@ -1,0 +1,30 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Article review" %}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Review" %}</p>
+    <h1>{% translate "Article review" %}</h1>
+    <p class="lede">{% translate "Read each article and publish it, or decline it with a reason its author is shown. Publishing says that it is fit to show, not that its statements are right. Nobody decides about their own article." %}</p>
+  </header>
+  <section class="section" aria-labelledby="waiting-title">
+    <h2 id="waiting-title">{% blocktranslate count counter=waiting|length %}{{ counter }} awaiting review{% plural %}{{ counter }} awaiting review{% endblocktranslate %}</h2>
+    {% for entry in waiting %}
+      {% url 'article-review' entry.public_id as href %}
+      {% include "web/includes/article_card.html" with entry=entry href=href show_status=True %}
+    {% empty %}
+      <div class="empty"><p class="empty__title">{% translate "No article awaits review." %}</p></div>
+    {% endfor %}
+  </section>
+  {% if decided %}
+    <section class="section" aria-labelledby="decided-title">
+      <h2 id="decided-title">{% translate "Decided" %}</h2>
+      {% for entry in decided %}
+        {% url 'article-review' entry.public_id as href %}
+        {% include "web/includes/article_card.html" with entry=entry href=href show_status=True %}
+      {% endfor %}
+    </section>
+  {% endif %}
+{% endblock %}

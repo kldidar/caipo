@@ -266,6 +266,21 @@ Opening the link (`http://127.0.0.1:8000/activate/#<token>`) and choosing a pass
 
 Registering never gives another role. An Administrator grants one with `caipo.accounts.services.grant_role`; there is no page for it yet.
 
+## Contributed articles
+
+Decided in [ADR-0022](adr/0022-contributed-articles.md).
+
+A Reader, Researcher, or Reviewer opens **Articles → Write an article**, accepts CC BY 4.0, and sends it. It awaits review and is shown only to its author ("Your articles") until a Reviewer or an Administrator, signed in with a second factor, opens **Article review**, reads it, and publishes or declines it with a reason. A published article can be withdrawn with a reason. Nobody decides about their own article. At most five articles a day from one account (`ARTICLE_SUBMISSION_*` in `caipo/config/settings/base.py`).
+
+| Page | Method | Who |
+|---|---|---|
+| `/articles/` | GET | Readers of the workspace: the published articles |
+| `/articles/new/` | GET, POST | Accounts that may send an article |
+| `/articles/mine/` | GET | The same: their own articles, with each decision and its reason |
+| `/articles/<id>/` | GET | A published article for every reader; any article for its author |
+| `/articles/review/` | GET | Reviewers and Administrators with a second factor: what awaits review, and what was decided |
+| `/articles/review/<id>/` | GET, POST | The same: one article, and the decision about it |
+
 ## Resetting a forgotten password
 
 Decided in [ADR-0016](adr/0016-password-reset.md).

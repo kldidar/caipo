@@ -550,6 +550,17 @@ The delivery sprint builds reduced forms of some entities of §3 ahead of their 
 
 Formal status is derived as in §4.4. Sources, documents, policies, links, and provisions refuse DELETE by trigger; policy events refuse UPDATE and DELETE. Each creation and each change of a policy's assignment writes an audit event; a release writes one for itself and none for each value (target types `sources.source`, `sources.document`, `policies.policy`, `policies.policy_document_link`, `policies.policy_event`, `policies.policy_provision`, `indicators.indicator`, `indicators.dataset_release`, `research.analysis_run`, `research.search_run`; fields `corpus_assignment`, `ai_focus`, `contextual_category`).
 
+## 7b. Contributed articles (ADR-0022)
+
+Articles are not part of the research model of §3 and are never evidence ([ADR-0022](adr/0022-contributed-articles.md)). They have no data class, because they are neither demonstration nor reference data: they are their authors' views.
+
+| Entity | Fields | Rules |
+|---|---|---|
+| Article (`articles`) | Public identifier, author (an account), the name the author is credited with, title, summary, text, licence (CC BY 4.0), when it was sent | Append-only by trigger. Every part is required, and the licence is one of those listed, by database checks. Never changed after it is sent: a correction is a new article |
+| ArticleDecision (`articles`) | Public identifier, article, decision (`published`, `declined`, `withdrawn`), reason, who decided, when | Append-only by trigger. A decline or a withdrawal gives a reason, an article has at most one verdict (published or declined) and at most one withdrawal, by database checks. A withdrawal follows only a publication, and nobody decides about their own article, by the service under the article's row lock |
+
+An article's status (awaiting review, published, declined, withdrawn) is derived from its latest decision and never stored. Sending an article and each decision write an audit event (target types `articles.article`, `articles.article_decision`).
+
 ## 8. Changes from the initial entity list
 
 | Initial | In this model | Reason |

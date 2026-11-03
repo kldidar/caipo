@@ -46,6 +46,9 @@ TARGET_TYPES = [
     "indicators.dataset_release",
     "research.analysis_run",
     "research.search_run",
+    # Contributed articles (ADR-0022).
+    "articles.article",
+    "articles.article_decision",
 ]
 FIELDS = [
     "name_en",

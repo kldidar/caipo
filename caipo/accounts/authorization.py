@@ -63,6 +63,12 @@ class Permission(StrEnum):
     operation consumes them yet. They are deliberately coarse and are to be
     split only when a feature needs a finer distinction.
 
+    The two article permissions (ADR-0022) concern contributed articles, which
+    are their authors' views and not part of the evidence base: reviewing one
+    decides whether it is shown, and says nothing about its accuracy. That is
+    why an Administrator, who has no say over the evidence base, holds the
+    permission to review articles.
+
     The three registry permissions are registry maintenance, not research
     (ADR-0018 point 11): holding one confers nothing of the research
     permissions. REGISTRY_INSTITUTIONS_MANAGE admits an account to the entry
@@ -101,6 +107,10 @@ class Permission(StrEnum):
     REGISTRY_REFERENCE_MANAGE = "registry.reference.manage"
     # Maintain institutions and their names.
     REGISTRY_INSTITUTIONS_MANAGE = "registry.institutions.manage"
+    # Write an article and send it for review (ADR-0022).
+    ARTICLES_SUBMIT = "articles.submit"
+    # Publish, decline, or withdraw another account's article (ADR-0022).
+    ARTICLES_REVIEW = "articles.review"
 
 
 # Each role's permissions, written out in full (PROJECT_SPECIFICATION.md §3).
@@ -116,6 +126,7 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.WORKSPACE_READ,
                 Permission.MFA_MANAGE_OWN,
                 Permission.REGISTRY_READ,
+                Permission.ARTICLES_SUBMIT,
             }
         ),
         Role.RESEARCHER: frozenset(
@@ -125,6 +136,7 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.MFA_MANAGE_OWN,
                 Permission.REGISTRY_READ,
                 Permission.REGISTRY_INSTITUTIONS_MANAGE,
+                Permission.ARTICLES_SUBMIT,
             }
         ),
         Role.REVIEWER: frozenset(
@@ -135,6 +147,8 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.MFA_MANAGE_OWN,
                 Permission.REGISTRY_READ,
                 Permission.REGISTRY_INSTITUTIONS_MANAGE,
+                Permission.ARTICLES_SUBMIT,
+                Permission.ARTICLES_REVIEW,
             }
         ),
         Role.ADMINISTRATOR: frozenset(
@@ -149,6 +163,7 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.REGISTRY_READ,
                 Permission.REGISTRY_REFERENCE_MANAGE,
                 Permission.REGISTRY_INSTITUTIONS_MANAGE,
+                Permission.ARTICLES_REVIEW,
             }
         ),
     }

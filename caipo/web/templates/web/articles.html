@@ -1,0 +1,40 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Articles" %}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Research workspace" %}</p>
+    <h1>{% translate "Articles" %}</h1>
+    <p class="lede">{% translate "Articles written by people who use CAIPO, published after review. Each is its author's view, kept apart from the sources, indicators, and analyses." %}</p>
+  </header>
+  {% include "web/includes/article_notice.html" %}
+  <div class="detail-grid">
+    <div class="detail-grid__main">
+      {% for entry in entries %}
+        {% url 'article' entry.public_id as href %}
+        {% include "web/includes/article_card.html" with entry=entry href=href show_status=False %}
+      {% empty %}
+        <div class="empty"><p class="empty__title">{% translate "No article has been published yet." %}</p></div>
+      {% endfor %}
+    </div>
+    {% if can_write or can_review %}
+      <aside class="detail-grid__side">
+        <section class="panel">
+          <div class="panel__header"><h2>{% translate "Contribute" %}</h2></div>
+          <div class="panel__body">
+            {% if can_write %}
+              <p>{% translate "Write an article and send it for review. It is shown here only once a reviewer publishes it." %}</p>
+              <p class="actions"><a class="button" href="{% url 'article-new' %}">{% translate "Write an article" %}</a></p>
+              <ul class="link-list"><li><a href="{% url 'articles-mine' %}">{% translate "Your articles" %}</a></li></ul>
+            {% endif %}
+            {% if can_review %}
+              <ul class="link-list"><li><a href="{% url 'articles-review' %}">{% blocktranslate count counter=waiting %}Review: {{ counter }} article waiting{% plural %}Review: {{ counter }} articles waiting{% endblocktranslate %}</a></li></ul>
+            {% endif %}
+          </div>
+        </section>
+      </aside>
+    {% endif %}
+  </div>
+{% endblock %}

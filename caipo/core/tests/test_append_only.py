@@ -68,6 +68,9 @@ def test_the_three_event_models_and_the_two_audit_models_are_built_on_it() -> No
         # Analysis runs and search runs (ADR-0020, DATA_MODEL.md §7a).
         "AnalysisRun",
         "SearchRun",
+        # Contributed articles and the decisions about them (ADR-0022).
+        "Article",
+        "ArticleDecision",
     }
     for model in apps.get_models():
         if issubclass(model, AppendOnlyModel):

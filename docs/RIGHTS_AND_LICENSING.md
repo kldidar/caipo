@@ -62,6 +62,8 @@ Two different things are stored as data.
 
 **Project-created data.** Research claims, evidence links, policy coding, search runs, analysis results, and descriptive metadata are created by the project. These are not software, and the MIT License on the code does not automatically license them. **Under what licence the project releases its own research data has not been decided.** Until it is, no reuse rights in that data are granted beyond what the law allows. This is part of the remaining B7.
 
+**Contributed articles.** An article written by a person who uses CAIPO is that person's work. They keep the copyright and, by sending it, publish it under the Creative Commons Attribution 4.0 International licence (CC BY 4.0) if a reviewer accepts it ([ADR-0022](adr/0022-contributed-articles.md); the project owner's choice of 2026-11-03). Every published article names its author as they chose and links to the licence. It is not project-created data, and the open question of the research data licence does not affect it.
+
 Project-created records can quote or embed third-party material, for example a passage quoted as evidence. A licence on project-created data would not extend to the quoted material.
 
 ## 4. Display and redistribution policy

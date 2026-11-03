@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "caipo.policies",
     "caipo.indicators",
     "caipo.research",
+    "caipo.articles",
     "caipo.demo",
     "caipo.web",
 ]
@@ -138,6 +139,13 @@ ACCOUNT_REGISTRATION_SOURCE_LIMIT = 10
 # Verification messages sent to one account that awaits verification within
 # that window, before a further registration for its address sends none.
 ACCOUNT_REGISTRATION_MESSAGE_LIMIT = 3
+
+# Contributed articles (ADR-0022). Repository-versioned like the limits above.
+
+# Articles one account can send within this window before a further one is
+# refused until earlier ones age out.
+ARTICLE_SUBMISSION_WINDOW = timedelta(days=1)
+ARTICLE_SUBMISSION_LIMIT = 5
 
 # Password reset (ADR-0016). Repository-versioned like the limits above. The
 # names avoid Django's own PASSWORD_RESET_TIMEOUT, which belongs to a token

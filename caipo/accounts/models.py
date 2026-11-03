@@ -859,6 +859,9 @@ class AuditTargetType(models.TextChoices):
     DATASET_RELEASE = "indicators.dataset_release", _("Dataset release")
     ANALYSIS_RUN = "research.analysis_run", _("Analysis run")
     SEARCH_RUN = "research.search_run", _("Search run")
+    # Contributed articles (ADR-0022).
+    ARTICLE = "articles.article", _("Article")
+    ARTICLE_DECISION = "articles.article_decision", _("Article decision")
 
 
 class AuditField(models.TextChoices):
