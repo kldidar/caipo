@@ -23,7 +23,7 @@ A walk-through of 5 to 10 minutes for a professor or a reviewer, and an honest a
 
 | Minute | Show | Say |
 |---|---|---|
-| 0:00 | The public home page, signed out | CAIPO is a research platform for comparing AI policy and economic transformation in Turkmenistan and Uzbekistan. Its value is trust: every statement traceable, gaps visible, results reproducible. Anonymous visitors see no records. |
+| 0:00 | The public home page, signed out | CAIPO is a research platform for comparing AI policy and economic transformation in Turkmenistan and Uzbekistan. Its value is trust: every statement traceable, gaps visible, results reproducible. Anonymous visitors see no records. Anyone can create an account here: it reads the workspace and adds nothing, and only after its email address is verified. |
 | 0:45 | Sign in as the Reader → **Overview** | The workspace at a glance. Core AI policies and contextual entries are counted separately. Layer C has no indicator for either study country, and the page says so rather than hiding it. |
 | 1:30 | **Policies**, core tab, filter *Data class: Reference data* → *Strategy for the Development of Artificial Intelligence Technologies until 2030* | A real record, by metadata only: resolution RP-358 of 14.10.2024 from lex.uz, with its address and access date. Its status, *In force*, is derived from two formal events; the database has no status column. The assignment to the core corpus is provisional and gives its reason. No text of the law is held, because its rights are not decided. |
 | 2:30 | **Contextual policy registry** tab → Turkmenistan's digital-economy programme | Broader material is kept apart and never counted as AI policy. Here the signing date is not recorded, because the source does not give it, so the status is honestly *No formal event recorded*. |
@@ -49,7 +49,7 @@ Questions it is worth being ready for:
 
 ### Real and working
 
-- Accounts with four roles and permission checks on every page and every write; sign-in with throttling; TOTP two-step verification required for Reviewers and Administrators; provisioning, email verification, password reset, and recovery of a lost second factor ([SECURITY.md](../SECURITY.md)).
+- Accounts with four roles and permission checks on every page and every write; sign-in with throttling; TOTP two-step verification required for Reviewers and Administrators; provisioning, registration on the site for the Reader role ([ADR-0021](adr/0021-registration-for-the-reader-role.md)), email verification, password reset, and recovery of a lost second factor ([SECURITY.md](../SECURITY.md)). In development no email is sent: each message, with its link, is written to `data/outbox/`.
 - The registry, and the general audit record of every change.
 - Sources, documents (metadata), policies with formal events and AI-related provisions, indicators, dataset releases, observations, analysis runs, search runs, and their pages, forms, and exports ([DATA_MODEL.md](DATA_MODEL.md) §7a).
 - Integrity enforced by PostgreSQL: data-class checks, append-only and delete-refusing triggers, the missing-value rule, the no-reference-text rule.

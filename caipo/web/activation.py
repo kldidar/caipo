@@ -32,7 +32,8 @@ from caipo.web.forms import ActivationForm
 # an account that is disabled or already active.
 REFUSED_MESSAGE = _(
     "That code was not accepted. It may have been used already or have lapsed."
-    " Ask an Administrator to send the message again."
+    " To have the message sent again, register again with the same address, or ask"
+    " an Administrator."
 )
 THROTTLED_MESSAGE = _("Too many attempts were refused. Wait a while and try again.")
 ACTIVATED_QUERY = "activated"

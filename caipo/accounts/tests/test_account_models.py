@@ -212,6 +212,9 @@ def test_the_event_types_are_exactly_these() -> None:
         "verification_failed",
         "account_disabled",
         "account_enabled",
+        "account_registered",
+        "registration_repeated",
+        "registration_message_sent",
     ]
     limit = AccountEvent._meta.get_field("event_type").max_length
     assert limit is not None
@@ -274,7 +277,16 @@ def test_what_an_administrator_does_names_the_administrator(
         _event(user, event_type)
 
 
-@pytest.mark.parametrize("event_type", ["verification_succeeded", "verification_failed"])
+@pytest.mark.parametrize(
+    "event_type",
+    [
+        "verification_succeeded",
+        "verification_failed",
+        "account_registered",
+        "registration_repeated",
+        "registration_message_sent",
+    ],
+)
 def test_the_database_rejects_an_actor_on_what_the_owner_does(
     user: User, actor: User, event_type: str
 ) -> None:
@@ -294,6 +306,23 @@ def test_nobody_creates_invites_or_enables_their_own_account(user: User, event_t
         transaction.atomic(),
     ):
         _event(user, event_type, user)
+
+
+@pytest.mark.parametrize(
+    "event_type", ["account_registered", "registration_repeated", "registration_message_sent"]
+)
+def test_a_registration_on_the_site_names_its_account_and_no_actor(
+    user: User, event_type: str
+) -> None:
+    assert _event(user, event_type).actor is None
+
+
+def test_registration_events_are_not_administrative() -> None:
+    assert not {
+        AccountEventType.ACCOUNT_REGISTERED,
+        AccountEventType.REGISTRATION_REPEATED,
+        AccountEventType.REGISTRATION_MESSAGE_SENT,
+    } & set(ADMINISTRATIVE_ACCOUNT_EVENT_TYPES)
 
 
 def test_disabling_ones_own_account_can_be_recorded(user: User) -> None:

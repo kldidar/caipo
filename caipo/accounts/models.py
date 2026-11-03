@@ -199,10 +199,13 @@ class RoleEvent(AppendOnlyModel):
     is no current-role row that could be overwritten, so a role cannot change
     without a new event naming who changed it, when, and why.
 
-    Every event names the user who made the change, with one exception. The
+    Every event names the user who made the change, with two exceptions. The
     grant that creates the first Administrator is made by an operator at the
     server, before any account exists that could be its actor. It has no
-    actor, says so in its reason, and can exist at most once.
+    actor, says so in its reason, and can exist at most once. And the Reader
+    role that a person takes by registering on the site (ADR-0021) is granted
+    by nobody: it has no actor, says so in its reason, and can exist at most
+    once for each account.
     """
 
     # PROTECT: an event must never disappear because an account did. Accounts
@@ -245,19 +248,27 @@ class RoleEvent(AppendOnlyModel):
                 name="accounts_roleevent_actor_is_not_user",
             ),
             # An event without an actor can only be the grant that creates the
-            # first Administrator...
+            # first Administrator, or the Reader role taken by registering
+            # (ADR-0021)...
             models.CheckConstraint(
                 condition=models.Q(actor__isnull=False)
-                | models.Q(role=Role.ADMINISTRATOR, event_type=RoleEventType.GRANTED),
-                name="accounts_roleevent_no_actor_only_for_bootstrap",
+                | models.Q(role=Role.ADMINISTRATOR, event_type=RoleEventType.GRANTED)
+                | models.Q(role=Role.READER, event_type=RoleEventType.GRANTED),
+                name="accounts_roleevent_no_actor_only_bootstrap_or_registration",
             ),
-            # ...and there can be only one such event, ever. Every event
-            # without an actor has the same event type, so uniqueness of the
-            # event type among them allows a single row.
+            # ...there can be only one first Administrator, ever: every such
+            # event has the same event type, so uniqueness of the event type
+            # among them allows a single row...
             models.UniqueConstraint(
                 fields=["event_type"],
-                condition=models.Q(actor__isnull=True),
+                condition=models.Q(actor__isnull=True, role=Role.ADMINISTRATOR),
                 name="accounts_roleevent_single_bootstrap",
+            ),
+            # ...and an account registers once.
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=models.Q(actor__isnull=True, role=Role.READER),
+                name="accounts_roleevent_single_registration",
             ),
         ]
 
@@ -708,6 +719,17 @@ class AccountEventType(models.TextChoices):
     VERIFICATION_FAILED = "verification_failed", _("Verification refused")
     ACCOUNT_DISABLED = "account_disabled", _("Account disabled")
     ACCOUNT_ENABLED = "account_enabled", _("Account enabled")
+    # Registration on the site (ADR-0021). Whoever registers is not signed
+    # in, so none of these names an actor.
+    ACCOUNT_REGISTERED = "account_registered", _("Account registered by its owner")
+    REGISTRATION_REPEATED = (
+        "registration_repeated",
+        _("Registration asked for an address that has an account"),
+    )
+    REGISTRATION_MESSAGE_SENT = (
+        "registration_message_sent",
+        _("Verification message sent on registration"),
+    )
 
 
 # What an Administrator does to an account. Only these name an actor.
@@ -722,12 +744,13 @@ ADMINISTRATIVE_ACCOUNT_EVENT_TYPES = (
 class AccountEvent(AppendOnlyModel):
     """One step in the lifecycle of an account (ADR-0015).
 
-    Append-only. It records that an account was created, sent its verification
-    message, verified, disabled, or enabled, and each refused attempt to
-    verify: what happened, when, to which account if that is known, who did
-    it if an Administrator did, and under which request. It is also what the
-    throttling of verification attempts counts. It is not the general audit
-    record.
+    Append-only. It records that an account was created or registered, sent
+    its verification message, verified, disabled, or enabled, each
+    registration asked for an address that already has an account, and each
+    refused attempt to verify: what happened, when, to which account if that
+    is known, who did it if an Administrator did, and under which request.
+    It is also what the throttling of verification attempts and of
+    registrations counts. It is not the general audit record.
 
     It never holds a verification token or its hash, a password, a
     second-factor secret, or an email address. Where a verification attempt

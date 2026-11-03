@@ -185,7 +185,7 @@ What exists now, and what does not. Nothing here means authentication is complet
 **Not implemented**
 
 - Recovery of an account after a suspected compromise, and of an account that lost its password, its second factor, and its email address together. Changing an account's email address. Password reset by email is implemented ([ADR-0016](docs/adr/0016-password-reset.md)); it changes a password and recovers nothing else. Recovery from a lost second factor is implemented ([ADR-0017](docs/adr/0017-account-recovery.md)); the one part of it that is not is named in the entry below.
-- **Sending email in production.** No delivery service is configured, so there an account can be created and its verification message cannot be sent (see "Account lifecycle as implemented"), a password reset can be asked for and its message cannot be sent, and no message about a recovery is delivered: each attempt is logged as an error and changes nothing.
+- **Sending email in production.** No delivery service is configured, so there an account can be created or registered and its verification message cannot be sent (see "Account lifecycle as implemented"), a password reset can be asked for and its message cannot be sent, and no message about a recovery is delivered: each attempt is logged as an error and changes nothing.
 - The operational audit trail of the break-glass command ([ADR-0017](docs/adr/0017-account-recovery.md) point 68). Asking for recovery, an Administrator's authorisation or rejection of the request, the record that a recovery is complete, the break-glass command, the pages that show the history of recoveries, and the messages about a recovery are built (see "Asking for recovery of a lost second factor", "Authorising and rejecting a recovery request", "The break-glass command", and "Seeing a recovery, and being told of one"). The operational audit trail of the server, which is what records who ran the break-glass command, and the instructions for running it in a deployment wait for [ADR-0008](docs/adr/0008-deployment-strategy.md), which is Proposed. Nothing in the application stands in for that trail. There are no recovery codes.
 - Pages for role administration and for disabling and enabling accounts. Those services work for an Administrator with a verified second factor; no page calls them yet.
 - Assistant quotas.
@@ -287,6 +287,16 @@ This is the one second factor that is created trusted, with no enrolment for any
 ### Account lifecycle as implemented
 
 How an account other than the first Administrator's comes to exist, how its owner verifies the email address and chooses a password, and how it is disabled and enabled. The decisions are in [ADR-0015](docs/adr/0015-account-lifecycle-and-email-verification.md). Password reset by email is implemented as decided in [ADR-0016](docs/adr/0016-password-reset.md), which states its controls and its residual risks; disabling an account also removes its password-reset token. Recovery from a lost second factor is implemented, except for its notifications and the page that shows its history, as decided in [ADR-0017](docs/adr/0017-account-recovery.md): see "Multi-factor authentication as implemented". Recovery after a suspected compromise is not implemented; such an account is disabled.
+
+**Registration as implemented**
+
+Decided in [ADR-0021](docs/adr/0021-registration-for-the-reader-role.md), which supersedes the earlier rule that there is no self-registration.
+
+- `/register/` is public and takes one email address. It creates an account awaiting verification, with the Reader role granted by nobody, and sends the same verification message as an Administrator's invitation. Nothing can be read until the owner of the address opens the link and chooses a password.
+- No other role can be taken by registering. The database allows a role event without an actor only for the first Administrator's grant, once, and for a Reader grant, once per account.
+- Every registration with a well-formed address gets the same answer, records one event, and costs one password hash, whether the address is new, already has an account, or the registration was throttled. Nothing submitted is put back into the page. An account that awaits verification is sent its message again, at most three times an hour; an active or disabled account is sent nothing.
+- At most ten registrations an hour from one source, counted in PostgreSQL under the lock that serializes account changes. A throttled registration stores and sends nothing.
+- Residual risks: anyone who receives mail at an address can read the workspace, which today holds no text of a legal document; email addresses of unknown people are stored with no retention period yet; there is no CAPTCHA, so the throttle is the only bound on automated registrations; behind a reverse proxy the throttle counts every visitor together until ADR-0008 names the header to trust; and in production no message is delivered until ADR-0008 names an email service.
 
 **States**
 
@@ -586,7 +596,7 @@ The last part of [ADR-0017](docs/adr/0017-account-recovery.md) (points 78 to 81,
 - Document-derived text and model output are always auto-escaped.
 - Permissions are checked in the service layer, deny by default.
 - Rate limits apply to public pages per client address, and to login, AI questions, URL submission, and uploads per account.
-- There is no public self-registration. Accounts are created by an Administrator.
+- Anyone can register an account on the site, and a registered account holds the Reader role and nothing more, once its owner has verified the email address ([ADR-0021](docs/adr/0021-registration-for-the-reader-role.md)). Every other role is given by an Administrator. See "Registration as implemented".
 - The interface is server-rendered. HTMX is served from the application's own static files at a pinned version, with its script-evaluation features turned off. There is no API at launch (ADR-0010).
 - **Multi-factor authentication with TOTP is required for Administrator and Reviewer accounts.** Such an account cannot use its privileges until TOTP is enrolled with an Administrator's approval and a code has been verified for the sign-in (ADR-0007, ADR-0014).
 - **Django admin.** Restricted to Administrators, on a non-default path. Models for provenance and integrity-governed records (artifacts, acquisition records, versions, reviews, rights, extractions, segments, passages, releases, observations, claims, evidence, claim reviews, analysis and search runs, AI interaction records, audit events, redaction records) are registered read-only: no add, change, or delete. All writes to them go through services. The database-level protection on append-only tables applies to the web process's role as well, so the admin cannot bypass it even through a defect. Admin write access is limited to operational data such as users and roles.

@@ -3,7 +3,7 @@ and its approval, asking for a lost second factor to be recovered,
 authorising or rejecting that request, and recording that the recovery is
 complete, the two emergency actions of the break-glass command, telling the
 people concerned that a recovery was asked for or finalised, changing
-roles, creating, activating,
+roles, creating, registering (ADR-0021), activating,
 disabling, and enabling accounts, resetting a forgotten password, creating
 the first Administrator, and writing the general audit record for the apps
 above this one.
@@ -33,6 +33,7 @@ from enum import StrEnum
 
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
@@ -101,6 +102,22 @@ _RECOVERY_LOCK = 6
 
 # What stands for the network address in the one event that no request causes.
 BOOTSTRAP_SOURCE = "create_first_administrator command"
+
+# The reason recorded on the Reader role that registering grants (ADR-0021).
+REGISTRATION_ROLE_REASON = (
+    "Reader role, taken by registering on the site (ADR-0021). No acting user exists"
+    " for this event."
+)
+# What the throttling of registrations from one source counts.
+_REGISTRATION_EVENT_TYPES = (
+    AccountEventType.ACCOUNT_REGISTERED,
+    AccountEventType.REGISTRATION_REPEATED,
+)
+# The verification messages that count against the limit on sending them again.
+_VERIFICATION_MESSAGE_EVENT_TYPES = (
+    AccountEventType.VERIFICATION_SENT,
+    AccountEventType.REGISTRATION_MESSAGE_SENT,
+)
 
 
 class AccountChangeError(Exception):
@@ -1396,6 +1413,109 @@ def send_account_verification(
     return _send_verification(user, activation_url(token), source_key, actor.user)
 
 
+@sensitive_variables("email", "token")
+def register_account(*, email: str, source: str, activation_url: Callable[[str], str]) -> None:
+    """Take a registration on the site for an email address (ADR-0021).
+
+    Needs no actor: whoever registers is not signed in. `source` is the
+    network address the request came from, as the caller established it.
+    `activation_url` turns a token into the address the message carries; the
+    caller supplies it, because only the caller knows the site's pages.
+
+    Returns nothing, whatever happened, so that a caller cannot tell an
+    address that has an account from one that has none. Every registration
+    that is not throttled records one account event, and costs one password
+    hash, whichever way it goes.
+
+    For an address that belongs to no account, in one transaction: the
+    account is created in PENDING_VERIFICATION with a password nobody knows,
+    one RoleEvent with no actor grants it the Reader role, an activation
+    token is stored as a keyed hash, and `account_registered` is recorded.
+    Then, outside that transaction, the verification message is sent, and
+    `registration_message_sent` is recorded if it was handed on. The account
+    can do nothing until its owner activates it with `activate_account`, and
+    then holds only what the Reader role confers. No other role can be taken
+    this way.
+
+    For an address that already belongs to an account, nothing is created
+    and `registration_repeated` is recorded, naming that account. If it
+    awaits verification and fewer than ACCOUNT_REGISTRATION_MESSAGE_LIMIT
+    verification messages were sent to it within
+    ACCOUNT_REGISTRATION_WINDOW, a new token replaces the earlier one, which
+    stops working at once, and the message is sent again as above; the
+    account keeps the role it had. An active or disabled account is sent
+    nothing.
+
+    A registration is throttled once ACCOUNT_REGISTRATION_SOURCE_LIMIT
+    registrations came from the source within ACCOUNT_REGISTRATION_WINDOW,
+    whatever their addresses. A throttled registration is logged, stores
+    nothing, and sends nothing.
+
+    Raises ValidationError if the email address is not valid; then nothing
+    was stored. Never raises because of whether the address has an account.
+    A message that could not be sent is logged as an error, without the
+    address, the token, or the link, and the account awaits another message.
+    """
+    source_key = _key("source", source)
+    address = User.objects.normalize_email(email)
+    validate_email(address)
+    recipient: User | None = None
+    token = None
+
+    with transaction.atomic():
+        # One registration at a time, like every account change. The lock
+        # also makes the count below exact.
+        _serialize_account_changes()
+        since = timezone.now() - settings.ACCOUNT_REGISTRATION_WINDOW
+        registrations = AccountEvent.objects.filter(
+            event_type__in=_REGISTRATION_EVENT_TYPES, source_key=source_key, created_at__gte=since
+        ).count()
+        if registrations >= settings.ACCOUNT_REGISTRATION_SOURCE_LIMIT:
+            logger.warning(
+                "Registration throttled", extra={"event": "accounts.registration_throttled"}
+            )
+            return
+
+        # Locked, as disabling locks it: the status decides.
+        known = User.objects.select_for_update().filter(email=address).first()
+        if known is None:
+            user = User(email=address, status=AccountStatus.PENDING_VERIFICATION)
+            # A password nobody knows, as for an account an Administrator
+            # creates (ADR-0015 point 14). The value is discarded here.
+            user.set_password(secrets.token_urlsafe(32))
+            user.save()
+            RoleEvent.objects.create(
+                user=user,
+                role=Role.READER,
+                event_type=RoleEventType.GRANTED,
+                actor=None,
+                reason=REGISTRATION_ROLE_REASON,
+            )
+            _record_account(AccountEventType.ACCOUNT_REGISTERED, user, source_key)
+            recipient, token = user, _issue_activation(user)
+        else:
+            # The hash that creating an account costs, so that the time taken
+            # does not tell an address with an account from one without.
+            make_password(secrets.token_urlsafe(32))
+            _record_account(AccountEventType.REGISTRATION_REPEATED, known, source_key)
+            sent = AccountEvent.objects.filter(
+                user=known,
+                event_type__in=_VERIFICATION_MESSAGE_EVENT_TYPES,
+                created_at__gte=since,
+            ).count()
+            if (
+                known.status == AccountStatus.PENDING_VERIFICATION
+                and sent < settings.ACCOUNT_REGISTRATION_MESSAGE_LIMIT
+            ):
+                recipient, token = known, _issue_activation(known)
+
+    # The same line for every registration: what is logged does not tell an
+    # address with an account from one without.
+    logger.info("Registration taken", extra={"event": "accounts.registration_taken"})
+    if recipient is not None and token is not None:
+        _send_verification(recipient, activation_url(token), source_key, None)
+
+
 @sensitive_variables("token", "password")
 def activate_account(*, token: str, password: str, source: str) -> ActivationResult:
     """Verify an email address and activate its account, with the password its owner chose.
@@ -2119,12 +2239,14 @@ def _pending_activation(token_key: str) -> tuple[User | None, AccountActivation 
 
 
 @sensitive_variables("url")
-def _send_verification(user: User, url: str, source_key: str, actor: User) -> bool:
+def _send_verification(user: User, url: str, source_key: str, actor: User | None) -> bool:
     """Send the account its verification message, and record that if it was handed on.
 
-    Returns whether it was. A message that could not be sent is logged as an
-    error, without its content, and recorded nowhere: the account still
-    awaits a message.
+    `actor` is the Administrator who had it sent, recorded as
+    `verification_sent`, or None for a registration on the site, recorded as
+    `registration_message_sent`. Returns whether it was handed on. A message
+    that could not be sent is logged as an error, without its content, and
+    recorded nowhere: the account still awaits a message.
     """
     lifetime_hours = int(settings.ACCOUNT_ACTIVATION_LIFETIME.total_seconds() // 3600)
     try:
@@ -2145,10 +2267,17 @@ def _send_verification(user: User, url: str, source_key: str, actor: User) -> bo
             },
         )
         return False
-    _record_account(AccountEventType.VERIFICATION_SENT, user, source_key, actor=actor)
+    if actor is None:
+        _record_account(AccountEventType.REGISTRATION_MESSAGE_SENT, user, source_key)
+    else:
+        _record_account(AccountEventType.VERIFICATION_SENT, user, source_key, actor=actor)
     logger.info(
         "Verification message sent",
-        extra={"event": "accounts.verification_sent", "user_id": user.pk, "actor_id": actor.pk},
+        extra={
+            "event": "accounts.verification_sent",
+            "user_id": user.pk,
+            "actor_id": actor.pk if actor else None,
+        },
     )
     return True
 

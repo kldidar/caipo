@@ -413,7 +413,7 @@ def test_only_the_command_calls_the_bootstrap_operation() -> None:
     ]
 
 
-def test_only_the_bootstrap_operation_writes_an_event_without_an_actor() -> None:
+def test_only_the_bootstrap_and_registration_write_an_event_without_an_actor() -> None:
     package_root = Path(inspect.getfile(caipo)).parent
     writers = sorted(
         str(path.relative_to(package_root))
@@ -424,8 +424,10 @@ def test_only_the_bootstrap_operation_writes_an_event_without_an_actor() -> None
     )
 
     assert writers == ["accounts/services.py"]
-    assert inspect.getsource(services).count("actor=None") == 1
+    assert inspect.getsource(services).count("actor=None") == 2
     assert "actor=None" in inspect.getsource(services.create_first_administrator)
+    # The Reader role taken by registering on the site (ADR-0021).
+    assert "actor=None" in inspect.getsource(services.register_account)
 
 
 def test_only_the_bootstrap_and_the_break_glass_approval_trust_a_device_nobody_approved() -> None:

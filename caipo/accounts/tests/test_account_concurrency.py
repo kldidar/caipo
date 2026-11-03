@@ -278,3 +278,44 @@ def test_two_administrators_disabling_each_other_leave_one(user_with_roles: User
     assert isinstance(refusal, (PermissionDenied, LastAdministratorError))
     assert User.objects.filter(pk__in=[first.pk, second.pk], status="active").count() == 1
     assert _events() == ["account_disabled"]
+
+
+# --- Registration on the site (ADR-0021) -------------------------------------------------
+
+
+def _register(source: str = SOURCE) -> None:
+    services.register_account(email=EMAIL, source=source, activation_url=_url)
+
+
+def test_two_registrations_of_one_address_at_once_create_one_account() -> None:
+    results = _at_the_same_time(lambda: _register(SOURCE), lambda: _register("198.51.100.1"))
+
+    assert results == [None, None]
+    user = User.objects.get(email=EMAIL)
+    assert RoleEvent.objects.filter(user=user).count() == 1
+    assert sorted(AccountEvent.objects.values_list("event_type", flat=True)) == [
+        "account_registered",
+        "registration_message_sent",
+        "registration_message_sent",
+        "registration_repeated",
+    ]
+    assert len(django_mail.outbox) == 2
+    # The later message replaced the earlier token; only its link works.
+    assert AccountActivation.objects.filter(user=user).count() == 1
+
+
+def test_registrations_from_one_source_at_once_stay_within_its_limit(
+    settings: LazySettings,
+) -> None:
+    settings.ACCOUNT_REGISTRATION_SOURCE_LIMIT = 2
+
+    def register(number: int) -> Callable[[], None]:
+        return lambda: services.register_account(
+            email=f"test.registrant{number}@caipo.test", source=SOURCE, activation_url=_url
+        )
+
+    results = _at_the_same_time(*(register(number) for number in range(4)))
+
+    assert results == [None] * 4
+    assert User.objects.count() == 2
+    assert AccountEvent.objects.filter(event_type="account_registered").count() == 2

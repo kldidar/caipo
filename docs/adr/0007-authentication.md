@@ -41,7 +41,7 @@ Must not, under any configuration:
 
 1. **Deny by default.** Every view declares the access it requires: public, a named role, or administration. A view with no declaration is refused, and a test enforces that no undeclared view exists. Permissions are checked again in the service layer.
 2. **Document rights are enforced independently of authentication.** Being signed in, in any role, never substitutes for a right, and holding a right never substitutes for a permission. Both checks must pass. See [RIGHTS_AND_LICENSING.md](../RIGHTS_AND_LICENSING.md).
-3. **No public self-registration at launch.** Accounts are created by an Administrator.
+3. **No public self-registration at launch.** Accounts are created by an Administrator. *(Superseded by [ADR-0021](0021-registration-for-the-reader-role.md) on 2026-11-03.)*
 4. **Multi-factor authentication with TOTP is required for Reviewer and Administrator accounts.** Such an account cannot use its privileges until TOTP is enrolled. Other accounts may enrol voluntarily.
 5. **The AI assistant requires an authenticated account** and is subject to per-account quotas and the usage policy. Quotas are tracked persistently in PostgreSQL, never only in a cache.
 6. **Rate limiting.** Public pages are throttled per client address. Login, source submission, uploads, and assistant questions are throttled per account.
@@ -53,7 +53,7 @@ Must not, under any configuration:
 
 ### Not part of launch
 
-- Self-registration
+- Self-registration *(superseded by [ADR-0021](0021-registration-for-the-reader-role.md) on 2026-11-03: registration on the site, for the Reader role)*
 - Institutional single sign-on
 - Machine-to-machine access tokens. There is no API at launch (ADR-0010).
 

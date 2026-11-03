@@ -190,6 +190,16 @@ class PasswordResetRequestForm(forms.Form):
     )
 
 
+class RegistrationForm(forms.Form):
+    """The email address an account is registered for (ADR-0021). Shape only."""
+
+    email = forms.EmailField(
+        label=_("Email address"),
+        max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "email", "autofocus": True}),
+    )
+
+
 class PasswordResetForm(_NewPasswordForm):
     """The code from the reset message and the new password its owner chooses. Shape only."""
 
