@@ -1,0 +1,21 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Add an indicator" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'indicators' %}">{% translate "Economic transformation" %}</a></nav>
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Indicators" %}</p>
+    <h1>{% translate "Add an indicator" %}</h1>
+    <p class="lede">{% translate "Record a provider's measure and the layer it belongs to. The indicator takes the data class of its source. Its values are not entered here: they come only from a provider's release file, imported with its hash, so that every value can be traced to what was obtained." %}</p>
+  </header>
+  <p class="notice notice--warning"><span><strong>{% translate "The layer is a provisional assignment." %}</strong> {% translate "Say why the measure belongs to this layer. Layers are reported on their own and are never combined; a layer is never filled from another." %}</span></p>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{% url 'indicator-create' %}" class="card" novalidate>
+    {% csrf_token %}
+    {% include "web/includes/fields.html" %}
+    <div class="actions"><button type="submit">{% translate "Add the indicator" %}</button> <a class="button button--ghost" href="{% url 'indicators' %}">{% translate "Cancel" %}</a></div>
+  </form>
+{% endblock %}

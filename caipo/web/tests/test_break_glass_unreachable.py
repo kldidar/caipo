@@ -71,8 +71,9 @@ def test_no_route_is_a_break_glass_route() -> None:
     # indicator pages (Day 5), and seven more the research workspace and
     # its exports (Day 6). One more is the registration page (ADR-0021,
     # Day 11), which creates a Reader's account awaiting verification. Six
-    # more are contributed articles and their review (ADR-0022, Day 12).
-    assert len(routes) == 68
+    # more are contributed articles and their review (ADR-0022, Day 12), and
+    # one the page that adds an indicator (Day 13).
+    assert len(routes) == 69
     for route in routes:
         described = f"{route.name} {route.pattern} {route.callback.__module__}"
         assert "break" not in described.lower()

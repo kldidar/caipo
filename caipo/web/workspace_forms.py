@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 from caipo.articles.selectors import ArticleDecisionType
 from caipo.core.data_class import DataClass
+from caipo.indicators.selectors import Layer
 from caipo.policies.selectors import (
     AIFocus,
     ContextualCategory,
@@ -205,4 +206,19 @@ class ArticleDecisionForm(forms.Form):
         max_length=2000,
         strip=False,
         widget=forms.Textarea(attrs={"rows": 4}),
+    )
+
+
+class IndicatorForm(_OptionsForm):
+    """An indicator of a provider (ADR-0020). It takes its data class from its source."""
+
+    source = forms.ChoiceField(label=_("Provider (a registered source)"))
+    code = _text(_("Provider's code"), max_length=64)
+    name = _text(_("Name"), max_length=300)
+    definition = _area(_("Definition, as the provider gives it"))
+    unit = _text(_("Unit"), max_length=100)
+    layer = forms.ChoiceField(label=_("Layer"), choices=Layer.choices)
+    layer_reason = _area(_("Why this layer (a provisional assignment)"), required=True)
+    original_provider = _text(
+        _("Original provider, if the source republishes it"), required=False, max_length=300
     )

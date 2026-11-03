@@ -19,7 +19,7 @@
         <div class="panel__header"><h2 id="chart-title">{% translate "Values by country" %}</h2></div>
         <div class="panel__body">
           {% include "web/includes/line_chart.html" with title=view.name chart=chart %}
-          {% include "web/includes/value_table.html" %}
+          {% if view.years %}{% include "web/includes/value_table.html" %}{% endif %}
           <p class="muted"><small>{% translate "Values are shown rounded to two decimals; they are stored exactly as published. A year without a value is left empty and is never filled in." %}</small></p>
         </div>
       </section>
