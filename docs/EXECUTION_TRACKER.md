@@ -1,6 +1,6 @@
 # Execution Tracker
 
-Status: Progress record, updated with every execution Day · Last updated: 2026-11-03
+Status: Progress record, updated with every execution Day · Last updated: 2026-11-04
 
 This file records progress: what is done, what is waiting, and what comes next. **It decides nothing.** Requirements, phases, gates, blocker status, research rules, and architecture decisions are set by [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md), the Accepted ADRs, [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md), and the other documents listed in [CLAUDE.md](../CLAUDE.md). Where this file disagrees with them, they govern and this file is corrected. The rules for working with it are in [CLAUDE.md](../CLAUDE.md), "Execution workflow". It is the only progress tracker.
 
@@ -35,13 +35,13 @@ Fri 2026-11-06 is the buffer for review, CI, and merges. A Day whose pull reques
 
 ## 1. Verified repository state
 
-Verified on 2026-11-03, after the owner's merges of #39 and #40.
+Verified on 2026-11-04, after the owner's merge of #41.
 
 | Item | Value | How verified |
 |---|---|---|
-| `origin/main` | `efd4c6b`, the merge of #40 (Day 12), after `be8fb08` (#39, Day 11), `bcb9806` (#38, Day 10), `c66e2d4` (#37, Day 9), `2f42d68` (#36, Days 5 to 8), `9e5e9ea` (#31, Day 4), `5ba91c8` (#30, Day 3), and `7904e36` (#29, Day 2) | `git fetch`; `gh pr view 36` |
-| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s`. `9e5e9ea`: run 41405637271, all four checks passed, `4674 passed in 631.67s`. `2f42d68`: run 41409027896, all four checks passed, `4787 passed in 682.99s`. `c66e2d4`: run 41413845532, all four checks passed, `4787 passed in 677.49s`, test job 712 s of its new 1,500 s. `bcb9806`: run 41426022585, all four checks passed, `4807 passed in 684.88s`, test job 721 s. `be8fb08`: run 41669533592, all four checks passed, `4876 passed in 692.82s`. `efd4c6b`: run 41672940236, all four checks passed, `4961 passed in 655.30s` | `gh run view`; job logs |
-| Pull requests | 40 merged, none closed without merging. #1 to #31 and #36 to #40 were merged into `main`. **#32 to #35 were merged into the branches they were stacked on** (`feat/sources-policies`, `feat/indicators`, `feat/research-workspace`, `feat/polish-quality`), not into `main`, on 2026-11-02 between 07:20 and 07:23 UTC; no CI ran on them, because CI runs only for pull requests into `main`. #36 brought Days 5 to 8 to `main`, merged as `2f42d68`. #40 was built on #39 and opened against `main`; its squash merge restored two tracker rows that Day 12 had deleted and Day 11 had added, which Day 13 deletes again (§11). Open: only the one that changes this file (Day 13) | `gh pr list`; merge bases |
+| `origin/main` | `6806c72`, the merge of #41 (Day 13), after `efd4c6b` (#40, Day 12), `be8fb08` (#39, Day 11), `bcb9806` (#38, Day 10), `c66e2d4` (#37, Day 9), `2f42d68` (#36, Days 5 to 8), `9e5e9ea` (#31, Day 4), `5ba91c8` (#30, Day 3), and `7904e36` (#29, Day 2) | `git fetch`; `gh pr view 36` |
+| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s`. `9e5e9ea`: run 41405637271, all four checks passed, `4674 passed in 631.67s`. `2f42d68`: run 41409027896, all four checks passed, `4787 passed in 682.99s`. `c66e2d4`: run 41413845532, all four checks passed, `4787 passed in 677.49s`, test job 712 s of its new 1,500 s. `bcb9806`: run 41426022585, all four checks passed, `4807 passed in 684.88s`, test job 721 s. `be8fb08`: run 41669533592, all four checks passed, `4876 passed in 692.82s`. `efd4c6b`: run 41672940236, all four checks passed, `4961 passed in 655.30s`. `6806c72`: run 41772648126, all four checks passed, `4966 passed in 704.52s` | `gh run view`; job logs |
+| Pull requests | 41 merged, none closed without merging. #1 to #31 and #36 to #41 were merged into `main`. **#32 to #35 were merged into the branches they were stacked on** (`feat/sources-policies`, `feat/indicators`, `feat/research-workspace`, `feat/polish-quality`), not into `main`, on 2026-11-02 between 07:20 and 07:23 UTC; no CI ran on them, because CI runs only for pull requests into `main`. #36 brought Days 5 to 8 to `main`, merged as `2f42d68`. #40 was built on #39 and opened against `main`; its squash merge restored two tracker rows that Day 12 had deleted and Day 11 had added, which Day 13 deletes again (§11). Open: only the one that changes this file (Day 14) | `gh pr list`; merge bases |
 | Protection of `main` | Ruleset "Protect main": pull request required, the four checks required with strict status checks, no bypass | GitHub API, 2026-10-30 |
 | Phase and gate | Phase 1. Gate READY for Phase 1, NOT READY for Phase 2 and later. Unchanged by ADR-0020 | [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 (authoritative) |
 | CI time headroom | The test job took 480 s to 738 s in the 25 successful runs from 2026-10-24 to 2026-11-02; runs of the same 4,494 tests ranged from 480 s to 699 s. Its limit was 900 s; Day 9 raises it to 1,500 s with the owner's approval (§9) | Job start and end times of those runs (`gh run view`) |
@@ -74,7 +74,7 @@ Counted from the packages in §4. No percentage is estimated.
 | Master-roadmap packages | 56 (57 listed, of which G1 is REMOVED) |
 | Sprint packages (S1 to S8) | 8 |
 | DONE | 15 (A1, H1, H6, E1, G3, F2 and F4 in their demonstrator forms, S1 to S8) |
-| AWAITING OWNER MERGE | 0; Day 13's pull request closes no package by itself |
+| AWAITING OWNER MERGE | 0; Day 14's pull request closes no package by itself |
 | Sprint packages NOT STARTED or BLOCKED on another sprint package | 0 |
 | Master-roadmap packages PARTIAL | 5 (A3, E2, E4, G4, J1; §12 says what is missing) |
 | Master-roadmap packages BLOCKED | 41 |
@@ -235,7 +235,8 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 10 | Translatable refusal messages, reflow at 400 % zoom, accessibility tree | G4 | 2026-11-02 | **DONE**: merged as `bcb9806`; CI run 41426022585 passed all four checks; `4807 passed` | #38 |
 | 11 | Registration on the site for the Reader role, and where development messages go | Owner request of 2026-11-03 | 2026-11-03 | **DONE**: merged as `be8fb08`; CI run 41669533592 passed all four checks; `4876 passed` | #39 |
 | 12 | Contributed articles, published after review | Owner request of 2026-11-03 | 2026-11-03 | **DONE**: merged as `efd4c6b`; CI run 41672940236 passed all four checks; `4961 passed` | #40 |
-| 13 | A page to add an indicator; tracker corrections after the merges of Days 11 and 12 | J1 (acceptance list, item B) | 2026-11-03 | AWAITING OWNER MERGE | The pull request that changes this file |
+| 13 | A page to add an indicator; tracker corrections after the merges of Days 11 and 12 | J1 (acceptance list, item B) | 2026-11-03 | **DONE**: merged as `6806c72`; CI run 41772648126 passed all four checks; `4966 passed` | #41 |
+| 14 | Final delivery check: a rehearsal of the demonstration from an empty database, refreshed screenshots, and the defect it found | J1 | 2026-11-04 | AWAITING OWNER MERGE | The pull request that changes this file |
 
 ### Planned Days
 
@@ -266,7 +267,7 @@ Days 5 to 8 get full checklists when they start; their deliverables are in §4.1
 
 | Pull request | Day | Head | Status |
 |---|---|---|---|
-| The pull request that changes this file | 13 | Reported when it is opened | Awaiting CI, then the owner's merge |
+| The pull request that changes this file | 14 | Reported when it is opened | Awaiting CI, then the owner's merge |
 
 ## 8. Blockers and dependencies
 
@@ -303,6 +304,7 @@ Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 
 | 2026-11-03 | **Provisional**, within ADR-0022: who may send (Reader, Researcher, Reviewer) and who may review (Reviewer and Administrator, with a second factor); five articles a day from one account; the length of each part; a withdrawal after publication; reviewers' own pages, because an Administrator does not read the workspace | Claude Code, under the owner's delegation | ADR-0022; `caipo/accounts/authorization.py` |
 | 2026-11-03 | **Provisional**, within ADR-0021: the limits (ten registrations an hour from one source; three verification messages an hour to one waiting account), the three account event types, the Reader grant without an actor, and the note about `data/outbox/` on the registration and password reset pages in development | Claude Code, under the owner's delegation | ADR-0021; `caipo/config/settings/base.py` |
 | 2026-11-03 | Accessibility evidence for Days 11 and 12: axe-core 4.10.2 (scratch environment, not added to the project) finds no violation on the registration, sign-in, and home pages at 1280 and 390 CSS px in light and dark mode, nor on the six article pages, including the review pages of a verified Administrator. One defect found and fixed: the navigation of a signed-in account ran past the right edge at 1280 px once "Articles" was added, and an Administrator's already did at 1366 px. Its items now wrap onto a second line, and the tag line under the name gives way beside a navigation below 1500 px; no role's page scrolls sideways at 1181, 1280, 1366, or 1440 px | Claude Code | This file; `caipo/web/static/web/caipo.css` |
+| 2026-11-04 | Rehearsal of the demonstration (Day 14), on a database created empty: `check`, `migrate`, and `seed_demo` in 6 seconds; `create_first_administrator` driven at a pseudo-terminal with a code computed from the key it showed; then each step of the walk-through in [DEMO.md](DEMO.md), in a browser: the public home page, the Reader's overview, RP-358 with its derived status, the contextual registry, the demonstration strategy, layers B and C, *Reproduced exactly*, the CSV export, the bounded negative finding, the refusal of a demonstration policy for Turkmenistan and its creation for DEMO Northland, a new analysis run, a registration through the message in `data/outbox/`, an article published by the Administrator, and four pages at phone width in dark mode (no sideways scrolling, no axe-core violation). **One defect found and fixed:** the CSV export of an analysis wrote a negative number as text with a leading apostrophe (`'-6.352022`), against SECURITY.md's rule that numeric cells are not altered; numbers are now written as numbers, and text that begins like a formula is still neutralised. Screenshots in `docs/images/` were taken again, with two new ones (articles, registration) | Claude Code | This file; [DEMO.md](DEMO.md); `caipo/web/exports.py` |
 | 2026-10-30 | P-1 (part of Q-10), **provisional**: WCAG 2.2 level AA as the accessibility target of the demonstrator's pages, checked in S2 and S7 | Claude Code, under the owner's delegation to choose a reasonable default and record it as provisional | This file. The owner may replace it |
 
 ## 10. Decisions awaiting the owner
@@ -326,10 +328,10 @@ Recommended defaults are recommendations, not decisions. None of them blocks the
 
 ## 11. Next executable Day
 
-- **Day 13** (a page to add an indicator) is the pull request that changes this file. Days 11 and 12 are DONE (`be8fb08`, `efd4c6b`).
+- **Day 14** (final delivery check) is the pull request that changes this file. Days 11 to 13 are DONE (`be8fb08`, `efd4c6b`, `6806c72`).
 - **Correction of 2026-11-03.** #40 was built on #39 and opened against `main`. After #39 was squash-merged, the squash merge of #40 kept two rows of this file that Day 11 had added and Day 12 had deleted (the planned Day 12 and the open Q-15). Every other file on `main` is identical to what Day 12's checks ran on (`git diff c3fd485 efd4c6b`). Day 13 deletes the two rows again. A pull request built on another is compared with its own head after both merges.
 - **After the merges:** the owner runs `migrate` on the development database (accounts 0013 and 0014, articles 0001).
-- **What remains before 2026-11-06:** a check by a person using a screen reader (the owner), and a clean-setup run of the demonstration on an empty database.
+- **What remains before 2026-11-06:** a check by a person using a screen reader (the owner). The clean-setup rehearsal is done (Day 14, §9).
 - **Correction of 2026-11-02, kept for the record.** The stacked pull requests #32 to #35 were merged into their stack branches, not `main`, because GitHub retargets a stacked pull request only when its base branch is deleted. #36 brought their four commits to `main` unchanged. No pull request is stacked from now on unless it is retargeted to `main` by hand before it is merged.
 - **Before the demonstration:** the owner reads [DEMO.md](DEMO.md) and runs `seed_demo` on an empty development database.
 - **What remains of the owner's acceptance list (§12):** a page to add an indicator (an import of values stays out of the demonstrator by ADR-0020 point 3), and a check by a person using a screen reader. Then the post-sprint queue (§5).
@@ -346,7 +348,7 @@ The list of the owner's mandate of 2026-10-30, §11, checked on 2026-11-02 again
 | A. Seeded demonstration environment | Met | `seed_demo` on an empty database in under 3 seconds (Day 8) |
 | A. Working authentication | Met | Phase 1, with TOTP for Reviewers and Administrators; demonstration accounts for Researcher and Reader; registration on the site for the Reader role (Day 11) |
 | A. Complete primary user journeys | Met | `caipo/web/tests/test_journeys.py`, through the sign-in form on the seeded environment |
-| A. Functional backend and frontend | Met | 69 routes, each with a declared access; 4,961 tests passing in CI on `efd4c6b` |
+| A. Functional backend and frontend | Met | 69 routes, each with a declared access; 4,966 tests passing in CI on `6806c72`; the whole walk-through rehearsed in a browser from an empty database (Day 14) |
 | A. Error, empty, and loading states | Met for error and empty states | Error pages; empty states that say an empty list is not evidence of absence. Pages are rendered on the server, so there is no asynchronous loading to show |
 | B. Source and provenance management | Met | Sources and documents with publisher, address, access date, terms, permitted use, tier; releases with SHA-256 |
 | B. Policy instrument and provision records | Met | Policies, formal events, AI-related provisions with locators |

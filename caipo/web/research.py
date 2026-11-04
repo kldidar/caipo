@@ -6,6 +6,7 @@ permission again. Checking a run's reproducibility writes nothing.
 """
 
 import uuid
+from decimal import Decimal
 from typing import Any
 
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseRedirect
@@ -44,6 +45,10 @@ _RESULT_COLUMNS = (
     "years_held",
     "years_missing",
     "values_flagged",
+)
+# The columns whose values the stored result holds as exact decimal text.
+_NUMERIC_COLUMNS = frozenset(
+    {"start_value", "end_value", "absolute_change", "relative_change_percent"}
 )
 
 
@@ -166,14 +171,23 @@ def _notes(entry: AnalysisEntry) -> list[str]:
 @never_cache
 @require_safe
 def analysis_csv(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
-    """Export a run's result as CSV, with its provenance and methodology note."""
+    """Export a run's result as CSV, with its provenance and methodology note.
+
+    The stored result holds its values as exact decimal text; they are
+    written as numbers, so that a fall keeps its sign and is not quoted.
+    """
     _, entry = _run(request, public_id)
+
+    def cell(row: dict[str, Any], column: str) -> object:
+        value = row.get(column)
+        return Decimal(value) if column in _NUMERIC_COLUMNS and value is not None else value
+
     return csv_response(
         f"caipo-analysis-{entry.public_id}.csv",
         _notes(entry),
         ("data_class", *_RESULT_COLUMNS),
         (
-            (entry.data_class, *(row.get(column) for column in _RESULT_COLUMNS))
+            (entry.data_class, *(cell(row, column) for column in _RESULT_COLUMNS))
             for row in entry.result
         ),
     )

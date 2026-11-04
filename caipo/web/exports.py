@@ -11,6 +11,7 @@ import csv
 import io
 import json
 from collections.abc import Iterable, Sequence
+from decimal import Decimal
 from typing import Any
 
 from django.http import HttpResponse
@@ -25,7 +26,14 @@ NON_CAUSATION = (
 
 
 def safe_cell(value: object) -> str:
-    """Return a value as CSV text that no spreadsheet will run as a formula."""
+    """Return a value as CSV text that no spreadsheet will run as a formula.
+
+    A number (an int or a Decimal, never a bool) is written as it is: it
+    cannot run, and a sign is part of its value (SECURITY.md, "Export
+    safety"). Text that begins as a formula would is kept as text.
+    """
+    if isinstance(value, int | Decimal) and not isinstance(value, bool):
+        return str(value)
     text = "" if value is None else str(value)
     if text.startswith(_FORMULA_START):
         return "'" + text
