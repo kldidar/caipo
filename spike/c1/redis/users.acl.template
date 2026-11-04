@@ -1,0 +1,5 @@
+user default off
+user trusted on >TRUSTED_PW ~* &* +@all -@dangerous +acl|log
+user parse on >PARSE_PW resetchannels -@all +@connection +blmove +lrem +llen ~q:parse ~q:parse:processing
+user parse_celery on >PARSE_CELERY_PW resetchannels -@all +@connection +brpop +lpush +rpush +lrange +llen +hset +hget +hdel +hgetall +zadd +zrem +zrangebyscore +zrange +zrevrangebyscore +zcard +set +del +get +smembers +sadd +multi +exec +watch +unwatch +eval +evalsha +script|load +info +ping ~parse* ~unacked:parse ~unacked_index:parse ~unacked_mutex:parse ~_kombu.binding.parse ~_kombu.binding_permanent.parse
+user parse_dramatiq on >PARSE_DRAMATIQ_PW resetchannels -@all +@connection +@scripting +@list +@hash +@sortedset +@set +@string +@keyspace -keys -flushdb -flushall ~dramatiq ~dramatiq:parse* ~dramatiq:__acks__.*.parse* ~dramatiq:__heartbeats__
