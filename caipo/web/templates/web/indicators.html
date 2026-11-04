@@ -8,6 +8,7 @@
     <p class="eyebrow">{% translate "Workspace" %}</p>
     <h1>{% translate "Economic transformation" %}</h1>
     <p class="lede">{% translate "Indicators in three separate layers. Layers are reported on their own for each country and are never combined into an index or an overall verdict." %}</p>
+    {% if may_contribute %}<div class="actions"><a class="button button--secondary" href="{% url 'indicator-create' %}">{% translate "Add an indicator" %}</a></div>{% endif %}
   </header>
 
   <p class="notice notice--warning"><span><strong>{% translate "Not a causal analysis." %}</strong> {% translate "These views show what was measured. They do not show that any policy caused any change, and a pattern across layers or countries is not evidence of a cause." %}</span></p>

@@ -172,6 +172,7 @@ urlpatterns = [
     ),
     path("policies/<uuid:public_id>/assignment/", policies.reassign, name="policy-reassign"),
     path("indicators/", indicators.compare, name="indicators"),
+    path("indicators/new/", indicators.create, name="indicator-create"),
     path("indicators/<uuid:public_id>/", indicators.detail, name="indicator"),
     path("analysis/", research.analyses, name="analyses"),
     path("analysis/<uuid:public_id>/", research.analysis, name="analysis"),

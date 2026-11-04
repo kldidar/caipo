@@ -43,6 +43,7 @@ A walk-through of 5 to 10 minutes for a professor or a reviewer, and an honest a
 Questions it is worth being ready for:
 
 - *How do you know a value was not altered?* Each release is identified by the SHA-256 of the files obtained, the files are checked against their manifest before being read, and observations are append-only at the database.
+- *Can a researcher add an indicator?* Yes: **Indicators → Add an indicator**, with its provider, its layer, and the reason for the layer, which is provisional. Its values are never typed in: they come only from a provider's release file, imported with its SHA-256, and there is deliberately no upload page in the demonstrator ([ADR-0020](adr/0020-demonstrator-track.md) point 3).
 - *Why so few real policies?* The reference records come from a bounded search, recorded as search runs. Building the full corpus is research work behind the gates (B9, B22).
 - *Can it compare policy dates with indicator changes?* It could compute it, and deliberately does not yet: the protocol allows such a comparison only as a correlation with a recorded design, which is not settled.
 - *What about the AI assistant?* Designed in [AI_ARCHITECTURE.md](AI_ARCHITECTURE.md) and not built; it waits for provider, retrieval, and evaluation decisions (B14 to B16, B19, B24).

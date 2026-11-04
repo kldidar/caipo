@@ -1,5 +1,6 @@
 """The economic transformation pages (ADR-0020)."""
 
+import re
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -7,9 +8,11 @@ from typing import Any
 import pytest
 from django.test import Client
 
+from caipo.accounts.models import AuditEvent
 from caipo.accounts.selectors import Role
 from caipo.accounts.tests.fixtures import UserFactory
 from caipo.indicators import services
+from caipo.indicators.models import Indicator
 from caipo.indicators.services import ObservationRow
 from caipo.registry.tests.helpers import ActingAs
 from caipo.sources.tests.helpers import World, make_source, make_world
@@ -143,3 +146,97 @@ def test_unknown_parameters_fall_back_rather_than_fail(
 
     assert response.status_code == 200
     assert "TEST Agriculture share" in _text(response)
+
+
+# --- Adding an indicator (Day 13) ------------------------------------------------------------
+
+
+@pytest.fixture
+def researcher(user_with_roles: UserFactory) -> Client:
+    return signed_in(Client(), user_with_roles(Role.RESEARCHER))
+
+
+def _source_of(client: Client, data_class: str) -> str:
+    """The identifier of a source the form offers, by its data class label."""
+    page = _text(client.get("/indicators/new/"))
+    label = "Demonstration data" if data_class == "demonstration" else "Reference data"
+    match = re.search(rf'<option value="([0-9a-f-]+)">[^<]*\({label}\)</option>', page)
+    assert match is not None, page[:2000]
+    return match.group(1)
+
+
+def _new(**changes: str) -> dict[str, str]:
+    return {
+        "code": "TEST-NEW",
+        "name": "TEST new indicator",
+        "definition": "TEST definition, as a provider gives it.",
+        "unit": "%",
+        "layer": "B",
+        "layer_reason": "TEST reason for layer B",
+        "original_provider": "",
+        **changes,
+    }
+
+
+def test_a_researcher_adds_an_indicator_that_takes_its_sources_data_class(
+    researcher: Client, reader: Client, records: dict[str, Any]
+) -> None:
+    source = _source_of(researcher, "demonstration")
+
+    response = researcher.post("/indicators/new/", {"source": source, **_new()})
+
+    assert response.status_code == 302
+    indicator = Indicator.objects.get(code="TEST-NEW")
+    assert response["Location"] == f"/indicators/{indicator.public_id}/"
+    assert indicator.data_class == "demonstration"
+    assert (indicator.layer, indicator.layer_reason) == ("B", "TEST reason for layer B")
+    assert AuditEvent.objects.filter(
+        target_type="indicators.indicator", target_public_id=indicator.public_id
+    ).exists()
+    page = _text(reader.get(response["Location"]))
+    assert "TEST new indicator" in page
+    assert "TEST reason for layer B" in page
+    # No value is held yet: the page says so, with no empty table under it.
+    assert "No value is held for any country." in page
+    assert "<table" not in page
+
+
+def test_the_comparison_page_offers_the_form_to_researchers_only(
+    researcher: Client, reader: Client, records: dict[str, Any]
+) -> None:
+    assert 'href="/indicators/new/"' in _text(researcher.get("/indicators/"))
+    assert 'href="/indicators/new/"' not in _text(reader.get("/indicators/"))
+
+
+def test_a_reader_cannot_add_an_indicator(reader: Client, records: dict[str, Any]) -> None:
+    before = Indicator.objects.count()
+
+    assert reader.get("/indicators/new/").status_code == 403
+    assert reader.post("/indicators/new/", _new()).status_code == 403
+    assert Indicator.objects.count() == before
+
+
+def test_a_refused_indicator_is_shown_again_with_the_reason(
+    researcher: Client, records: dict[str, Any]
+) -> None:
+    source = _source_of(researcher, "demonstration")
+    before = Indicator.objects.count()
+
+    duplicate = researcher.post("/indicators/new/", {"source": source, **_new(code="TEST-C")})
+    incomplete = researcher.post("/indicators/new/", {"source": source, **_new(layer_reason="")})
+    unknown = researcher.post(
+        "/indicators/new/", {"source": "00000000-0000-4000-8000-000000000001", **_new()}
+    )
+
+    assert duplicate.status_code == 400
+    assert 'role="alert"' in _text(duplicate)
+    assert incomplete.status_code == 400
+    assert unknown.status_code == 400
+    assert Indicator.objects.count() == before
+
+
+def test_the_form_says_values_are_not_entered_here(researcher: Client) -> None:
+    page = _text(researcher.get("/indicators/new/"))
+
+    assert "Its values are not entered here" in page
+    assert "provisional assignment" in page
