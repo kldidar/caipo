@@ -24,7 +24,8 @@ CAIPO records public policy sources with their provenance, keeps the **core AI p
 | ![Economic transformation](docs/images/indicators.webp) | **Economic transformation.** Indicators in layers A (structural change), B (digital transformation), and C (AI-specific outcomes), never combined. Real World Bank values for Turkmenistan and Uzbekistan, with every gap shown as a gap; layer C is reported as having no indicator rather than dropped. |
 | ![Analysis](docs/images/analysis.webp) | **Analysis.** Descriptive change between two years, with every input value and its release, SHA-256 fingerprints of inputs and result, a one-click reproducibility check, and CSV and JSON exports carrying their provenance. |
 | ![Search](docs/images/search.webp) | **Searches.** How the absence of a source is recorded: as the bounded outcome of a documented search, never as a document. |
-| ![Dark mode](docs/images/indicators-dark.webp) | **Design.** A bespoke design system with light and dark themes, self-hosted fonts that cover Turkmen, Uzbek, and Russian, and layouts down to phone width ([phone](docs/images/phone.webp)). No violation of the WCAG 2.2 A/AA rules found by axe-core on 17 pages in either theme. |
+| ![Articles](docs/images/articles.webp) | **Articles.** Anyone can [register](docs/images/register.webp) a Reader account and contribute an article. A Reviewer or Administrator, signed in with a second factor, publishes it or declines it with a reason the author sees. Every [article](docs/images/article.webp) is labelled as its author's view, not evidence, and is published under CC BY 4.0. |
+| ![Dark mode](docs/images/indicators-dark.webp) | **Design.** A bespoke design system with light and dark themes, self-hosted fonts that cover Turkmen, Uzbek, and Russian, and layouts down to phone width ([phone](docs/images/phone.webp)). No violation of the WCAG 2.2 A/AA rules found by axe-core on 17 pages in either theme, nor on the registration, article, and indicator pages added since. |
 
 ## Real data and demonstration data are never mixed
 
@@ -82,7 +83,7 @@ Sign in as `demo.researcher@caipo.test` (can add records and run analyses) or `d
 To run the checks:
 
 ```sh
-uv run --env-file .env pytest                 # about 4,800 tests, about 10 minutes
+uv run --env-file .env pytest                 # about 5,000 tests, about 12 minutes
 uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run lint-imports
 ```
 

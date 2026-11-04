@@ -159,6 +159,62 @@ def test_a_cell_that_looks_like_a_formula_is_neutralised(value: str) -> None:
     assert safe_cell(value) == "'" + value
 
 
+@pytest.mark.parametrize(
+    ("value", "written"),
+    [(Decimal("-6.352022"), "-6.352022"), (Decimal("12.5"), "12.5"), (-3, "-3"), (2024, "2024")],
+)
+def test_a_number_is_written_as_a_number_and_not_altered(value: object, written: str) -> None:
+    """SECURITY.md, "Export safety": numeric cells are written as numbers and are not altered."""
+    assert safe_cell(value) == written
+
+
+def test_a_bool_is_not_taken_for_a_number() -> None:
+    assert safe_cell(True) == "True"
+
+
+def test_a_fall_is_exported_as_a_negative_number(acting_as: ActingAs, reader: Client) -> None:
+    world = make_world()
+    actor = acting_as(Role.RESEARCHER)
+    source = make_source(actor, world)
+    indicator = indicator_services.create_indicator(
+        actor=actor,
+        source=source,
+        code="TEST-F",
+        name="TEST fall",
+        unit="%",
+        layer="A",
+        layer_reason="TEST",
+    )
+    indicator_services.import_release(
+        actor=actor,
+        source=source,
+        label="TEST release",
+        retrieved_on=date(2026, 1, 1),
+        file_name="t",
+        sha256="e" * 64,
+        rows=[
+            ObservationRow("TEST-F", "XA", 2020, Decimal("3"), "reported"),
+            ObservationRow("TEST-F", "XA", 2021, Decimal("1"), "reported"),
+        ],
+    )
+    run = services.run_analysis(
+        actor=actor,
+        title="TEST fall",
+        data_class="demonstration",
+        indicators=[indicator],
+        start_year=2020,
+        end_year=2021,
+    )
+
+    rows = list(csv.reader(io.StringIO(_text(reader.get(f"/analysis/{run}/export.csv")))))
+    header = next(row for row in rows if row and row[0] == "data_class")
+    data = rows[rows.index(header) + 1]
+
+    assert data[header.index("absolute_change")] == "-2.000000"
+    assert Decimal(data[header.index("relative_change_percent")]) == Decimal("-66.666667")
+    assert data[header.index("start_value")] == "3"
+
+
 def test_a_researcher_records_a_search_and_its_negative_finding_is_bounded(
     researcher: Client, records: dict[str, Any]
 ) -> None:

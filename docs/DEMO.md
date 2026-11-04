@@ -16,7 +16,7 @@ A walk-through of 5 to 10 minutes for a professor or a reviewer, and an honest a
    uv run --env-file .env python manage.py runserver
    ```
 
-   Verified on 2026-11-02 on an empty database: `check`, `migrate`, and `seed_demo` together took under 3 seconds, and `/health/ready/` answered `ok`.
+   Verified on 2026-11-02 on an empty database: `check`, `migrate`, and `seed_demo` together took under 3 seconds, and `/health/ready/` answered `ok`. **Rehearsed on 2026-11-04** from an empty database: `check`, `migrate`, and `seed_demo` in 6 seconds; `create_first_administrator` at a terminal, with a code from an authenticator; then every step of the table below in a browser, including a registration through the message in `data/outbox/` and an article that the Administrator published. Each gave what the table says.
 3. Open two browser windows: one signed in as `demo.reader@caipo.test`, one as `demo.researcher@caipo.test`. Keep a third, signed out, on `http://127.0.0.1:8000/`.
 4. To show the review of articles, also sign in as an Administrator with two-step verification: the one `create_first_administrator` created ([DEVELOPMENT.md](DEVELOPMENT.md)). `seed_demo` creates no Administrator, because one cannot exist without a second factor.
 
@@ -57,7 +57,7 @@ Questions it is worth being ready for:
 - The registry, and the general audit record of every change.
 - Sources, documents (metadata), policies with formal events and AI-related provisions, indicators, dataset releases, observations, analysis runs, search runs, and their pages, forms, and exports ([DATA_MODEL.md](DATA_MODEL.md) §7a).
 - Integrity enforced by PostgreSQL: data-class checks, append-only and delete-refusing triggers, the missing-value rule, the no-reference-text rule.
-- About 4,800 automated tests, including end-to-end journeys on the seeded environment; strict type checking; import-layer contracts; CI on every pull request.
+- About 5,000 automated tests, including end-to-end journeys on the seeded environment; strict type checking; import-layer contracts; CI on every pull request.
 
 ### Real data, used within its limits
 
