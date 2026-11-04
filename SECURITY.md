@@ -321,8 +321,8 @@ Decided in [ADR-0022](docs/adr/0022-contributed-articles.md). Registered account
 
 **Creating an account**
 
-- **Only an Administrator signed in with a trusted second factor creates an account.** It needs the permission `accounts.create`, which only the Administrator role holds and which exists only at `MFA_VERIFIED`. The page and the service both check it, and nothing from the browser names the actor.
-- **There is no registration.** No page, setting, or request creates an account without an acting Administrator.
+- **Only an Administrator signed in with a trusted second factor creates an account with a role of their choosing.** It needs the permission `accounts.create`, which only the Administrator role holds and which exists only at `MFA_VERIFIED`. The page and the service both check it, and nothing from the browser names the actor.
+- **Registration creates a Reader's account and nothing else** ("Registration as implemented" above, [ADR-0021](docs/adr/0021-registration-for-the-reader-role.md), which superseded the earlier rule that there is no registration). No other page, setting, or request creates an account without an acting Administrator.
 - **The Administrator gives an email address and one role, and never a password.** The role must be one of the four. It is granted by the role service under its own rules and recorded as a RoleEvent naming the Administrator. Extra fields in a manipulated form are ignored: the account gets exactly one role, awaits verification, and has no password anybody knows.
 - **A privileged role given at creation confers nothing yet.** A new Reviewer or Administrator must be activated, then ask for a second factor, have it approved by an Administrator, verify it, and sign in with it (ADR-0014). Until then the role gives only the permission to manage its own second factor.
 - The account, its role event, its token, and the record of its creation are written in one transaction.
