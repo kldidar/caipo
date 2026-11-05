@@ -1,0 +1,58 @@
+{"role": "trusted", "req": "6", "check": "enqueues a job with its attempt counted in PostgreSQL", "pass": true, "detail": ""}
+{"role": "trusted", "req": "6", "check": "learns of completion from the result file alone, and validates it", "pass": true, "detail": "{'job': 'job-1', 'text_length': 13}"}
+{"role": "trusted", "req": "3", "check": "nothing appeared on another queue", "pass": true, "detail": "q:default length 0"}
+{"role": "parse", "req": "1", "check": "no database credentials in the environment", "pass": true, "detail": "CELERY_BROKER_URL DRAMATIQ_BROKER_URL HOME HOSTNAME LANG PATH PYTHON_SHA256 PYTHON_VERSION REDIS_URL"}
+{"role": "parse", "req": "1", "check": "PostgreSQL is not reachable", "pass": true, "detail": "gaierror: [Errno -3] Temporary failure in name resolution"}
+{"role": "parse", "req": "2", "check": "no AI provider credentials in the environment", "pass": true, "detail": "CELERY_BROKER_URL DRAMATIQ_BROKER_URL HOME HOSTNAME LANG PATH PYTHON_SHA256 PYTHON_VERSION REDIS_URL"}
+{"role": "parse", "req": "4", "check": "the trusted worker's host is not reachable", "pass": true, "detail": "gaierror: [Errno -3] Temporary failure in name resolution"}
+{"role": "parse", "req": "4", "check": "the broker is reachable", "pass": true, "detail": "connected"}
+{"role": "parse", "req": "8", "check": "no outbound connection to 1.1.1.1:443", "pass": true, "detail": "OSError: [Errno 101] Network is unreachable"}
+{"role": "parse", "req": "8", "check": "no outbound connection to 8.8.8.8:53", "pass": true, "detail": "OSError: [Errno 101] Network is unreachable"}
+{"role": "parse", "req": "8", "check": "no name resolution of external hosts", "pass": true, "detail": "[Errno -3] Temporary failure in name resolution"}
+{"role": "parse", "req": "3", "check": "takes a job from its own queue", "pass": true, "detail": "job-1"}
+{"role": "parse", "req": "3", "check": "cannot push to another queue", "pass": true, "detail": "NoPermissionError: User parse has no permissions to run the 'lpush' command"}
+{"role": "parse", "req": "3", "check": "cannot push to its own queue either", "pass": true, "detail": "NoPermissionError: User parse has no permissions to run the 'lpush' command"}
+{"role": "parse", "req": "3", "check": "cannot take from another queue", "pass": true, "detail": "NoPermissionError: No permissions to access a key"}
+{"role": "parse", "req": "3", "check": "cannot read another key", "pass": true, "detail": "NoPermissionError: User parse has no permissions to run the 'get' command"}
+{"role": "parse", "req": "3", "check": "cannot publish on a channel", "pass": true, "detail": "NoPermissionError: User parse has no permissions to run the 'publish' command"}
+{"role": "parse", "req": "3", "check": "cannot list keys", "pass": true, "detail": "NoPermissionError: User parse has no permissions to run the 'keys' command"}
+{"role": "parse", "req": "3", "check": "cannot change the server's configuration", "pass": true, "detail": "NoPermissionError: User parse has no permissions to run the 'config|get' command"}
+{"role": "parse", "req": "9", "check": "reads the artifact", "pass": true, "detail": "TEST artifact"}
+{"role": "parse", "req": "9", "check": "cannot write to the artifact store", "pass": true, "detail": "OSError: [Errno 30] Read-only file system: '/artifacts/forged.txt'"}
+{"role": "parse", "req": "9", "check": "cannot write to its own filesystem", "pass": true, "detail": "OSError: [Errno 30] Read-only file system: '/app/forged.py'"}
+{"role": "parse", "req": "5", "check": "writes its result as a file in the results area", "pass": true, "detail": ""}
+{"role": "trusted", "req": "6", "check": "Celery: the trusted side sends a task to the parse queue", "pass": true, "detail": ""}
+{"role": "parse", "req": "5", "check": "Celery: the worker ran the task under its limited user and wrote the result file", "pass": true, "detail": ""}
+{"role": "parse", "req": "3", "check": "Celery: cannot publish a task to another queue", "pass": true, "detail": "OperationalError: Command # 1 (LLEN default) of pipeline caused error: No permissions to access a key"}
+{"role": "parse", "req": "3", "check": "Celery (finding): CAN publish to its own queue", "pass": false, "detail": "published; kombu needs LPUSH on its own queue to restore unacknowledged tasks"}
+{"role": "parse", "req": "5", "check": "Dramatiq: the worker ran the task under its limited user and wrote the result file", "pass": true, "detail": ""}
+{"role": "parse", "req": "3", "check": "Dramatiq: cannot enqueue a message on another queue", "pass": true, "detail": "ResponseError: ACL failure in script: No permissions to access a key script: fdacc359c79a5adc3b8eeb53ff5772d7c42144e3, on @user_script:149."}
+{"role": "parse", "req": "3", "check": "Dramatiq: (finding) enqueue on its own queue", "pass": false, "detail": "enqueued"}
+{"role": "trusted", "req": "7", "check": "trusted-side delivery: a worker killed twice mid-task gives two counted attempts, then a failed job", "pass": true, "detail": "{\"attempts\": 2, \"state\": \"failed\", \"queued\": 0, \"processing\": 0}"}
+{"role": "parse", "req": "7", "check": "Celery (finding): deliveries of one task after two kills mid-task, with nothing on the isolated side able to bound them", "pass": false, "detail": "deliveries=3"}
+{"role": "fetch", "req": "1", "check": "no database credentials in the environment", "pass": true, "detail": "EGRESS_PROXY HOME HOSTNAME LANG PATH PYTHON_SHA256 PYTHON_VERSION"}
+{"role": "fetch", "req": "2", "check": "no AI provider credentials in the environment", "pass": true, "detail": ""}
+{"role": "fetch", "req": "1", "check": "PostgreSQL is not reachable", "pass": true, "detail": "gaierror: [Errno -3] Temporary failure in name resolution"}
+{"role": "fetch", "req": "10", "check": "no direct connection to the internet, around the proxy", "pass": true, "detail": "OSError: [Errno 101] Network is unreachable"}
+{"role": "fetch", "req": "10", "check": "a public site is reached through the egress proxy", "pass": true, "detail": "ok"}
+{"role": "fetch", "req": "10", "check": "refused at network level: the cloud metadata address", "pass": true, "detail": "HTTP 403"}
+{"role": "fetch", "req": "10", "check": "refused at network level: loopback", "pass": true, "detail": "HTTP 403"}
+{"role": "fetch", "req": "10", "check": "refused at network level: a private address (10/8)", "pass": true, "detail": "HTTP 403"}
+{"role": "fetch", "req": "10", "check": "refused at network level: a private address (192.168/16)", "pass": true, "detail": "HTTP 403"}
+{"role": "fetch", "req": "10", "check": "refused at network level: an internal service by name", "pass": true, "detail": "HTTP 403"}
+{"role": "fetch", "req": "10", "check": "refused at network level: a public name that resolves to loopback (rebinding-style)", "pass": true, "detail": "HTTP 403"}
+{"role": "fetch", "req": "10", "check": "refused at network level: a port other than 80 and 443", "pass": true, "detail": "tunnel refused: <urlopen error Tunnel connection failed: 403 Forbidden>"}
+{"role": "fetch", "req": "11", "check": "the artifact store is not mounted", "pass": true, "detail": ""}
+{"role": "fetch", "req": "11", "check": "writes to the landing area", "pass": true, "detail": ""}
+{"role": "fetch", "req": "11", "check": "cannot write to its own filesystem", "pass": true, "detail": "[Errno 30] Read-only file system: '/app/forged.py'"}
+{"acl_denied": {"user": "parse_dramatiq", "reason": "key", "object": "dramatiq:default.msgs"}}
+{"acl_denied": {"user": "parse_celery", "reason": "key", "object": "default\u0006\u00169"}}
+{"acl_denied": {"user": "parse_celery", "reason": "key", "object": "default\u0006\u00166"}}
+{"acl_denied": {"user": "parse_celery", "reason": "key", "object": "default\u0006\u00163"}}
+{"acl_denied": {"user": "parse_celery", "reason": "key", "object": "default"}}
+{"acl_denied": {"user": "parse", "reason": "command", "object": "config|get"}}
+{"acl_denied": {"user": "parse", "reason": "command", "object": "keys"}}
+{"acl_denied": {"user": "parse", "reason": "command", "object": "publish"}}
+{"acl_denied": {"user": "parse", "reason": "command", "object": "get"}}
+{"acl_denied": {"user": "parse", "reason": "key", "object": "q:default"}}
+{"acl_denied": {"user": "parse", "reason": "command", "object": "lpush"}}

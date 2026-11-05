@@ -107,5 +107,40 @@ elif ROLE == "trusted":
             check("6", "learns of completion from the result file alone, and validates it", False, str(error))
         check("3", "nothing appeared on another queue", r.llen("q:default") == 0, f"q:default length {r.llen('q:default')}")
 
+elif ROLE == "slowparse":
+    # Takes a job and hangs, standing in for a parser that a hostile file crashes.
+    r = redis.Redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
+    r.blmove("q:parse", "q:parse:processing", timeout=20, src="RIGHT", dest="LEFT")
+    time.sleep(120)
+
+elif ROLE in ("dispatch", "reap"):
+    # The trusted side owns delivery: it counts each dispatch in PostgreSQL first,
+    # and a job whose result has not appeared by its deadline is dispatched again
+    # or, at the limit, failed. The isolated worker is never trusted to report.
+    import psycopg
+
+    LIMIT, DEADLINE_SECONDS = 2, 4
+    r = redis.Redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
+    with psycopg.connect(os.environ["DATABASE_URL"], autocommit=True) as db:
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS job (id text PRIMARY KEY, attempts int NOT NULL,"
+            " state text NOT NULL, dispatched_at timestamptz NOT NULL)"
+        )
+        if ROLE == "dispatch":
+            db.execute("INSERT INTO job VALUES ('job-crash', 1, 'dispatched', now())")
+            r.lpush("q:parse", "job-crash")
+        else:
+            time.sleep(DEADLINE_SECONDS + 1)
+            row = db.execute("SELECT attempts, state FROM job WHERE id = 'job-crash' FOR UPDATE").fetchone()
+            if row and row[1] == "dispatched" and not Path("/results/job-crash.json").exists():
+                r.lrem("q:parse:processing", 0, "job-crash")
+                if row[0] >= LIMIT:
+                    db.execute("UPDATE job SET state = 'failed' WHERE id = 'job-crash'")
+                else:
+                    db.execute("UPDATE job SET attempts = attempts + 1, dispatched_at = now() WHERE id = 'job-crash'")
+                    r.lpush("q:parse", "job-crash")
+            attempts, state = db.execute("SELECT attempts, state FROM job WHERE id = 'job-crash'").fetchone()
+            print(json.dumps({"reaper": {"attempts": attempts, "state": state, "queued": r.llen("q:parse"), "processing": r.llen("q:parse:processing")}}))
+
 for line in results:
     print(json.dumps(line))

@@ -62,6 +62,41 @@ else
   echo "{\"role\": \"parse\", \"req\": \"5\", \"check\": \"Dramatiq: the worker ran the task under its limited user and wrote the result file\", \"pass\": false, \"detail\": $(docker compose exec -T parse sh -c 'grep -i -m3 -E "permission|error" /tmp/dramatiq.log | cut -c1-200' | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}" >> "$OUT"
 fi
 docker compose exec -T parse python dramatiq_probe.py >> "$OUT" || true
+# Requirement 7, trusted-side delivery: kill the worker mid-task twice; the
+# trusted reaper re-dispatches once and then fails the job.
+docker compose exec -T trusted python probe.py dispatch
+for round in 1 2; do
+  docker compose exec -d parse python probe.py slowparse
+  sleep 3
+  docker compose kill -s KILL parse >/dev/null 2>&1
+  docker compose up -d parse >/dev/null 2>&1
+  docker compose exec -T trusted python probe.py reap > "$OUT.reap"
+done
+python3 - "$OUT.reap" >> "$OUT" <<'PY'
+import json, sys
+state = json.loads(open(sys.argv[1]).read().splitlines()[-1])["reaper"]
+ok = state == {"attempts": 2, "state": "failed", "queued": 0, "processing": 0}
+print(json.dumps({"role": "trusted", "req": "7", "check": "trusted-side delivery: a worker killed twice mid-task gives two counted attempts, then a failed job", "pass": ok, "detail": json.dumps(state)}))
+PY
+# Requirement 7, Celery's own redelivery (acks_late, reject on worker lost):
+# kill the worker mid-task twice and count deliveries.
+docker compose exec -d -e CELERY_VISIBILITY_TIMEOUT=3 parse celery -A celery_app worker -Q parse -P solo --without-gossip --without-mingle --without-heartbeat --logfile=/tmp/celery2.log
+sleep 5
+docker compose exec -T trusted python -c 'from celery_app import app; app.send_task("spike.slow", args=["job-4"], queue="parse")'
+for round in 1 2; do
+  sleep 4
+  docker compose kill -s KILL parse >/dev/null 2>&1
+  docker compose up -d parse >/dev/null 2>&1
+  sleep 4
+  docker compose exec -d -e CELERY_VISIBILITY_TIMEOUT=3 parse celery -A celery_app worker -Q parse -P solo --without-gossip --without-mingle --without-heartbeat --logfile=/tmp/celery2.log
+done
+sleep 8
+DELIVERIES=$(docker compose exec -T trusted sh -c 'cat /results/celery-job-4.deliveries 2>/dev/null || echo 0')
+echo "{\"role\": \"parse\", \"req\": \"7\", \"check\": \"Celery (finding): deliveries of one task after two kills mid-task, with nothing on the isolated side able to bound them\", \"pass\": false, \"detail\": \"deliveries=$DELIVERIES\"}" >> "$OUT"
+# Requirements 10 and 11: the fetch worker, behind the egress proxy.
+docker compose up -d --build egress fetch >/dev/null 2>&1
+sleep 6
+docker compose exec -T fetch python fetch_probe.py >> "$OUT" || true
 # Which keys and commands the broker refused, by user (the denials are the evidence).
 docker compose exec -T trusted python -c '
 import json, os, redis
