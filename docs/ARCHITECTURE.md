@@ -84,7 +84,7 @@ Twelve apps is the upper bound of what is justified. If two apps turn out to cha
 | `models.py` | Data and database constraints. No workflow logic. |
 | `services.py` | Operations that change state. The only public write interface. |
 | `selectors.py` | Read queries. The only public read interface. |
-| `tasks.py` | Thin task wrappers that call services. None exists yet: the job system is chosen at the Phase 2 gate (ADR-0004, Proposed) |
+| `tasks.py` | Thin task wrappers that call services. None exists yet: the job system is decided ([ADR-0004](adr/0004-asynchronous-jobs.md)) and is built in Phase 2 |
 | `tests/` | Tests for the app |
 
 Rules:
@@ -103,7 +103,7 @@ Rules:
 | Fetch worker | **Isolated** | Outbound fetches of documents and dataset files only |
 | Parse worker | **Isolated** | Type detection and parsing of all untrusted files, documents and datasets alike |
 | PostgreSQL | Data | System of record, full-text search, vector search |
-| Redis | Data | Broker for the job system, if the one chosen under ADR-0004 uses Redis; short-lived request-throttling counters |
+| Redis | Data | The isolated workers' queues, each worker restricted to its own ([ADR-0004](adr/0004-asynchronous-jobs.md), [ADR-0011](adr/0011-worker-isolation-mechanism.md)); short-lived request-throttling counters |
 | Artifact store | Data | Content-addressed raw files |
 
 All Python components run from the same image and codebase with different commands and different privileges.
@@ -263,7 +263,7 @@ Software baseline. Dependencies were first locked on 2026-10-01. What has and ha
 - Django 5.2, the long-term-support series, locked at 5.2.17. It declares support for Python 3.14.
 - PostgreSQL 18.6 in development, from the official image. That image has no vector extension; if ADR-0003 is accepted, the image changes.
 - Redis 8.10.2 in development.
-- The job system is undecided. Celery with Redis is the working proposal (ADR-0004); it is not locked and does not declare Python 3.14 support. The choice is made by a spike at the Phase 2 gate.
+- The job system is decided in [ADR-0004](adr/0004-asynchronous-jobs.md) (2026-11-05): no library in the isolated workers, which consume their own Redis list under a restricted user; `django-tasks` with `django-tasks-db` for trusted work. Nothing is installed before Phase 2 builds it.
 - HTMX, vendored at a pinned version when the first interactive page is built (ADR-0010). Django REST Framework is deferred.
 - Document parsing libraries: chosen in Phase 2, as few as possible, each justified. Each is verified against the pinned Python when added.
 
