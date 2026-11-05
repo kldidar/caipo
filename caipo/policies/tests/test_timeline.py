@@ -1,6 +1,5 @@
 """The formal events read for a shared time axis (FR-42)."""
 
-import uuid
 from datetime import date
 
 import pytest
@@ -8,7 +7,6 @@ from django.core.exceptions import PermissionDenied
 
 from caipo.accounts.selectors import AuthenticationContext
 from caipo.policies import selectors, services
-from caipo.registry.models import Country
 from caipo.sources.tests.helpers import World, make_document, make_source
 
 pytestmark = pytest.mark.django_db
@@ -20,14 +18,11 @@ def _policy_with_events(
     events: list[tuple[str, date]],
     *,
     data_class: str = "demonstration",
-    country: uuid.UUID | None = None,
     corpus: str = "core",
     title: str = "TEST Strategy for Artificial Intelligence",
     title_en: str = "",
 ) -> None:
-    home = country or (
-        world.demo_country if data_class == "demonstration" else world.reference_country
-    )
+    home = world.demo_country if data_class == "demonstration" else world.reference_country
     policy = services.create_policy(
         actor=actor,
         data_class=data_class,
@@ -58,46 +53,40 @@ def _policy_with_events(
 def test_the_events_of_core_policies_are_read_oldest_first(
     researcher: AuthenticationContext, reader: AuthenticationContext, world: World
 ) -> None:
-    second = Country.objects.create(alpha2="XB", alpha3="XBB", name_en="TEST Second Country")
     _policy_with_events(
         researcher,
         world,
-        [("adopted", date(2021, 3, 1)), ("entered_into_force", date(2021, 6, 1))],
+        [("entered_into_force", date(2021, 6, 1)), ("adopted", date(2021, 3, 1))],
         title="TEST Title as written",
         title_en="TEST English title",
     )
-    _policy_with_events(
-        researcher, world, [("adopted", date(2020, 5, 5))], country=second.public_id
-    )
+    _policy_with_events(researcher, world, [("adopted", date(2020, 5, 5))])
 
-    events = selectors.formal_events(reader, data_class="demonstration", countries=["XA", "XB"])
+    events = selectors.formal_events(reader, data_class="demonstration", countries=["XA"])
 
-    assert [
-        (event.country_alpha2, event.effective_date, event.event_type, event.label)
-        for event in events
-    ] == [
-        ("XB", date(2020, 5, 5), "adopted", "Adopted"),
-        ("XA", date(2021, 3, 1), "adopted", "Adopted"),
-        ("XA", date(2021, 6, 1), "entered_into_force", "Entered into force"),
+    assert [(event.effective_date, event.event_type, event.label) for event in events] == [
+        (date(2020, 5, 5), "adopted", "Adopted"),
+        (date(2021, 3, 1), "adopted", "Adopted"),
+        (date(2021, 6, 1), "entered_into_force", "Entered into force"),
     ]
     assert events[1].policy_title == "TEST English title"
     assert events[0].policy_title == "TEST Strategy for Artificial Intelligence"
-    assert events[1].country_name == "TEST Synthetic Country"
+    assert (events[1].country_alpha2, events[1].country_name) == ("XA", "TEST Synthetic Country")
 
 
 def test_only_the_countries_asked_for_are_read(
     researcher: AuthenticationContext, reader: AuthenticationContext, world: World
 ) -> None:
-    second = Country.objects.create(alpha2="XB", alpha3="XBB", name_en="TEST Second Country")
     _policy_with_events(researcher, world, [("adopted", date(2021, 3, 1))])
-    _policy_with_events(
-        researcher, world, [("adopted", date(2020, 5, 5))], country=second.public_id
-    )
+    _policy_with_events(researcher, world, [("adopted", date(2022, 4, 4))], data_class="reference")
 
-    events = selectors.formal_events(reader, data_class="demonstration", countries=["XA"])
-
-    assert [event.country_alpha2 for event in events] == ["XA"]
+    assert selectors.formal_events(reader, data_class="demonstration", countries=["OA"]) == []
+    assert selectors.formal_events(reader, data_class="reference", countries=["XA"]) == []
     assert selectors.formal_events(reader, data_class="demonstration", countries=[]) == []
+    assert [
+        event.country_alpha2
+        for event in selectors.formal_events(reader, data_class="reference", countries=["XA", "OA"])
+    ] == ["OA"]
 
 
 def test_contextual_policies_are_left_out(
