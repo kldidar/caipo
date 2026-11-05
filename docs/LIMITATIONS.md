@@ -63,7 +63,7 @@ Two concepts in the research title are not yet defined for this project (blocker
 
 - Sources are in several languages and scripts. Terms for the same concept may not correspond exactly across languages.
 - Translated versions of official documents may differ from the original-language text.
-- Researcher language coverage limits which sources can be read in the original.
+- Researcher language coverage limits which sources can be read in the original. On 2026-11-05 the researcher reads Turkmen, Russian, and English, and no reader of Uzbek is available. Uzbek instruments are assessed on their Russian versions where these exist, each such decision is marked as resting on a translation, and an Uzbek instrument without a Russian version cannot yet be assessed. This limits coverage of Uzbekistan until a reader of Uzbek is found (RESEARCH_PROTOCOL.md §3.7, O-5).
 
 ### 2.6 Source independence
 
