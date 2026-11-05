@@ -4,7 +4,9 @@ Indicators are shown in their three layers, which are never combined, and
 for one class of data at a time: the study countries' reference values and
 the synthetic demonstration countries never share a chart. Every chart shows
 each country's gaps as gaps, says how many years hold a value, and offers
-the values as a table.
+the values as a table. An indicator's page also shows the formal events of
+the core AI policy corpus of the same countries, in a panel of their own on
+the same years (FR-42), with the notice that this is not a causal analysis.
 """
 
 import uuid
@@ -21,9 +23,10 @@ from caipo.accounts.selectors import Permission
 from caipo.core.data_class import DataClass
 from caipo.indicators import selectors, services
 from caipo.indicators.selectors import Layer
+from caipo.policies import selectors as policies_selectors
 from caipo.sources import selectors as sources_selectors
 from caipo.web.access import requires
-from caipo.web.charts import line_chart
+from caipo.web.charts import event_axis, line_chart
 from caipo.web.workspace import FORM_ERROR, REFUSED, actor_of
 from caipo.web.workspace_forms import IndicatorForm
 
@@ -109,12 +112,24 @@ def create(request: HttpRequest) -> HttpResponse:
 @never_cache
 @require_safe
 def detail(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
-    """Show an indicator with its provenance, releases, chart, and every value."""
-    found = selectors.indicator_detail(actor_of(request), public_id)
+    """Show an indicator with its provenance, releases, chart, every value, and policy events."""
+    actor = actor_of(request)
+    found = selectors.indicator_detail(actor, public_id)
     if found is None:
         raise Http404
+    events = policies_selectors.formal_events(
+        actor,
+        data_class=found.view.data_class,
+        countries=[series.alpha2 for series in found.view.series],
+    )
     return render(
         request,
         "web/indicator.html",
-        {"detail": found, "view": found.view, "chart": line_chart(found.view)},
+        {
+            "detail": found,
+            "view": found.view,
+            "chart": line_chart(found.view),
+            "events": events,
+            "event_axis": event_axis(found.view, events),
+        },
     )

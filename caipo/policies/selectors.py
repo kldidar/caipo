@@ -5,6 +5,7 @@ Every function requires `WORKSPACE_READ`.
 
 import uuid
 from collections import defaultdict
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import date
 
@@ -44,7 +45,9 @@ __all__ = [
     "PolicyType",
     "ProvisionEntry",
     "ProvisionType",
+    "TimelineEvent",
     "coverage",
+    "formal_events",
     "policies",
     "policy_choices",
     "policy_detail",
@@ -313,6 +316,58 @@ def policy_detail(
             for public_id, data_class, provision_type, locator, label, quoted, key in provisions
         ),
     )
+
+
+@dataclass(frozen=True)
+class TimelineEvent:
+    """A formal lifecycle event of a policy in the core AI policy corpus, for a time axis."""
+
+    country_alpha2: str
+    country_name: str
+    effective_date: date
+    event_type: str
+    policy_public_id: uuid.UUID
+    policy_title: str
+
+    @property
+    def label(self) -> str:
+        return str(PolicyEventType(self.event_type).label)
+
+
+def formal_events(
+    context: AuthenticationContext | None, *, data_class: str, countries: Collection[str]
+) -> list[TimelineEvent]:
+    """Return the formal events of core-corpus policies of these countries, oldest first.
+
+    `countries` are alpha-2 codes, and only policies of `data_class` count, so
+    that synthetic and reference records are never shown together. Policies
+    of the contextual registry are left out: they are never counted as AI
+    policy. A policy's English title is used where one is recorded, and its
+    title as written otherwise. Reads only. Raises PermissionDenied if the
+    context may not read the workspace.
+    """
+    accounts_selectors.require_permission(context, Permission.WORKSPACE_READ)
+    rows = (
+        PolicyEvent.objects.filter(
+            policy__data_class=data_class,
+            policy__corpus_assignment=CorpusAssignment.CORE,
+            policy__country__alpha2__in=list(countries),
+        )
+        .order_by("effective_date", "policy__country__alpha2", "id")
+        .values_list(
+            "policy__country__alpha2",
+            "policy__country__name_en",
+            "effective_date",
+            "event_type",
+            "policy__public_id",
+            "policy__title_en",
+            "policy__title",
+        )
+    )
+    return [
+        TimelineEvent(alpha2, name, effective, event_type, public_id, title_en or title)
+        for alpha2, name, effective, event_type, public_id, title_en, title in rows
+    ]
 
 
 def policy_choices(

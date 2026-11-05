@@ -1,10 +1,15 @@
 """The geometry of the server-rendered line charts."""
 
 import uuid
+from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 from caipo.indicators.selectors import IndicatorView, Point, Series
-from caipo.web.charts import format_value, line_chart
+from caipo.policies.selectors import TimelineEvent
+from caipo.web.charts import event_axis, format_value, line_chart
+
+INCLUDES = Path(__file__).resolve().parents[1] / "templates" / "web" / "includes"
 
 
 def _view(*series: Series) -> IndicatorView:
@@ -79,11 +84,76 @@ def test_values_are_shown_rounded_and_never_changed() -> None:
 
 def test_chart_points_are_not_tab_stops() -> None:
     """A chart is one image to assistive technology; its values are in the table beside it."""
-    from pathlib import Path
+    for name in ("line_chart.html", "event_axis.html"):
+        template = (INCLUDES / name).read_text()
 
-    template = (
-        Path(__file__).resolve().parents[1] / "templates" / "web" / "includes" / "line_chart.html"
-    ).read_text()
+        assert "tabindex" not in template, name
+        assert 'role="img"' in template, name
 
-    assert "tabindex" not in template
-    assert 'role="img"' in template
+
+# --- Formal policy events on the same years (FR-42) ------------------------------------------
+
+
+def _event(alpha2: str, on: date, event_type: str = "adopted") -> TimelineEvent:
+    return TimelineEvent(
+        alpha2, f"TEST {alpha2}", on, event_type, uuid.uuid4(), f"TEST Policy of {alpha2}"
+    )
+
+
+def test_an_event_sits_at_the_x_of_its_year_in_the_chart() -> None:
+    view = _view(_series("XA", ["1", "2", "3", "4"]))
+
+    axis = event_axis(view, [_event("XA", date(2022, 7, 1))])
+
+    (mark,) = axis.rows[0].marks
+    point_2022 = line_chart(view).series[0].points[2]
+    assert mark.x == point_2022.x
+    assert (axis.left, axis.right, axis.width) == (48, line_chart(view).right, 640)
+    assert [tick.position for tick in axis.x_ticks] == [
+        tick.position for tick in line_chart(view).x_ticks
+    ]
+
+
+def test_events_of_one_country_in_one_year_are_one_mark_that_names_each() -> None:
+    view = _view(_series("XA", ["1", "2", "3"]))
+
+    axis = event_axis(
+        view,
+        [_event("XA", date(2021, 3, 1)), _event("XA", date(2021, 6, 1), "entered_into_force")],
+    )
+
+    (mark,) = axis.rows[0].marks
+    assert mark.count == 2
+    assert "Adopted, 2021-03-01" in mark.label
+    assert "Entered into force, 2021-06-01" in mark.label
+    assert mark.label.startswith("TEST XA, 2021: ")
+    assert axis.charted == 2
+
+
+def test_an_event_outside_the_years_charted_is_counted_and_not_drawn() -> None:
+    view = _view(_series("XA", ["1", "2", "3"]))
+
+    axis = event_axis(view, [_event("XA", date(2019, 12, 31)), _event("XA", date(2023, 1, 1))])
+
+    assert axis.rows[0].marks == ()
+    assert (axis.charted, axis.outside) == (0, 2)
+
+
+def test_every_country_of_the_chart_has_a_row_in_its_order_and_colour() -> None:
+    view = _view(_series("XA", ["1", "2"]), _series("XB", ["3", "4"]))
+
+    axis = event_axis(view, [_event("XB", date(2020, 1, 1))])
+
+    assert [(row.index, row.alpha2) for row in axis.rows] == [(1, "XA"), (2, "XB")]
+    assert [s.index for s in line_chart(view).series] == [1, 2]
+    assert axis.rows[0].marks == ()
+    assert len(axis.rows[1].marks) == 1
+    assert axis.rows[0].y < axis.rows[1].y < axis.height
+
+
+def test_the_event_panel_draws_no_line_or_shape_that_could_join_an_event_to_a_value() -> None:
+    """FR-42 (a): marks and row guides only; no path, no polyline, no area."""
+    template = (INCLUDES / "event_axis.html").read_text()
+
+    for element in ("<path", "<polyline", "<polygon", "<circle", "<area"):
+        assert element not in template, element

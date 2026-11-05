@@ -15,6 +15,38 @@
 
   <div class="detail-grid">
     <div class="detail-grid__main">
+      <section class="panel" aria-labelledby="events-title">
+        <div class="panel__header"><h2 id="events-title">{% translate "Formal policy events" %}</h2></div>
+        <div class="panel__body">
+          {% include "web/includes/non_causation.html" with timeline=True %}
+          <p class="muted"><small>{% translate "Adoption, amendment, entry into force, expiry, and repeal of the policies of the core AI policy corpus of these countries, on the same years as the values below and in a panel of their own. Contextual policies are not shown here. A country without a mark has no event recorded here, which does not mean that none occurred." %}</small></p>
+          {% if events %}
+            {% if event_axis.charted %}{% include "web/includes/event_axis.html" with title=view.name axis=event_axis %}{% endif %}
+            {% if event_axis.outside %}<p class="muted"><small>{% blocktranslate count counter=event_axis.outside %}{{ counter }} event falls outside the years charted; it is listed below and not drawn.{% plural %}{{ counter }} events fall outside the years charted; they are listed below and not drawn.{% endblocktranslate %}</small></p>{% endif %}
+            <div class="table-wrap" tabindex="0"><table>
+              <caption class="visually-hidden">{% translate "Formal policy events" %}</caption>
+              <thead><tr>
+                <th scope="col">{% translate "Date" %}</th>
+                <th scope="col">{% translate "Country" %}</th>
+                <th scope="col">{% translate "Event" %}</th>
+                <th scope="col">{% translate "Policy" %}</th>
+              </tr></thead>
+              <tbody>
+                {% for event in events %}
+                  <tr>
+                    <td class="date">{{ event.effective_date|date:"Y-m-d" }}</td>
+                    <td>{{ event.country_name }}</td>
+                    <td>{{ event.label }}</td>
+                    <td><a href="{% url 'policy' event.policy_public_id %}">{{ event.policy_title }}</a></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table></div>
+          {% else %}
+            <p>{% translate "No formal event is recorded for a core-corpus policy of these countries in this class of data." %}</p>
+          {% endif %}
+        </div>
+      </section>
       <section class="panel" aria-labelledby="chart-title">
         <div class="panel__header"><h2 id="chart-title">{% translate "Values by country" %}</h2></div>
         <div class="panel__body">
