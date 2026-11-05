@@ -35,7 +35,7 @@ The workflow is `.github/workflows/ci.yml`. It runs on every push to `main` and 
 |---|---|---|
 | Code quality | `uv lock --check`, `uv sync --locked`, the interpreter against `.python-version`, `ruff check`, `ruff format --check`, `mypy`, `lint-imports` | The lockfile does not match `pyproject.toml`, or any check reports a problem. The four code checks all run even if one fails. |
 | Django checks and tests | `manage.py check`, `manage.py makemigrations --check`, `pytest` | A system check fails, a model change has no migration, or a test fails |
-| Dependency audit | `pip-audit` on the exported lockfile, with hashes | A locked package, runtime or development, has a known vulnerability |
+| Dependency audit | `pip-audit` on the exported lockfile, with hashes | A locked package, runtime or development, has a known vulnerability. The same audit also runs every Monday on `main` (`.github/workflows/dependency-audit.yml`), so that a vulnerability published between pull requests is found within a week; that run is not a required check |
 | Secret scan | `gitleaks` over the committed history | Secret material is found in any commit |
 
 How it is built:
@@ -43,7 +43,7 @@ How it is built:
 - **Services.** The tests job starts PostgreSQL and Redis with `docker compose up`, from the same `docker-compose.yml` used locally, so the images, encoding, and collation are identical. Redis is started only because `tests/test_dev_services.py` tests it; the application does not use Redis yet. Service passwords are generated in each run and masked in the log. Only the synthetic fixture corpus is used.
 - **Settings.** Django commands run under the testing settings. No signing key or other secret is configured in GitHub.
 - **Permissions.** The workflow token can read the repository and nothing else, and checkout does not leave it in the git configuration.
-- **Pinning.** The two actions used (GitHub's `checkout` and Astral's `setup-uv`) are pinned to a full commit SHA with the release tag in a comment. `uv`, `pip-audit`, and the runner image are pinned by version, and the `gitleaks` image by digest. Updating a pin is an ordinary reviewed change. Nothing updates them automatically yet.
+- **Pinning.** The two actions used (GitHub's `checkout` and Astral's `setup-uv`) are pinned to a full commit SHA with the release tag in a comment. `uv`, `pip-audit`, and the runner image are pinned by version, and the `gitleaks` image by digest. Updating a pin is an ordinary reviewed change. Nothing updates them automatically yet. The weekly audit uses the pins of `ci.yml`, and a pin changed in one file is changed in the other in the same pull request.
 - **Caching.** Only the `uv` package cache, keyed on `uv.lock`.
 
 The secret scan reads commits, not the working directory. A secret that was ever committed keeps failing the scan after it is deleted, because it is still in the history: revoke the secret first, then decide with the project owner how to record it. Do not silence a finding to make the job pass.
