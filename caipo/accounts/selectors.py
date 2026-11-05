@@ -29,6 +29,8 @@ from caipo.accounts.authentication import AuthenticationContext
 from caipo.accounts.authorization import Assurance, Permission, Role, permissions_for
 from caipo.accounts.models import (
     AccountActivation,
+    AccountEvent,
+    AccountEventType,
     AccountStatus,
     AuditAction,
     AuditField,
@@ -46,7 +48,9 @@ from caipo.accounts.models import (
 
 __all__ = [
     "AccountAwaitingVerification",
+    "AccountDetail",
     "AccountStatus",
+    "AccountSummary",
     "Assurance",
     "AuditAction",
     "AuditField",
@@ -60,7 +64,10 @@ __all__ = [
     "RecoveryHistoryPage",
     "RecoveryRequest",
     "Role",
+    "RoleChange",
+    "account_for_administration",
     "accounts_awaiting_verification",
+    "accounts_for_administration",
     "administrators_able_to_act",
     "administrators_on_record",
     "an_administrator_is_able_to_act",
@@ -182,7 +189,10 @@ def mfa_state_of(user: User) -> MfaState:
     trusted. A pending enrolment that was not approved or confirmed in time
     counts as not enrolled.
     """
-    device = TotpDevice.objects.filter(user_id=user.pk).first()
+    return _mfa_state(TotpDevice.objects.filter(user_id=user.pk).first())
+
+
+def _mfa_state(device: TotpDevice | None) -> MfaState:
     if device is None:
         return MfaState.NOT_ENROLLED
     if device.state == TotpDeviceState.ACTIVE:
@@ -797,3 +807,140 @@ def require_permission(context: AuthenticationContext | None, permission: Permis
 def _user_id(context: object) -> int | None:
     user = getattr(context, "user", None)
     return user.pk if isinstance(user, User) else None
+
+
+@dataclass(frozen=True)
+class AccountSummary:
+    """One account as an Administrator sees it in the list of accounts.
+
+    `registered` says the account was made by its owner on the site rather
+    than by an Administrator.
+    """
+
+    user_id: int
+    email: str
+    status: str
+    roles: tuple[Role, ...]
+    mfa_state: MfaState
+    created_at: datetime
+    registered: bool
+
+    @property
+    def status_label(self) -> str:
+        return str(AccountStatus(self.status).label)
+
+    @property
+    def role_labels(self) -> tuple[str, ...]:
+        return tuple(str(role.label) for role in self.roles)
+
+
+@dataclass(frozen=True)
+class RoleChange:
+    """One grant or revocation of a role, as its RoleEvent records it.
+
+    `actor_email` is None where no person acted: the first Administrator's
+    own grant and the Reader role given at self-registration.
+    """
+
+    role: Role
+    granted: bool
+    actor_email: str | None
+    reason: str
+    created_at: datetime
+
+    @property
+    def role_label(self) -> str:
+        return str(self.role.label)
+
+
+@dataclass(frozen=True)
+class AccountDetail:
+    """One account with its role history, newest change first.
+
+    `is_actor` says the account is the one asking: nobody changes their own
+    roles or status. `grantable` lists the roles the account does not hold.
+    """
+
+    summary: AccountSummary
+    role_history: tuple[RoleChange, ...]
+    is_actor: bool
+    grantable: tuple[Role, ...]
+
+
+def _registered_ids(user_ids: list[int]) -> frozenset[int]:
+    return frozenset(
+        AccountEvent.objects.filter(
+            event_type=AccountEventType.ACCOUNT_REGISTERED, user_id__in=user_ids
+        ).values_list("user_id", flat=True)
+    )
+
+
+def _summaries(users: list[User]) -> list[AccountSummary]:
+    ids = [user.pk for user in users]
+    granted: dict[int, set[Role]] = {}
+    latest = (
+        RoleEvent.objects.filter(user_id__in=ids)
+        .order_by("user_id", "role", "-id")
+        .distinct("user_id", "role")
+        .values_list("user_id", "role", "event_type")
+    )
+    for user_id, role, event_type in latest:
+        if event_type == RoleEventType.GRANTED:
+            granted.setdefault(user_id, set()).add(Role(role))
+    devices = {device.user_id: device for device in TotpDevice.objects.filter(user_id__in=ids)}
+    registered = _registered_ids(ids)
+    return [
+        AccountSummary(
+            user_id=user.pk,
+            email=user.email,
+            status=user.status,
+            roles=tuple(role for role in Role if role in granted.get(user.pk, ())),
+            mfa_state=_mfa_state(devices.get(user.pk)),
+            created_at=user.created_at,
+            registered=user.pk in registered,
+        )
+        for user in users
+    ]
+
+
+def accounts_for_administration(context: AuthenticationContext) -> list[AccountSummary]:
+    """Return every account, newest first, with its status, roles, and second factor.
+
+    Reads only, in a fixed number of queries whatever the number of accounts.
+    Raises PermissionDenied unless the context may manage roles, which only an
+    Administrator verified with a second factor may.
+    """
+    require_permission(context, Permission.ROLES_MANAGE)
+    return _summaries(list(User.objects.order_by("-created_at", "-pk")))
+
+
+def account_for_administration(
+    context: AuthenticationContext, user_id: int
+) -> AccountDetail | None:
+    """Return one account with its role history, or None if there is no such account.
+
+    Reads only. The permission is checked before the account is looked up, so
+    a caller without it learns nothing about which accounts exist. Raises
+    PermissionDenied unless the context may manage roles.
+    """
+    require_permission(context, Permission.ROLES_MANAGE)
+    user = User.objects.filter(pk=user_id).first()
+    if user is None:
+        return None
+    (summary,) = _summaries([user])
+    history = tuple(
+        RoleChange(
+            role=Role(event.role),
+            granted=event.event_type == RoleEventType.GRANTED,
+            actor_email=event.actor.email if event.actor is not None else None,
+            reason=event.reason,
+            created_at=event.created_at,
+        )
+        for event in RoleEvent.objects.filter(user=user).select_related("actor").order_by("-id")
+    )
+    return AccountDetail(
+        summary=summary,
+        role_history=history,
+        is_actor=context.user.pk == user.pk,
+        grantable=tuple(role for role in Role if role not in summary.roles),
+    )

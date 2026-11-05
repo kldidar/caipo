@@ -46,6 +46,21 @@ urlpatterns = [
         accounts.send_verification,
         name="account-send-verification",
     ),
+    path("administration/accounts/<int:user_id>/", accounts.detail, name="account"),
+    path(
+        "administration/accounts/<int:user_id>/grant-role/",
+        accounts.grant_role,
+        name="account-grant-role",
+    ),
+    path(
+        "administration/accounts/<int:user_id>/revoke-role/",
+        accounts.revoke_role,
+        name="account-revoke-role",
+    ),
+    path(
+        "administration/accounts/<int:user_id>/disable/", accounts.disable, name="account-disable"
+    ),
+    path("administration/accounts/<int:user_id>/enable/", accounts.enable, name="account-enable"),
     path("account/second-factor/", second_factor.overview, name="second-factor"),
     path("account/second-factor/enrol/", second_factor.enrol, name="second-factor-enrol"),
     path("account/second-factor/confirm/", second_factor.confirm, name="second-factor-confirm"),

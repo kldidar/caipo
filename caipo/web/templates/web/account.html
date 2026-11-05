@@ -1,0 +1,107 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Account" %}{% endblock %}
+
+{% block content %}
+  {% with summary=account.summary %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Administration" %} · <a href="{% url 'accounts' %}">{% translate "Accounts" %}</a></p>
+    <h1 class="wrap-anywhere">{{ summary.email }}</h1>
+  </header>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% elif changed %}
+    <p role="status">{{ changed }}</p>
+  {% endif %}
+
+  <div class="grid grid--2">
+  <section class="panel" aria-labelledby="state-title">
+  <div class="panel__header"><h2 id="state-title">{% translate "The account" %}</h2></div>
+  <div class="panel__body">
+  <dl>
+    <dt>{% translate "Status" %}</dt><dd>{% include "web/includes/account_status.html" %}</dd>
+    <dt>{% translate "Roles" %}</dt><dd>{{ summary.role_labels|join:", "|default:_("None") }}</dd>
+    <dt>{% translate "Two-step verification" %}</dt><dd>{% include "web/includes/account_mfa.html" %}</dd>
+    <dt>{% translate "Created" %}</dt><dd>{{ summary.created_at|date:"Y-m-d H:i" }} UTC</dd>
+    <dt>{% translate "How it was made" %}</dt><dd>{% if summary.registered %}{% translate "Registered by its owner on the site" %}{% else %}{% translate "Created for its owner" %}{% endif %}</dd>
+  </dl>
+  <p class="muted"><small>{% translate "A Reviewer or Administrator role gives the account nothing until it has turned on two-step verification and signs in with it." %}</small></p>
+  </div>
+  </section>
+
+  <section class="panel" aria-labelledby="change-title">
+  <div class="panel__header"><h2 id="change-title">{% translate "Change" %}</h2></div>
+  <div class="panel__body">
+  {% if account.is_actor %}
+    <p>{% translate "This is your own account. Its roles and status are changed by another Administrator." %}</p>
+  {% else %}
+    {% if account.grantable %}
+      <h3>{% translate "Grant a role" %}</h3>
+      <form method="post" action="{% url 'account-grant-role' summary.user_id %}" novalidate>
+        {% csrf_token %}
+        {% include "web/includes/fields.html" with form=grant_form %}
+        <button type="submit">{% translate "Grant the role" %}</button>
+      </form>
+    {% endif %}
+    {% if summary.roles %}
+      <h3>{% translate "Revoke a role" %}</h3>
+      <form method="post" action="{% url 'account-revoke-role' summary.user_id %}" novalidate>
+        {% csrf_token %}
+        {% include "web/includes/fields.html" with form=revoke_form %}
+        <button type="submit" class="button--secondary">{% translate "Revoke the role" %}</button>
+      </form>
+    {% endif %}
+    {% if summary.status == "disabled" %}
+      <h3>{% translate "Enable the account" %}</h3>
+      <p>{% translate "It returns with the roles, password, and second factor it had. An account that was never activated must be sent its verification message again." %}</p>
+      <form method="post" action="{% url 'account-enable' summary.user_id %}">
+        {% csrf_token %}
+        <button type="submit">{% translate "Enable the account" %}</button>
+      </form>
+    {% else %}
+      <h3>{% translate "Disable the account" %}</h3>
+      <p>{% translate "It keeps its roles and history, and can be enabled again." %}</p>
+      <form method="post" action="{% url 'account-disable' summary.user_id %}" novalidate>
+        {% csrf_token %}
+        {% include "web/includes/fields.html" with form=disable_form %}
+        <button type="submit" class="button--danger">{% translate "Disable the account" %}</button>
+      </form>
+    {% endif %}
+  {% endif %}
+  </div>
+  </section>
+  </div>
+
+  <section class="panel section" aria-labelledby="history-title">
+  <div class="panel__header"><h2 id="history-title">{% translate "Role history" %}</h2></div>
+  <div class="panel__body">
+  {% if account.role_history %}
+    <div class="table-wrap" tabindex="0"><table>
+      <thead><tr>
+        <th scope="col">{% translate "When (UTC)" %}</th>
+        <th scope="col">{% translate "Change" %}</th>
+        <th scope="col">{% translate "Role" %}</th>
+        <th scope="col">{% translate "Changed by" %}</th>
+        <th scope="col">{% translate "Reason" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for change in account.role_history %}
+          <tr>
+            <td>{{ change.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{% if change.granted %}{% translate "Granted" %}{% else %}{% translate "Revoked" %}{% endif %}</td>
+            <td>{{ change.role_label }}</td>
+            <td>{{ change.actor_email|default:_("The system") }}</td>
+            <td>{{ change.reason }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  {% else %}
+    <p>{% translate "No role has been granted to this account." %}</p>
+  {% endif %}
+  </div>
+  </section>
+  {% endwith %}
+  <p class="actions"><a class="button button--ghost" href="{% url 'accounts' %}">← {% translate "All accounts" %}</a></p>
+{% endblock %}

@@ -1,0 +1,1 @@
+{% load i18n %}{% if summary.status == "active" %}<span class="badge badge--ok">{{ summary.status_label }}</span>{% elif summary.status == "disabled" %}<span class="badge badge--danger">{{ summary.status_label }}</span>{% else %}<span class="badge badge--warn">{{ summary.status_label }}</span>{% endif %}

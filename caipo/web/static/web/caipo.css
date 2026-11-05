@@ -649,6 +649,12 @@ svg {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
 }
 
+/* A long email address or identifier in a heading wraps rather than
+   widening the page. */
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+}
+
 .stack > * + * {
   margin-top: var(--s-4);
 }
@@ -796,6 +802,10 @@ svg {
 
 .panel__body {
   padding: var(--s-5);
+}
+
+.panel__body > :first-child {
+  margin-top: 0;
 }
 
 .panel__body > :last-child {

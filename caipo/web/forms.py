@@ -1,5 +1,5 @@
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from datetime import date, datetime
 from typing import Any, Final
 
@@ -137,6 +137,37 @@ class AccountCreationForm(forms.Form):
         widget=forms.EmailInput(attrs={"autocomplete": "off"}),
     )
     role = forms.ChoiceField(label=_("Role"), choices=Role.choices)
+
+
+class RoleChangeForm(forms.Form):
+    """One role to grant or revoke, and why. Shape only.
+
+    The service decides whether the change can be made and records the
+    reason; the form only bounds what it is given.
+    """
+
+    role = forms.ChoiceField(label=_("Role"), choices=Role.choices)
+    reason = forms.CharField(
+        label=_("Reason"),
+        max_length=1000,
+        widget=forms.TextInput(attrs={"autocomplete": "off"}),
+    )
+
+    def offer(self, roles: Iterable[Role]) -> None:
+        """Offer only these roles in the page, while still accepting any of the four."""
+        self.fields["role"].widget.choices = [(role.value, role.label) for role in roles]
+
+
+class DisableAccountForm(_ExplicitConfirmationForm):
+    """The explicit confirmation without which an account is not disabled."""
+
+    confirmed = forms.BooleanField(
+        label=_(
+            "I understand that this account will be signed out and can do nothing until an"
+            " Administrator enables it again."
+        ),
+        required=True,
+    )
 
 
 class _NewPasswordForm(forms.Form):
