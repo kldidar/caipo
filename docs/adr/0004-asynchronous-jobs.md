@@ -1,7 +1,7 @@
-# ADR-0004: Celery with Redis for asynchronous jobs
+# ADR-0004: Job system: no library in the isolated workers, django-tasks for trusted work
 
-- Status: Proposed
-- Date: 2026-10-01
+- Status: Accepted
+- Date: 2026-11-05
 
 ## Context
 
@@ -12,63 +12,53 @@ Some work cannot run inside a web request:
 - Building retrieval chunks and computing embeddings
 - Running evaluation suites
 
-Fetching and parsing also need to run with different privileges from the web process (ADR-0009, ADR-0011). The project brief names Redis as part of the stack and Celery where justified.
+Fetching and parsing also run with different privileges from the web process ([ADR-0009](0009-untrusted-content-handling.md), [ADR-0011](0011-worker-isolation-mechanism.md)).
 
-## Spike of 2026-11-05
+This ADR was proposed on 2026-10-01 as "Celery with Redis for asynchronous jobs". On 2026-10-02 the project owner moved the choice to a spike shared with ADR-0011 (blockers B4 and B21). The spike ran on 2026-11-05 ([report](../reports/spike-c1-job-system-and-isolation.md)). It evaluated Celery 5.7.0rc1, Dramatiq 2.2.1, and `django-tasks` with `django-tasks-db` on Python 3.14, against the isolation requirements of ADR-0011, and found that no job library is fit to run inside an isolated worker. The project owner accepted its recommendation on 2026-11-05 (Q-16 of the execution tracker). This text replaces the proposal.
 
-The spike in Open points ran on 2026-11-05 ([report](../reports/spike-c1-job-system-and-isolation.md)). It found that no job library is fit to run inside the isolated workers: Celery 5.7.0rc1 and Dramatiq 2.2.1 work under a restricted broker user but need to publish to their own queue, and Celery's acknowledge-late redelivery cannot be bounded by a worker without database access. Its recommendation, which the owner has not yet decided, replaces the proposal below: no library in the isolated workers, whose delivery the trusted side owns through PostgreSQL; `django-tasks` with `django-tasks-db` for trusted work; Redis kept for the isolated queues and throttling counters. This ADR stays Proposed until the owner decides.
+## Decision
 
-## Decision (proposed)
-
-**The choice of job system is not made.** On 2026-10-02 the project owner moved it to the Phase 2 gate, to be settled by the spike described under Open points. Python stays at 3.14 and Celery is not installed. What follows is the working proposal that the spike will test, not a decision.
-
-Use Celery with Redis as the broker, with a narrow scope.
-
-- Separate queues and workers for fetch, parse, and default work, so each can run in its own security zone.
-- Tasks are thin wrappers around service functions and take identifiers, not data.
-- JSON serialisation only. Pickle is disabled.
-- Tasks are idempotent and acknowledge after completion.
-- **The state of every job lives in PostgreSQL**, in IngestionRequest and IngestionEvent rows and their equivalents. Redis is never the record of what happened. A reconciliation command re-enqueues requests left in `pending`, `running`, or `retrying`.
-- **Bounded delivery.** Attempts are counted in PostgreSQL by the trusted side before each dispatch, per stage. Transient errors are retried a small number of times with backoff. A task whose worker was killed or timed out while handling a file is delivered at most once more, then the request is `failed`. Nothing is redelivered without limit. The limits are repository configuration.
-- No Celery result backend is used unless a concrete need appears.
-- No periodic scheduler is deployed until a scheduled task exists.
-- The assistant's question-answering path runs in the web request unless measured latency shows it does not fit; in that case it moves to a background job and the page polls for the verified result.
+1. **Two kinds of work, two mechanisms.** Isolated work, fetching and parsing, follows ADR-0011 and point 2 below. Trusted work is everything else that runs in the background: the trusted side of ingestion, reconciliation, building retrieval data, and evaluation. It uses the queue of point 4.
+2. **No job library inside an isolated worker.** Each isolated worker runs a small consumer of its own Redis list, under the restricted broker user of ADR-0011. The consumer moves one job identifier from its queue into its own processing list (`BLMOVE`), handles the job, writes its result as a file, and removes the job from its processing list (`LREM`). It has no other broker command. A message is a job identifier and never data.
+3. **The trusted side owns the delivery of isolated work.** Before each dispatch it counts the attempt in PostgreSQL, in IngestionRequest and IngestionEvent rows and their equivalents. Each stage has a deadline. A job whose validated result has not appeared by its deadline is dispatched again or, at the limit, failed. Isolated workers acknowledge a job when they take it and never report state. The limits are repository configuration.
+4. **Trusted work uses `django-tasks` with `django-tasks-db`.** `django-tasks` is the backport of Django's built-in tasks framework, and `django-tasks-db` is its database backend. A task's state lives in PostgreSQL. A task is enqueued inside the caller's transaction, so it is not enqueued if the transaction rolls back. Task arguments are JSON only. Tasks are thin wrappers around service functions; they take identifiers, not data, and are idempotent.
+5. **A reaper on the trusted side.** No candidate recovers a task whose worker died: `django-tasks-db` leaves it running, and a library's own redelivery cannot be bounded from an isolated worker. A reconciliation command finds trusted tasks left running and isolated jobs past their deadline, counts each as an attempt, and enqueues it again or fails it, within the limits of point 3.
+6. **Nothing is installed before Phase 2 builds the job system.** The two packages are then pinned exactly and justified in the pull request that adds them (CLAUDE.md, architecture rule 14). The versions verified by the spike were `django-tasks` 0.12.0 and `django-tasks-db` 0.13.0, on Python 3.14.4 and Django 5.2.17. Both are before 1.0, so an upgrade is reviewed like any change of a dependency.
+7. **Redis keeps two uses.** It holds the isolated workers' queues and short-window throttling counters. It is never the record of what happened to a job. No result backend is used. No periodic scheduler is deployed until a scheduled task exists.
+8. **Celery and Dramatiq are not used.** See Alternatives considered.
+9. **The assistant answers in the web request** unless measured latency shows it does not fit. In that case its pipeline becomes a trusted task, and the page polls for the verified result.
 
 ### What Redis is used for
 
 | Use | Justification | Loss tolerance |
 |---|---|---|
-| Celery broker | Asynchronous jobs are required, as above | Messages may be lost; PostgreSQL state allows re-enqueueing |
-| Short-window request throttling counters | Rate limits on login, questions, submissions | Counters may reset |
+| Queues of the isolated workers | ADR-0011; each worker sees only its own | Messages may be lost; the trusted side dispatches again from PostgreSQL |
+| Short-window request throttling counters | Rate limits on sign-in, questions, submissions | Counters may reset |
 
-Redis is not used as a cache until a measurement shows a need for one. **AI budget and cost accounting are not held in Redis**; they are computed from records in PostgreSQL. Redis requires authentication and is reachable only on the internal network.
+AI budget and cost accounting are not held in Redis; they are computed from records in PostgreSQL. Redis requires authentication and is reachable only on the internal network.
 
 ## Alternatives considered
 
-- **A PostgreSQL-backed task queue.** Would remove the broker and give transactional enqueueing. A reasonable choice at this scale. Not proposed because the project brief names Redis and Celery, and Celery's queue routing maps directly onto the security zones. It remains the fallback if ADR-0011's spike shows the isolation requirement cannot be met with a Redis broker.
-- **A task interface built into Django with a third-party backend.** The locked release, Django 5.2.17, does not contain one (verified 2026-10-02). It would require a newer Django series, and its routing and isolation features would need to be assessed.
-- **Synchronous processing.** Not viable for fetching and parsing, and it would put untrusted file parsing in the web process.
-- **Cron scripts.** No retries, no routing, weak visibility.
+- **Celery with Redis**, the earlier proposal. Rejected for four reasons:
+  - Only a release candidate, 5.7.0rc1, declares Python 3.14; the latest stable release, 5.6.3, stops at 3.13.
+  - kombu 5.7.0 imports `packaging` without declaring it as a dependency.
+  - Under a restricted broker user, its worker still needs to publish to its own queue.
+  - Its acknowledge-late redelivery of a task whose worker was killed cannot be bounded from an isolated worker: the spike measured 3 deliveries after 2 kills.
+- **Dramatiq.** Rejected. It is licensed LGPL-3.0, its workers share broker keys, and its worker needs to publish to its own queue.
+- **Procrastinate**, a PostgreSQL-backed queue under the MIT licence. Not tested. It is the first substitute for trusted work if `django-tasks` proves insufficient.
+- **A small queue of our own on PostgreSQL.** It would need more code than `django-tasks` and would not follow Django's API for tasks.
+- **One library for both kinds of work.** None meets the isolation requirements, and a PostgreSQL-backed queue cannot serve isolated workers, which hold no database credentials.
+- **Synchronous processing, or cron scripts.** Not viable for fetching and parsing.
 
 ## Consequences
 
-- Two more runtime components to operate: Redis and the workers.
-- Fetching and parsing are isolated from the web process.
-- A worker with broker access can normally enqueue tasks. For the fetch and parse workers this must be prevented; how is the subject of ADR-0011 (blocker B21).
-- Discipline is required to keep tasks thin and idempotent.
-
-## Open points
-
-1. Acceptance of the fetch and parse queues as described depends on ADR-0011. The two questions are settled by one spike before Phase 2 (blockers B4 and B21).
-2. **Python 3.14 support is not declared by Celery 5.6.3 or kombu 5.6.2**, which list support up to Python 3.13 (package metadata checked 2026-10-01). A one-off smoke test on the same day passed a message through Redis 8.10.2 on Python 3.14.4, which is not the same as upstream support. Celery is not yet in the lockfile. The owner must decide whether this is acceptable before Phase 2 (blocker B4). The Redis client is already capped below 6.5 in `pyproject.toml` because kombu requires it.
-3. **The spike must evaluate**, on the pinned Python version:
-   - a stable Celery release, and whether one that declares Python 3.14 support exists by then
-   - `django-tasks`
-   - Dramatiq
-   - another alternative if one is justified, such as a PostgreSQL-backed queue
-   - against each: the worker isolation requirements of ADR-0009 and ADR-0011; retry and redelivery behaviour, including a worker killed mid-task; broker permissions, including whether an isolated worker can be prevented from publishing; JSON-only task serialisation; declared and actual Python 3.14 support; and the security properties that follow from these
-4. If the spike selects a job system that does not use Redis, the Redis service in the development environment is reconsidered.
+- About fifty lines of the project's own consumer code, with tests, replace a library in the isolated workers.
+- Two packages before 1.0 become dependencies when Phase 2 builds the job system.
+- The reaper of point 5 is required, and it is tested with a worker killed mid-task.
+- Redis stays a runtime component. Its users and access rules are part of the deployment (ADR-0008).
+- The `redis` client was capped below 6.5 because kombu required it. That reason is gone. The cap is reviewed when Phase 2 adds the job system.
+- When the project moves to a Django release that has the tasks framework built in, `django-tasks` is replaced by the built-in API, with the same database backend.
 
 ## Revisit when
 
-Task loss or broker operation becomes a recurring problem, or the ADR-0011 spike shows the isolation requirement cannot be met with Celery on Redis. In either case reconsider the PostgreSQL-backed queue.
+`django-tasks` or `django-tasks-db` stops being maintained or fails on an upgrade of Python or Django; throughput outgrows a queue in PostgreSQL; or the project moves to a Django release with the tasks framework built in.

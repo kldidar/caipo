@@ -4,21 +4,21 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, and ADR-0021 and ADR-0022 on 2026-11-03. Five remain Proposed; the last column says what stands between each of those and acceptance.
+Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, ADR-0021 and ADR-0022 on 2026-11-03, and ADR-0004 and ADR-0011, after the spike of B4 and B21, on 2026-11-05. Three remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
 | [0001](0001-modular-monolith.md) | Modular monolith on Django | Accepted | — |
 | [0002](0002-postgresql-system-of-record.md) | PostgreSQL as system of record | Accepted | — |
 | [0003](0003-vector-search.md) | Vector search with pgvector and hybrid retrieval | Proposed | Embedding model decision; retrieval spike (B15) |
-| [0004](0004-asynchronous-jobs.md) | Celery with Redis for asynchronous jobs | Proposed | The owner's decision on the spike's recommendation of 2026-11-05 (no library in the isolated workers; `django-tasks` with its database backend for trusted work), [report](../reports/spike-c1-job-system-and-isolation.md) |
+| [0004](0004-asynchronous-jobs.md) | Job system: no library in the isolated workers, django-tasks for trusted work | Accepted | — (accepted on 2026-11-05 after the spike of B4 and B21, [report](../reports/spike-c1-job-system-and-isolation.md); replaces the proposal of Celery with Redis; nothing is installed before Phase 2 builds it) |
 | [0005](0005-evidence-and-provenance-model.md) | Evidence and provenance model | Accepted | — (amended before ratification) |
 | [0006](0006-ai-provider-abstraction.md) | AI provider abstraction | Proposed | Provider, model, and budget decisions (B14) |
 | [0007](0007-authentication.md) | Authentication and access model | Accepted | — (rule 3, no self-registration, superseded by [ADR-0021](0021-registration-for-the-reader-role.md)) |
 | [0008](0008-deployment-strategy.md) | Deployment strategy | Proposed | Hosting decision (B17); isolation mechanism (ADR-0011). CI on GitHub Actions was approved separately as Phase 1 tooling and does not depend on this ADR. |
 | [0009](0009-untrusted-content-handling.md) | Untrusted content handling: principles | Accepted | — |
 | [0010](0010-web-interface-and-api.md) | Web interface and API style | Accepted | — |
-| [0011](0011-worker-isolation-mechanism.md) | Worker isolation mechanism | Proposed | The owner's decision on the spike's recommendation of 2026-11-05 (candidate 1 in its strictest form, with trusted-side delivery and an egress proxy), [report](../reports/spike-c1-job-system-and-isolation.md) |
+| [0011](0011-worker-isolation-mechanism.md) | Worker isolation mechanism | Accepted | — (accepted on 2026-11-05 after the spike, which demonstrated its eleven requirements; Phase 2 demonstrates them again against its deployed configuration; production specifics wait for ADR-0008) |
 | [0012](0012-authorization-and-role-event-integrity.md) | Authorization and role event integrity | Accepted | — (amended on 2026-10-02 for the first-Administrator bootstrap) |
 | [0013](0013-authentication-core-and-first-administrator-bootstrap.md) | Authentication core and first-Administrator bootstrap | Accepted | — |
 | [0014](0014-totp-mfa-and-authentication-assurance.md) | TOTP multi-factor authentication and authentication assurance | Accepted | — (amended on 2026-10-03: enrolment for Reviewer and Administrator accounts needs an Administrator's approval, and the first Administrator's second factor is set up by the bootstrap; key management in production waits for ADR-0008) |

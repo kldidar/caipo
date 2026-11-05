@@ -1,25 +1,43 @@
 # ADR-0011: Worker isolation mechanism
 
-- Status: Proposed
-- Date: 2026-10-01
+- Status: Accepted
+- Date: 2026-11-05
 
 ## Context
 
-[ADR-0009](0009-untrusted-content-handling.md) requires that the fetch worker and the parse worker be isolated: compromise of either must not yield database credentials, AI credentials, access to internal services, or the ability to enqueue arbitrary tasks, and the parse worker must have no outbound network access.
+[ADR-0009](0009-untrusted-content-handling.md) requires that the fetch worker and the parse worker be isolated. Compromising either must not yield database credentials, AI credentials, access to internal services, or the ability to enqueue arbitrary tasks. The parse worker must also have no outbound network access.
 
-[ADR-0004](0004-asynchronous-jobs.md) proposes Celery with Redis. A Celery worker needs broker access, and broker access normally allows publishing any task to any queue. The two proposals are therefore in tension, and no mechanism has been shown to reconcile them. Nothing here has been built or tested.
+A worker of a job library normally needs broker access, and broker access normally allows publishing any task to any queue. Isolated workers also hold no database credentials, so they cannot record their own results. A trusted worker must therefore learn that work is finished without giving the isolated worker the ability to enqueue.
 
-There is a second gap: the isolated workers hold no database credentials, so they cannot record their own results. A trusted worker must learn that work is finished without the isolated worker being able to enqueue tasks.
+This ADR was proposed on 2026-10-01. It stated the requirements below and listed four candidate mechanisms, none of them tested. The spike shared with [ADR-0004](0004-asynchronous-jobs.md) (blockers B4 and B21) ran on 2026-11-05 ([report](../reports/spike-c1-job-system-and-isolation.md)). It demonstrated all eleven requirements by tests with candidate 1 in its strictest form. The project owner accepted its recommendation on 2026-11-05 (Q-16 of the execution tracker).
 
-## Spike of 2026-11-05
+## Decision
 
-The spike ran on 2026-11-05 ([report](../reports/spike-c1-job-system-and-isolation.md)) and demonstrated all eleven requirements below by tests, with candidate 1 in its strictest form: each isolated worker's broker user may only move a job from its queue into its own processing list and remove it from there; results leave as files a trusted worker validates; delivery and attempts are owned by the trusted side in PostgreSQL; the parse worker sits on an internal network with only the broker; the fetch worker's only route out is an egress proxy that checks destinations after resolution. That is its recommendation, which the owner has not yet decided. This ADR stays Proposed until the owner decides.
+1. **Restricted broker users (candidate 1), in the strictest form.**
+   - Each isolated worker connects to Redis as its own user.
+   - That user may run only `BLMOVE` from its own queue into its own processing list and `LREM` on that list, besides authenticating.
+   - It cannot publish to any queue, including its own, and cannot read, list, or change anything else.
+   - The default user is disabled.
+   - The consumer is the project's own (ADR-0004 point 2), because a job library needs more rights than this.
+2. **Results leave as files.** The parse worker writes to its result area, and the fetch worker to its landing area. A trusted worker validates every result before anything is written to the database (ADR-0009).
+3. **The trusted side owns delivery** (ADR-0004 points 3 and 5). It counts each attempt in PostgreSQL before dispatch and gives each stage a deadline. It dispatches again or fails a job whose validated result has not appeared. An isolated worker is never trusted to report state.
+4. **Networks.**
+   - The parse worker sits on an internal network that holds only the broker.
+   - The fetch worker sits on an internal network that holds the broker and an egress proxy. Only the proxy has a route out.
+   - The proxy resolves names itself and checks the address it will connect to. It refuses private, loopback, link-local, metadata, shared, documentation, multicast, and reserved destinations, and every port but 80 and 443. The spike used Squid; a purpose-built egress proxy such as Smokescreen is compared when Phase 2 is designed.
+   - The application's fetch guard stays as a separate layer: the proxy does not replace it.
+5. **Containers.**
+   - Isolated workers run as a non-root user, with a read-only root filesystem, every capability dropped, `no-new-privileges`, and a temporary `/tmp`.
+   - Their environment holds no database or AI credentials.
+   - The parse worker gets the artifact store read-only and its result area writable.
+   - The fetch worker does not get the artifact store at all; only its landing area is writable.
+6. **The requirements below are the acceptance tests.**
+   - The spike demonstrated each one.
+   - Phase 2 demonstrates them again, by tests against the configuration it deploys, before ingestion is enabled.
+   - A change to that configuration runs them again.
+7. **Production specifics wait for [ADR-0008](0008-deployment-strategy.md)**, for example network policies in an orchestrator or a sandboxed container runtime. Whatever is chosen keeps every property below.
 
-## Decision (proposed)
-
-No mechanism is decided. This ADR fixes what the spike must demonstrate and lists the candidates.
-
-### Requirements the mechanism must meet, shown by tests
+### Requirements, shown by tests
 
 For both isolated workers:
 
@@ -41,32 +59,27 @@ Additionally for the fetch worker:
 10. Connections to private, loopback, link-local, and metadata addresses fail at network level, independently of the application check.
 11. The artifact store is not readable. Only the landing area is writable.
 
-### Candidate mechanisms
-
-1. **Restricted broker accounts.** Each isolated worker runs in its own container and connects to Redis with an account whose access control limits it to the keys of its own queue. Results are written to a shared volume as files. A trusted worker polls for results by request identifier, or is notified through a narrowly restricted reply channel.
-2. **Separate broker instance per isolated queue.** Each isolated worker has its own Redis instance, containing nothing but its queue. Results as in candidate 1.
-3. **No broker access for isolated work.** A trusted worker launches each fetch or parse as a subprocess inside an operating-system sandbox with the required network and filesystem restrictions. The isolated code is then not a Celery worker at all.
-4. **Fallback: a PostgreSQL-backed queue** as considered in ADR-0004, if none of the above meets the requirements with Redis. This would supersede part of ADR-0004.
-
 ### How artifacts reach isolated workers
 
-Isolated workers receive and deliver files only through mounted volumes: the landing area for the fetch worker, a read-only artifact mount and a scratch area for the parse worker. They never hold storage credentials. This holds whatever the artifact store's backing technology is (see ADR-0008).
+Isolated workers receive and deliver files only through mounted volumes. The fetch worker has its landing area. The parse worker has a read-only artifact mount and a scratch area. They never hold storage credentials, whatever technology backs the artifact store (see ADR-0008).
 
 ## Alternatives considered
 
-- **Accept the risk and rely on input validation in tasks.** A compromised worker could enqueue tasks with crafted identifiers against trusted workers. Validation reduces but does not remove this, and it contradicts the requirement in ADR-0009.
-- **Give isolated workers narrowly scoped database roles.** Simpler result handling, but puts database credentials and a network path to PostgreSQL inside the components that handle hostile input.
+- **A separate broker instance for each isolated queue (candidate 2).** It adds instances without making isolation stronger than per-user rules on one broker, which the spike showed to be sufficient.
+- **No broker access for isolated work (candidate 3).** A trusted worker would launch each fetch or parse inside an operating-system sandbox. That needs sandbox tooling, or access to the container runtime, which is itself a large privilege. It remains the route if a future runtime makes per-job sandboxes cheap.
+- **A PostgreSQL-backed queue for isolated work (candidate 4).** Impossible: the isolated workers would need database access, which requirement 1 forbids. A PostgreSQL-backed queue is used for trusted work instead (ADR-0004).
+- **A job library's consumer under a restricted user.** Celery and Dramatiq both ran under one in the spike. Both still needed to publish to their own queue, and Celery's redelivery could not be bounded from the isolated side.
+- **Accepting the risk and relying on input validation in tasks.** A compromised worker could enqueue tasks with crafted identifiers against trusted workers. That contradicts ADR-0009.
+- **Giving isolated workers narrowly scoped database roles.** It puts database credentials, and a network path to PostgreSQL, inside the components that handle hostile input.
 
 ## Consequences
 
-- Phase 2 cannot begin until the spike is done (blocker B21).
-- The chosen mechanism may add operational complexity, such as Redis access-control configuration or sandbox tooling.
-- If only candidate 4 works, ADR-0004 changes.
-
-## Open points
-
-Everything. Acceptance requires a spike that implements one candidate and passes tests for requirements 1 to 11. The same spike chooses the job system (ADR-0004), because the two cannot be decided separately; it takes place before Phase 2. The spike is throwaway code in its own branch; it is not application code.
+- The broker's users and access rules, the internal networks, and the egress proxy are part of the deployment. They are versioned with it, and the tests of point 6 check them.
+- The egress proxy is one more component to operate.
+- IPv6 must be disabled on the isolated networks, or filtered by the proxy as IPv4 is. The spike tested IPv4 only.
+- Because no library runs in the isolated workers, the project maintains their small consumers.
+- Phase 2 cannot enable ingestion until point 6 holds for its deployed configuration.
 
 ## Revisit when
 
-The broker, container runtime, or artifact store changes.
+The broker, the container runtime, the orchestration, or the artifact store changes.
