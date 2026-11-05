@@ -1,0 +1,62 @@
+# Weekly audit of the locked dependency set: the "Dependency audit" job of
+# ci.yml, on a schedule. Approved by the project owner on 2026-11-05
+# (execution tracker, Q-13).
+#
+# A vulnerability published between two pull requests is otherwise found only
+# by the next one. This finds it within a week. Like ci.yml, it checks the code
+# and nothing else: it deploys nothing, uses no repository secret, and its token
+# can only read. It runs on the default branch and on no pull request, so it is
+# not a required check. A failed run shows in the Actions tab, and GitHub
+# notifies the repository's owner.
+#
+# Its pins are those of ci.yml, under the same policy. A pin changed there is
+# changed here in the same pull request.
+
+name: Weekly dependency audit
+
+on:
+  schedule:
+    # Mondays at 05:17 UTC (10:17 in Tashkent). An off-the-hour minute, because
+    # runs at the start of an hour are the most often delayed.
+    - cron: "17 5 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  UV_VERSION: "0.12.21"
+
+jobs:
+  dependency-audit:
+    name: Dependency audit (weekly)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PIP_AUDIT_VERSION: "2.10.1"
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+
+      - name: Export the locked dependency set
+        run: >-
+          uv export --locked --no-emit-project --format requirements-txt
+          --output-file "${RUNNER_TEMP}/requirements.txt"
+
+      - name: Known vulnerabilities (pip-audit)
+        run: >-
+          uvx "pip-audit==${PIP_AUDIT_VERSION}"
+          --require-hashes --disable-pip
+          --requirement "${RUNNER_TEMP}/requirements.txt"

@@ -438,4 +438,4 @@ Differences from CI to keep in mind:
 
 - CI starts from a fresh checkout with no `.env`. It takes service names and ports from the workflow, generates the two service passwords for each run, and runs the two `manage.py` commands under the testing settings. Locally, `.env` selects the development settings for them.
 - The secret scan covers commits only. Run it after committing and before pushing; it does not see uncommitted changes, and it does not read `.env`.
-- The pinned versions of `uv`, `pip-audit`, and `gitleaks` are in the workflow file. If you change one there, change it here.
+- The pinned versions of `uv`, `pip-audit`, and `gitleaks` are in the workflow file. If you change one there, change it here, and in `.github/workflows/dependency-audit.yml`, which runs the dependency audit every Monday.
