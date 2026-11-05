@@ -175,21 +175,21 @@ Each phase has its own gate check: its blockers in §10 must be closed before it
 
 ## 8. Decisions made and open
 
-Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, and ADR-0021 and ADR-0022 on 2026-11-03. Five remain Proposed and must not be built on; the last column says what each still needs.
+Decisions are recorded as ADRs in [adr/](adr/README.md). Nine were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, ADR-0021 and ADR-0022 on 2026-11-03, and ADR-0004 and ADR-0011 on 2026-11-05. Three remain Proposed and must not be built on; the last column says what each still needs.
 
 | ADR | Topic | Status | Needs |
 |---|---|---|---|
 | 0001 | Modular monolith on Django | Accepted | — |
 | 0002 | PostgreSQL as system of record | Accepted | — |
 | 0003 | Vector search with pgvector, hybrid retrieval | Proposed | Embedding model decision; retrieval spike (B15) |
-| 0004 | Celery with Redis for asynchronous jobs | Proposed | Job-system spike before Phase 2 (B4, B21); Celery does not yet declare Python 3.14 support |
+| 0004 | Job system: no library in the isolated workers, django-tasks for trusted work | Accepted | — (accepted on 2026-11-05 after the spike of B4 and B21; nothing is installed before Phase 2 builds it) |
 | 0005 | Evidence and provenance model | Accepted | — (amended before ratification) |
 | 0006 | AI provider abstraction | Proposed | Provider, model, and budget decisions (B14) |
 | 0007 | Authentication and access model | Accepted | — |
 | 0008 | Deployment strategy | Proposed | Hosting decision (B17); isolation mechanism (ADR-0011) |
 | 0009 | Untrusted content handling: principles | Accepted | — |
 | 0010 | Web interface and API style | Accepted | — |
-| 0011 | Worker isolation mechanism | Proposed | Spike (B21) |
+| 0011 | Worker isolation mechanism | Accepted | — (accepted on 2026-11-05 after the spike; Phase 2 demonstrates the requirements again against its deployed configuration) |
 | 0012 | Authorization and role event integrity | Accepted | — (amended for the first-Administrator bootstrap) |
 | 0013 | Authentication core and first-Administrator bootstrap | Accepted | — |
 | 0014 | TOTP multi-factor authentication and authentication assurance | Accepted | — (amended on 2026-10-03 for approval of privileged enrolment; key management in production waits for ADR-0008) |
@@ -257,8 +257,8 @@ The service checks were run with a temporary environment file holding generated 
 
 ### Not verified
 
-- **Celery on Python 3.14.** Celery 5.6.3 and kombu 5.6.2 declare support up to Python 3.13 only. A one-off smoke test outside the project passed a message through Redis 8.10.2 on Python 3.14.4. That is not upstream support. Celery is not in the lockfile and will not be installed before the job-system spike at the Phase 2 gate (ADR-0004).
-- **redis client 6.4.0 on Python 3.14.** It does not declare 3.14 support. It is held below 6.5 because kombu requires that. The service tests pass with it.
+- **Celery on Python 3.14.** No longer relevant: ADR-0004, accepted on 2026-11-05, uses no Celery. The spike found that only Celery 5.7.0rc1 declares Python 3.14 ([report](reports/spike-c1-job-system-and-isolation.md)).
+- **redis client 6.4.0 on Python 3.14.** It does not declare 3.14 support. It was held below 6.5 because kombu required that; ADR-0004 uses no kombu, so the cap is reviewed when Phase 2 adds the job system. The service tests pass with it.
 - **django-stubs on Python 3.14.** django-stubs 5.2.9 does not declare Python 3.14 support. Type checking passes with it.
 - **Dependencies not yet locked:** the pgvector client and every document-parsing library.
 - **Tools not yet set up:** `pre-commit` and `trivy`.
@@ -285,12 +285,13 @@ Phase 1 has no open blocker after the owner decisions of 2026-10-02. The demonst
 | B5 | Access model undecided | 2026-10-02 | Owner decision: public research site, authenticated research workspace, restricted administration. Recorded in ADR-0007. |
 | B6 | Web interface and API style undecided | 2026-10-02 | Owner decision: server-rendered templates, HTMX, small targeted JavaScript; no separate frontend; API deferred; English at launch with internationalisation enabled. Recorded in ADR-0010. |
 | B18 | No security contact or private reporting channel | 2026-10-02 | SECURITY.md names GitHub private vulnerability reporting as the intended channel and sets out the coordinated disclosure process. The repository setting is enabled: the GitHub API endpoint `private-vulnerability-reporting` for `kldidar/caipo` returned `enabled: true` when queried on 2026-10-02. |
+| B4 | Python version and job system | 2026-11-05 | Python stays at 3.14: Python 3.14.4, Django 5.2.17, psycopg 3.3.6, and redis client 6.4.0 lock, install, and pass the service tests (closed in part on 2026-10-02). The job system is decided in [ADR-0004](adr/0004-asynchronous-jobs.md), accepted by the project owner after the spike ([report](reports/spike-c1-job-system-and-isolation.md)): no library in the isolated workers, `django-tasks` with `django-tasks-db` for trusted work, verified on Python 3.14. Other libraries are still checked against Python 3.14 when first added. |
+| B21 | Isolation mechanism for the fetch and parse workers not chosen or proven | 2026-11-05 | The spike demonstrated all eleven requirements of [ADR-0011](adr/0011-worker-isolation-mechanism.md) by tests (47 checks); the project owner accepted the mechanism. Phase 2 demonstrates them again against its deployed configuration before ingestion is enabled |
 
 ### Partly closed
 
 | ID | Closed part | Open part | Open part blocks |
 |---|---|---|---|
-| B4 | Python stays at 3.14. Python 3.14.4, Django 5.2.17, psycopg 3.3.6, and redis client 6.4.0 lock, install, and pass the service tests; PostgreSQL 18.6 and Redis 8.10.2 run (§9). | The job-system decision: see B4 under Phase 2. Other libraries are checked against Python 3.14 when first added; `pytest-django`, `django-stubs`, and `import-linter` are locked as the first step of Phase 1. | Phase 2 |
 | B7 | Software license: MIT, for CAIPO's original software only ([LICENSE](../LICENSE)). Software, document, data, and display rights are separated in [RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md). | The rights policy for third-party documents and the licence for project-created data: see B7 under Phase 2. | Phase 2 |
 
 ### Blocks Phase 1 (project skeleton)
@@ -303,12 +304,10 @@ Owner decision of 2026-10-02 on Phase 1 scope: **CI on GitHub Actions is approve
 
 | ID | Issue | Needed |
 |---|---|---|
-| B4 | (remaining part) The job system is not chosen. Celery does not yet declare Python 3.14 support. | One spike, shared with B21, on Python 3.14: evaluate a stable Celery release, `django-tasks`, Dramatiq, and another alternative if justified, for worker isolation, retry and redelivery behaviour, broker permissions, JSON-only task serialisation, Python 3.14 support, and security properties. Then decide ADR-0004. Celery is not installed before that. **Spike done on 2026-11-05** ([report](reports/spike-c1-job-system-and-isolation.md)); open until the owner decides ADR-0004 on its recommendation. |
 | B7 | (remaining part) No rights policy for third-party documents: which kinds may be stored, shown in the workspace, shown publicly, redistributed, or sent to an AI provider, and on what basis. No licence for project-created research data and snapshots. No procedure for removal requests. | Define the policy items listed in [RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md) §4 |
 | B8 | Research questions and study period are drafts | Researcher confirms or revises [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §2 and §3.3 |
 | B9 | Source inclusion criteria and initial source list are not finalised | Researcher provides and verifies the seed list |
 | B10 | Unknown share of scanned documents; OCR approach and language support undecided | Sample real documents; decide whether OCR is in scope |
-| B21 | Isolation mechanism for the fetch and parse workers not chosen or proven | Spike per ADR-0011, shared with the job-system spike in B4: demonstrate with tests that a compromised fetch or parse worker gets no database credentials, no AI key, no access to internal services, and cannot enqueue arbitrary tasks, and that the parse worker has no outbound network. **Spike done on 2026-11-05:** all eleven requirements of ADR-0011 demonstrated by tests ([report](reports/spike-c1-job-system-and-isolation.md)); open until the owner decides ADR-0011 |
 | B22 | "AI policy" domain boundary and "economic transformation" are undefined | Researcher defines both ([RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.1, §3.2) and revises the research questions accordingly |
 
 ### Blocks Phase 3 (policies and indicators)

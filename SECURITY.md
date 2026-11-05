@@ -104,7 +104,7 @@ A trusted worker validates the manifest, recomputes the hash, and records the ar
 - Artifacts are stored under content-hash names with no extension, outside any web root, without execute permission.
 - Original files are served only as downloads with `Content-Disposition: attachment`, a generic content type, `X-Content-Type-Options: nosniff`, and a restrictive Content Security Policy. Access requires authorisation and the right to display the document.
 - No code path passes a stored filename or document-derived string to a shell.
-- No deserialisation of untrusted data with `pickle`, unsafe YAML loaders, or similar. Task messages are serialised as JSON only; JSON-only task serialisation is a criterion of the job-system spike (ADR-0004, blocker B4).
+- No deserialisation of untrusted data with `pickle`, unsafe YAML loaders, or similar. Task arguments are JSON only: `django-tasks` refuses anything else, and a message to an isolated worker is a job identifier and nothing more ([ADR-0004](docs/adr/0004-asynchronous-jobs.md)).
 
 ### Prompt injection
 

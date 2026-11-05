@@ -109,7 +109,7 @@ uv lock --check                       # verify the lockfile matches pyproject.to
 
 Do not use `pip install`. Every new dependency needs the justification described in [CLAUDE.md](../CLAUDE.md).
 
-The `redis` client is capped below 6.5 on purpose: Celery's transport library requires it. See the comment in `pyproject.toml`. Celery itself is not installed, and must not be added yet: the job system is chosen by a spike at the Phase 2 gate (ADR-0004).
+The `redis` client is capped below 6.5. The cap was set because Celery's transport library required it (see the comment in `pyproject.toml`). [ADR-0004](adr/0004-asynchronous-jobs.md), accepted on 2026-11-05, uses no Celery, so the cap is reviewed when Phase 2 adds the job system. Nothing of the job system is installed before then.
 
 ## Running Django
 
