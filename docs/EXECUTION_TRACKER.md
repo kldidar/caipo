@@ -37,13 +37,13 @@ Fri 2026-11-06 is the buffer for review, CI, and merges. A Day whose pull reques
 
 ## 1. Verified repository state
 
-Verified on 2026-11-05, after the owner's merge of #44.
+Verified on 2026-11-05, after the owner's merge of #45.
 
 | Item | Value | How verified |
 |---|---|---|
-| `origin/main` | `26c0839`, the merge of #44 (Day 16), after `bf9c441` (#43, Day 15), `ec02751` (#42, Day 14), `6806c72` (#41, Day 13), `efd4c6b` (#40, Day 12), `be8fb08` (#39, Day 11), `bcb9806` (#38, Day 10), `c66e2d4` (#37, Day 9), `2f42d68` (#36, Days 5 to 8), `9e5e9ea` (#31, Day 4), `5ba91c8` (#30, Day 3), and `7904e36` (#29, Day 2) | `git fetch`; `gh pr view 36` |
-| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s`. `9e5e9ea`: run 41405637271, all four checks passed, `4674 passed in 631.67s`. `2f42d68`: run 41409027896, all four checks passed, `4787 passed in 682.99s`. `c66e2d4`: run 41413845532, all four checks passed, `4787 passed in 677.49s`, test job 712 s of its new 1,500 s. `bcb9806`: run 41426022585, all four checks passed, `4807 passed in 684.88s`, test job 721 s. `be8fb08`: run 41669533592, all four checks passed, `4876 passed in 692.82s`. `efd4c6b`: run 41672940236, all four checks passed, `4961 passed in 655.30s`. `6806c72`: run 41772648126, all four checks passed, `4966 passed in 704.52s`. `ec02751`: run 41777689388, all four checks passed, `4972 passed in 745.79s`. `bf9c441`: run 41795974119, all four checks passed, `4972 passed in 714.04s`. `26c0839`: run 41972775585, all four checks passed, `4972 passed in 575.94s` | `gh run view`; job logs |
-| Pull requests | 44 merged, none closed without merging. #1 to #31 and #36 to #44 were merged into `main`. **#32 to #35 were merged into the branches they were stacked on** (`feat/sources-policies`, `feat/indicators`, `feat/research-workspace`, `feat/polish-quality`), not into `main`, on 2026-11-02 between 07:20 and 07:23 UTC; no CI ran on them, because CI runs only for pull requests into `main`. #36 brought Days 5 to 8 to `main`, merged as `2f42d68`. #40 was built on #39 and opened against `main`; its squash merge restored two tracker rows that Day 12 had deleted and Day 11 had added, which Day 13 deletes again (§11). Open: only the one that changes this file (Day 17) | `gh pr list`; merge bases |
+| `origin/main` | `e3ba938`, the merge of #45 (Day 17), after `26c0839` (#44, Day 16), `bf9c441` (#43, Day 15), `ec02751` (#42, Day 14), `6806c72` (#41, Day 13), `efd4c6b` (#40, Day 12), `be8fb08` (#39, Day 11), `bcb9806` (#38, Day 10), `c66e2d4` (#37, Day 9), `2f42d68` (#36, Days 5 to 8), `9e5e9ea` (#31, Day 4), `5ba91c8` (#30, Day 3), and `7904e36` (#29, Day 2) | `git fetch`; `gh pr view 36` |
+| CI on the merges | `7904e36`: run 41352450005, all four checks passed, `4494 passed in 522.91s`. `5ba91c8`: run 41353530141, all four checks passed, `4511 passed in 642.12s`. `9e5e9ea`: run 41405637271, all four checks passed, `4674 passed in 631.67s`. `2f42d68`: run 41409027896, all four checks passed, `4787 passed in 682.99s`. `c66e2d4`: run 41413845532, all four checks passed, `4787 passed in 677.49s`, test job 712 s of its new 1,500 s. `bcb9806`: run 41426022585, all four checks passed, `4807 passed in 684.88s`, test job 721 s. `be8fb08`: run 41669533592, all four checks passed, `4876 passed in 692.82s`. `efd4c6b`: run 41672940236, all four checks passed, `4961 passed in 655.30s`. `6806c72`: run 41772648126, all four checks passed, `4966 passed in 704.52s`. `ec02751`: run 41777689388, all four checks passed, `4972 passed in 745.79s`. `bf9c441`: run 41795974119, all four checks passed, `4972 passed in 714.04s`. `26c0839`: run 41972775585, all four checks passed, `4972 passed in 575.94s`. `e3ba938`: run 41984739241, all four checks passed, `4972 passed in 707.04s` | `gh run view`; job logs |
+| Pull requests | 45 merged, and one closed without merging: #46, opened from the spike's branch `spike/c1-job-isolation`, whose code is never merged (ADR-0011). #1 to #31 and #36 to #45 were merged into `main`. **#32 to #35 were merged into the branches they were stacked on** (`feat/sources-policies`, `feat/indicators`, `feat/research-workspace`, `feat/polish-quality`), not into `main`, on 2026-11-02 between 07:20 and 07:23 UTC; no CI ran on them, because CI runs only for pull requests into `main`. #36 brought Days 5 to 8 to `main`, merged as `2f42d68`. #40 was built on #39 and opened against `main`; its squash merge restored two tracker rows that Day 12 had deleted and Day 11 had added, which Day 13 deletes again (§11). Open: only the one that changes this file (Day 18) | `gh pr list`; merge bases |
 | Protection of `main` | Ruleset "Protect main": pull request required, the four checks required with strict status checks, no bypass | GitHub API, 2026-10-30 |
 | Phase and gate | Phase 1. Gate READY for Phase 1, NOT READY for Phase 2 and later. Unchanged by ADR-0020 | [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 (authoritative) |
 | CI time headroom | The test job took 480 s to 738 s in the 25 successful runs from 2026-10-24 to 2026-11-02; runs of the same 4,494 tests ranged from 480 s to 699 s. Its limit was 900 s; Day 9 raises it to 1,500 s with the owner's approval (§9) | Job start and end times of those runs (`gh run view`) |
@@ -76,7 +76,7 @@ Counted from the packages in §4. No percentage is estimated.
 | Master-roadmap packages | 56 (57 listed, of which G1 is REMOVED) |
 | Sprint packages (S1 to S8) | 8 |
 | DONE | 15 (A1, H1, H6, E1, G3, F2 and F4 in their demonstrator forms, S1 to S8) |
-| AWAITING OWNER MERGE | 1: C2, by Day 17's pull request |
+| AWAITING OWNER MERGE | 1: B4 (the period design, as a working basis), by Day 18's pull request |
 | Sprint packages NOT STARTED or BLOCKED on another sprint package | 0 |
 | Master-roadmap packages PARTIAL | 5 (A3, E2, E4, G4, J1; §12 says what is missing) |
 | Master-roadmap packages BLOCKED | 41 |
@@ -109,7 +109,7 @@ The master roadmap of 2026-10-28 with every package's status and its sprint clas
 | ID | Package | Class | Status | Waits for | Executor |
 |---|---|---|---|---|---|
 | A1 | Accept the audit baseline | — | **DONE** | — | Owner |
-| A2 | Research governance decisions | POST | BLOCKED. Q-1 and Q-6 answered (§9) | Q-2 to Q-5, Q-7, Q-8; then a Day records them in the protocol | Owner, then Day |
+| A2 | Research governance decisions | POST | IN PROGRESS: Q-1 to Q-8 answered (§9); Day 18 records Q-2, Q-3, Q-5, and Q-8 in the protocol | The remaining OPEN points of the protocol (O-1 to O-11), decided as the pilot proceeds | Owner, then Day |
 | A3 | Blueprint §9.2 decisions (at least P-1, P-11, P-13, P-14) | SHOULD | PARTIAL: P-13 answered, P-1 provisional (§9) | P-11, P-14 (Q-10) | Owner |
 | A4 | Store for research working records outside this repository | POST | NOT STARTED: Q-7 answered, a private repository (§9) | The owner creates it | Owner |
 | A5 | Phase 1 exit, or its residual items | SHOULD | BLOCKED | Q-11 | Owner, then Day |
@@ -124,7 +124,7 @@ All research work; the owner does it as the researcher. None is needed for the d
 | B1 | Languages, scripts, readers, pilot terminology lists (O-5) | POST | BLOCKED | A2, A4. Reader: the owner alone, with the blind re-check (§9) | Owner |
 | B2 | Run and report the §3.8 pilot | POST | BLOCKED | B1 | Owner |
 | B3 | Decide O-1 to O-3 and O-5 to O-10; O-4 after B20 | POST | BLOCKED | B2, A2 | Owner |
-| B4 | B8 period design | POST | BLOCKED | A2 (Q-3, Q-5) | Owner |
+| B4 | B8 period design | POST | AWAITING OWNER MERGE: a working basis, 2010 to 2024, recorded in Day 18; B8 stays open for the research questions (O-11) and O-6 | — | Owner |
 | B5 | O-11: revise RQ1 to RQ4 | POST | BLOCKED | B3, B4 | Owner |
 | B6 | Close B22 under its confirmed gate | POST | BLOCKED | B1 to B5, B20 (F-15), O-10 | Owner, then Day |
 | B7 | B9: inclusion criteria and verified seed list | POST | BLOCKED | B6 | Owner |
@@ -139,7 +139,7 @@ All research work; the owner does it as the researcher. None is needed for the d
 | ID | Package | Class | Status | Waits for | Executor |
 |---|---|---|---|---|---|
 | C1 | Shared B4/B21 spike (job system and worker isolation) | POST | **DONE** (#44, `26c0839`): [report](reports/spike-c1-job-system-and-isolation.md) | — | Day |
-| C2 | Decide ADR-0004 and ADR-0011 | POST | AWAITING OWNER MERGE: both accepted by the owner on 2026-11-05 (Q-16) and rewritten in Day 17 | — | Day, Owner |
+| C2 | Decide ADR-0004 and ADR-0011 | POST | **DONE** (#45, `e3ba938`): both accepted by the owner on 2026-11-05 (Q-16) | — | Day, Owner |
 | C3 | DATA_MODEL, specification, AI_ARCHITECTURE amendments for F-1 to F-16 | POST | BLOCKED | B3, B6 | Day |
 | C4 | ADR for the source of a registry name or date, and a preferred name (I3) | POST | BLOCKED | P-11 (Q-10) | Day, Owner |
 | C5 | Phase 2 gate marked READY | POST | BLOCKED | B6, B7, B8, B9, C2, C3 | Owner, Day |
@@ -241,7 +241,8 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 14 | Final delivery check: a rehearsal of the demonstration from an empty database, refreshed screenshots, and the defect it found | J1 | 2026-11-04 | **DONE**: merged as `ec02751`; CI run 41777689388 passed all four checks; `4972 passed` | #42 |
 | 15 | Sprint close-out: the records of Day 14 and of the owner's check, statements made stale by Days 11 to 14, and the sprint's summary | J1, H1 | 2026-11-04 | **DONE**: merged as `bf9c441`; CI run 41795974119 passed all four checks; `4972 passed` | #43 |
 | 16 | The C1 spike: job system and worker isolation (B4, B21), with its report | C1 | 2026-11-04 | **DONE**: merged as `26c0839`; CI run 41972775585 passed all four checks; `4972 passed`. The spike's code is on the branch `spike/c1-job-isolation` (`82f4de6`), never merged | #44 |
-| 17 | ADR-0004 and ADR-0011 rewritten as accepted; B4 and B21 closed; the documents that described them as open brought up to date | C2 | 2026-11-05 | AWAITING OWNER MERGE | The pull request that changes this file |
+| 17 | ADR-0004 and ADR-0011 rewritten as accepted; B4 and B21 closed; the documents that described them as open brought up to date | C2 | 2026-11-05 | **DONE**: merged as `e3ba938`; CI run 41984739241 passed all four checks; `4972 passed` | #45 |
+| 18 | The study period, the binding closure gate for B22, and the pilot's rights checks, recorded in the protocol | A2, B4 | 2026-11-05 | AWAITING OWNER MERGE | The pull request that changes this file |
 
 ### Planned Days
 
@@ -272,7 +273,7 @@ Days 5 to 8 get full checklists when they start; their deliverables are in §4.1
 
 | Pull request | Day | Head | Status |
 |---|---|---|---|
-| The pull request that changes this file | 17 | Reported when it is opened | Awaiting CI, then the owner's merge |
+| The pull request that changes this file | 18 | Reported when it is opened | Awaiting CI, then the owner's merge |
 
 ## 8. Blockers and dependencies
 
@@ -311,6 +312,9 @@ Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 
 | 2026-11-03 | Accessibility evidence for Days 11 and 12: axe-core 4.10.2 (scratch environment, not added to the project) finds no violation on the registration, sign-in, and home pages at 1280 and 390 CSS px in light and dark mode, nor on the six article pages, including the review pages of a verified Administrator. One defect found and fixed: the navigation of a signed-in account ran past the right edge at 1280 px once "Articles" was added, and an Administrator's already did at 1366 px. Its items now wrap onto a second line, and the tag line under the name gives way beside a navigation below 1500 px; no role's page scrolls sideways at 1181, 1280, 1366, or 1440 px | Claude Code | This file; `caipo/web/static/web/caipo.css` |
 | 2026-11-04 | Rehearsal of the demonstration (Day 14), on a database created empty: `check`, `migrate`, and `seed_demo` in 6 seconds; `create_first_administrator` driven at a pseudo-terminal with a code computed from the key it showed; then each step of the walk-through in [DEMO.md](DEMO.md), in a browser: the public home page, the Reader's overview, RP-358 with its derived status, the contextual registry, the demonstration strategy, layers B and C, *Reproduced exactly*, the CSV export, the bounded negative finding, the refusal of a demonstration policy for Turkmenistan and its creation for DEMO Northland, a new analysis run, a registration through the message in `data/outbox/`, an article published by the Administrator, and four pages at phone width in dark mode (no sideways scrolling, no axe-core violation). **One defect found and fixed:** the CSV export of an analysis wrote a negative number as text with a leading apostrophe (`'-6.352022`), against SECURITY.md's rule that numeric cells are not altered; numbers are now written as numbers, and text that begins like a formula is still neutralised. Screenshots in `docs/images/` were taken again, with two new ones (articles, registration) | Claude Code | This file; [DEMO.md](DEMO.md); `caipo/web/exports.py` |
 | 2026-11-04 | The check by a person using a screen reader, described to the owner as a walk with Windows Narrator, keyboard only, over the home, sign-in, indicator, article-form, and navigation pages. The owner reported: "Все работает отлично" ("everything works well"). Which pages were walked, and with which screen reader, is not recorded. It is the owner's own check, not an independent audit | Owner | This file; §12, item C |
+| 2026-11-05 | Q-3 and Q-5: the study period is set first, on grounds independent of AI policy dates, as a working basis: one common window from 2010 to 2024, both included, with a fixed end cutoff. The record states that the demonstrator had displayed indicator values for those years before the choice | Owner | [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.3 |
+| 2026-11-05 | Q-2: the six conditions of protocol §3.5 are the binding closure gate for B22; O-4 waits for B20; with one reader the re-check after an interval is used, with its limitation; B8 closes before B22 or in the same change. F-9 resolved | Owner | [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.5; [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 |
+| 2026-11-05 | Q-8: the owner makes and records the pilot's rights checks; an uncertain case is not kept; the competent rights reviewer for B7 is named or commissioned later, and until B7 no text of a legal document is shown publicly | Owner | [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.8 |
 | 2026-11-05 | Q-16: accept the C1 spike's recommendation. ADR-0004 and ADR-0011 are accepted as rewritten: no job library in the isolated workers, whose delivery the trusted side owns in PostgreSQL; `django-tasks` with `django-tasks-db` for trusted work; restricted broker users, internal networks, and an egress proxy for isolation. B4 and B21 close | Owner | [ADR-0004](adr/0004-asynchronous-jobs.md); [ADR-0011](adr/0011-worker-isolation-mechanism.md); [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 |
 | 2026-11-05 | Change of CLAUDE.md: ADR-0004 and ADR-0011 move to the Accepted list, and architecture rule 13 says the job system is decided in ADR-0004, installed only when Phase 2 builds it, with no Celery or other job system | Owner (approval of that change) | CLAUDE.md |
 | 2026-11-04 | Q-9: start the C1 spike now | Owner | Day 16; [the spike report](reports/spike-c1-job-system-and-isolation.md) |
@@ -324,10 +328,6 @@ Recommended defaults are recommendations, not decisions. None of them blocks the
 
 | ID | Decision | Why it matters | Recommended default | Alternatives and consequences | Blocks |
 |---|---|---|---|---|---|
-| Q-2 | Confirm the six conditions of protocol §3.5 as the binding B22 closure gate (F-9)? | Without a confirmed gate, B22 could be closed on the shorter specification row | Confirm all six as written; O-4 needs B20; the single-reader re-check is allowed with its limitation; B8 closes first or in the same change | Change conditions in a reviewed protocol change | B6, Phase 2 |
-| Q-3 | Order of B22 and B8 | They depend on each other | (a) Split the B8 work: set the period first, on grounds independent of AI policy dates, before any indicator values are examined | (b) close B8 and O-11 with B22; (c) a pilot-only period; (d) protocol dependencies govern | B4, B5, H5 |
-| Q-5 | B8 working basis and closure test | Fixes how the period is chosen before data is seen | P1, one common window, as a working basis only; a fixed end cutoff; the start reason recorded before values are examined | Keep P1 and P3 both open; or P3 | B4 |
-| Q-8 | Who makes the pilot's rights checks, and who is the competent rights reviewer for B7? | Files may be kept for the pilot only after a recorded check | The owner makes and records the pilot checks, and an uncertain case is not kept; the owner names or commissions the B7 reviewer | A named rights adviser | B2, B8, B9 |
 | Q-10 (rest) | P-11 (sources of names), P-14 (text style guide); confirm or replace the provisional P-1 | C4 and E3 depend on them | The Blueprint's recommended options | Reject or defer each | A3, C4, E3 |
 | Q-11 | Phase 1 exit: declare it met, with D0 as a residual item? | No document declares Phase 1 complete | Declare the exit met, with D0 residual | Keep Phase 1 open until D0 is built | A5, D0 |
 | Q-12 | Status consolidation, freezing the diagnostic report, a pull request template | Status is narrated in about seven places | Approve all three after the sprint | Approve some | H2, H3, H4 |
@@ -336,8 +336,8 @@ Recommended defaults are recommendations, not decisions. None of them blocks the
 
 ## 11. Next executable Day
 
-- **Day 17** (ADR-0004 and ADR-0011 accepted, B4 and B21 closed) is the pull request that changes this file. Days 1 to 16 are DONE; the last merge is `26c0839`.
-- **Next:** the Phase 2 gate stays NOT READY. Its remaining blockers are research and rights decisions (B7 to B10, B22, and the protocol items), not engineering. The research governance records wait for Q-2, Q-3, Q-5, and Q-8; the other open decisions are Q-10 to Q-14 (§10). Also queued: whether the bound of twelve apps still holds now that `demo` and `articles` exist ([ARCHITECTURE.md](ARCHITECTURE.md) §2.1).
+- **Day 18** (the study period, the binding B22 gate, the pilot's rights checks) is the pull request that changes this file. Days 1 to 17 are DONE; the last merge is `e3ba938`.
+- **Next:** the Phase 2 gate stays NOT READY. Its remaining blockers are research and rights decisions (B7 to B10, B22, and the protocol items), not engineering. The research path now runs through the pilot: the corpus languages and verified terminology lists (B1), then the pilot itself (B2) and the OPEN points it informs (B3). Those are the owner's research work, which Claude Code can prepare. The other open decisions are Q-10 to Q-14 (§10). Also queued: whether the bound of twelve apps still holds now that `demo` and `articles` exist ([ARCHITECTURE.md](ARCHITECTURE.md) §2.1).
 - **Correction of 2026-11-03.** #40 was built on #39 and opened against `main`. After #39 was squash-merged, the squash merge of #40 kept two rows of this file that Day 11 had added and Day 12 had deleted (the planned Day 12 and the open Q-15). Every other file on `main` is identical to what Day 12's checks ran on (`git diff c3fd485 efd4c6b`). Day 13 deletes the two rows again. A pull request built on another is compared with its own head after both merges.
 - **After the merges of Days 11 to 14:** the owner ran `migrate` on the development database; accounts 0013 and 0014 and articles 0001 are applied (checked read-only on 2026-11-04).
 - **Nothing remains before 2026-11-06.** The clean-setup rehearsal is done (Day 14), and the owner reported on the screen-reader check (§9).
