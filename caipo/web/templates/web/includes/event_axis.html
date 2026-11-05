@@ -1,0 +1,18 @@
+{% load i18n %}<figure class="chart chart--events">
+  <svg class="chart__svg" viewBox="0 0 {{ axis.width }} {{ axis.height }}" role="img" aria-label="{{ title }}: {% translate 'formal policy events by country and year; each event is in the table below' %}">
+    <g class="chart__grid" aria-hidden="true">
+      {% for row in axis.rows %}<line x1="{{ axis.left }}" x2="{{ axis.right }}" y1="{{ row.y }}" y2="{{ row.y }}"/><text class="chart__axis" x="{{ axis.left|add:'-8' }}" y="{{ row.y }}" text-anchor="end" dominant-baseline="middle">{{ row.alpha2 }}</text>{% endfor %}
+      {% for tick in axis.x_ticks %}<text class="chart__axis" x="{{ tick.position }}" y="{{ axis.height|add:'-8' }}" text-anchor="middle">{{ tick.label }}</text>{% endfor %}
+    </g>
+    {% for row in axis.rows %}
+      <g class="chart__events series-{{ row.index }}">
+        {% for mark in row.marks %}
+          <g transform="translate({{ mark.x }} {{ row.y }})"><rect x="-5" y="-5" width="10" height="10" transform="rotate(45)"><title>{{ mark.label }}</title></rect>{% if mark.count > 1 %}<text class="chart__count" x="9" y="0" dominant-baseline="middle">×{{ mark.count }}</text>{% endif %}</g>
+        {% endfor %}
+      </g>
+    {% endfor %}
+  </svg>
+  <figcaption class="chart__legend">
+    <span class="legend-item legend-item--note"><span class="legend-item__event" aria-hidden="true"></span>{% translate "One or more formal events in that year; ×2 means two" %}</span>
+  </figcaption>
+</figure>

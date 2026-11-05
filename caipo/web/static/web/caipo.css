@@ -907,6 +907,12 @@ th.num {
   text-align: right;
 }
 
+/* A date is read as one unit and never broken across lines. */
+td.date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Definition lists ---------- */
 
 dl {
@@ -2036,6 +2042,29 @@ details.disclosure > .disclosure__body {
    same values in the table below each chart. */
 .chart__series circle:hover {
   r: 6;
+}
+
+/* Formal policy events: a mark per country and year, in the country's
+   colour, in a panel of their own (FR-42). */
+.chart__events rect {
+  fill: var(--series);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.chart__count {
+  fill: var(--ink-2);
+  font-size: 11px;
+  font-weight: 650;
+  font-family: var(--font-sans);
+}
+
+.legend-item__event {
+  width: 8px;
+  height: 8px;
+  margin: 0 1px;
+  transform: rotate(45deg);
+  background: var(--ink-3);
 }
 
 .chart__label {
