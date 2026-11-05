@@ -1,8 +1,10 @@
 # CAIPO full diagnostic, 2026-10-20
 
+**Frozen on 2026-11-06 (execution Day 23, Q-12).** This report is a historical record of the audit of 2026-10-20 and its follow-ups to 2026-10-24. It is no longer updated, and a statement in it about what is open or built is true of its own date only. Its six open findings are tracked in [EXECUTION_TRACKER.md](../EXECUTION_TRACKER.md): I1, I2, and I5 under package I2 (production hardening, after ADR-0008); I3 under C4 (an ADR for the source of a registry name or date); I4 under D6 (a reader of the audit record); and I6 under A6 (housekeeping).
+
 Technical, security, data, and research-readiness audit of the repository at `main` `4bff508` and of the local development database. Carried out by an AI agent (Claude Code) at the project owner's request, on the branch `audit/caipo-full-diagnostic`.
 
-**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15, §16, and §17 are dated follow-ups and keep the state of their own day, including statements that a pull request was open or that a name was not yet entered. The Status column of the register in §8 records the status after the merges of §17, on 2026-10-23. §18 records the entry of the two institution names on 2026-10-23. §19 records the L4 optimization as it stood while pull request #20 was open, and the housekeeping of 2026-10-24. §20 records the merge of #20. The current status of every finding is in §1 and §20.3.
+**How to read this report.** Sections 2 to 7 and 14 describe the audit as carried out on 2026-10-20 against `main` `4bff508`. Each finding states what was observed then. §15, §16, and §17 are dated follow-ups and keep the state of their own day, including statements that a pull request was open or that a name was not yet entered. The Status column of the register in §8 records the status after the merges of §17, on 2026-10-23. §18 records the entry of the two institution names on 2026-10-23. §19 records the L4 optimization as it stood while pull request #20 was open, and the housekeeping of 2026-10-24. §20 records the merge of #20. The status of every finding as of 2026-10-24 is in §1 and §20.3; since the report was frozen, the tracker carries it.
 
 ## 1. Executive summary
 
