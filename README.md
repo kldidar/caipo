@@ -14,6 +14,7 @@ CAIPO records public policy sources with their provenance, keeps the **core AI p
 - Anyone can register a Reader account ([ADR-0021](docs/adr/0021-registration-for-the-reader-role.md)) and contribute **articles**, which a reviewer publishes or declines; an article is labelled as its author's view under CC BY 4.0 and is never evidence ([ADR-0022](docs/adr/0022-contributed-articles.md)).
 - On top of it, the **demonstrator track** ([ADR-0020](docs/adr/0020-demonstrator-track.md)) adds working sources, policies, indicators, analysis runs, search runs, and exports, built ahead of the research gates in a reduced, clearly labelled form.
 - The architecture gate stays **NOT READY for Phase 2 and later** ([specification §10](docs/PROJECT_SPECIFICATION.md#10-architecture-gate)). The research decisions it waits for — the domain boundary, the study period, the indicator selection, the rights policy, the ethics review — are open, and nothing in the demonstrator closes them.
+- Progress, Day by Day, is recorded in [docs/EXECUTION_TRACKER.md](docs/EXECUTION_TRACKER.md), the only progress record.
 
 ## What you can do in it
 

@@ -84,7 +84,7 @@ The project may have one developer (team size is undecided, blocker B13). Indepe
 While there is one developer:
 
 - Changes still go through a branch and a pull request, so that CI runs and the diff is recorded.
-- The author performs a **recorded self-review**: reads the full diff, works through the review checklist below, and notes in the pull request that it was self-reviewed.
+- The author performs a **recorded self-review**: reads the full diff, works through the review checklist below, and records it in the pull request. The pull request template, `.github/pull_request_template.md`, holds that self-review and the local checks, each with its own result, and every pull request fills it in.
 - CI must pass. It is the only independent check, so it is never bypassed.
 - For changes to fetch, parse, authentication, rights, redaction, or the AI pipeline, the security checklist in [SECURITY.md](SECURITY.md) is worked through explicitly and the result written in the pull request.
 - An AI agent's review may be used as an additional check. It does not count as independent human review.
