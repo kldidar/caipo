@@ -11,6 +11,10 @@
 
 There is a second gap: the isolated workers hold no database credentials, so they cannot record their own results. A trusted worker must learn that work is finished without the isolated worker being able to enqueue tasks.
 
+## Spike of 2026-11-05
+
+The spike ran on 2026-11-05 ([report](../reports/spike-c1-job-system-and-isolation.md)) and demonstrated all eleven requirements below by tests, with candidate 1 in its strictest form: each isolated worker's broker user may only move a job from its queue into its own processing list and remove it from there; results leave as files a trusted worker validates; delivery and attempts are owned by the trusted side in PostgreSQL; the parse worker sits on an internal network with only the broker; the fetch worker's only route out is an egress proxy that checks destinations after resolution. That is its recommendation, which the owner has not yet decided. This ADR stays Proposed until the owner decides.
+
 ## Decision (proposed)
 
 No mechanism is decided. This ADR fixes what the spike must demonstrate and lists the candidates.

@@ -14,6 +14,10 @@ Some work cannot run inside a web request:
 
 Fetching and parsing also need to run with different privileges from the web process (ADR-0009, ADR-0011). The project brief names Redis as part of the stack and Celery where justified.
 
+## Spike of 2026-11-05
+
+The spike in Open points ran on 2026-11-05 ([report](../reports/spike-c1-job-system-and-isolation.md)). It found that no job library is fit to run inside the isolated workers: Celery 5.7.0rc1 and Dramatiq 2.2.1 work under a restricted broker user but need to publish to their own queue, and Celery's acknowledge-late redelivery cannot be bounded by a worker without database access. Its recommendation, which the owner has not yet decided, replaces the proposal below: no library in the isolated workers, whose delivery the trusted side owns through PostgreSQL; `django-tasks` with `django-tasks-db` for trusted work; Redis kept for the isolated queues and throttling counters. This ADR stays Proposed until the owner decides.
+
 ## Decision (proposed)
 
 **The choice of job system is not made.** On 2026-10-02 the project owner moved it to the Phase 2 gate, to be settled by the spike described under Open points. Python stays at 3.14 and Celery is not installed. What follows is the working proposal that the spike will test, not a decision.
