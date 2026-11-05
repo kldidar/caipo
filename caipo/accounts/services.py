@@ -124,6 +124,10 @@ class AccountChangeError(Exception):
     """The requested change to an account cannot be made."""
 
 
+class NoSuchAccountError(AccountChangeError):
+    """No account has the number given."""
+
+
 class RoleChangeError(AccountChangeError):
     """The requested role change would not change anything."""
 
@@ -1296,6 +1300,31 @@ def revoke_role(*, actor: AuthenticationContext, user: User, role: Role, reason:
     return _change_role(actor, user, role, reason, RoleEventType.REVOKED)
 
 
+def grant_role_to_account(
+    *, actor: AuthenticationContext, user_id: int, role: Role, reason: str
+) -> RoleEvent:
+    """Grant a role to the account with this number, as `grant_role` does.
+
+    The permission is checked before the account is looked up, so a caller
+    without it learns nothing about which accounts exist. Raises what
+    `grant_role` raises, and NoSuchAccountError if there is no such account.
+    """
+    user = _account_to_change(actor, user_id, Permission.ROLES_MANAGE)
+    return grant_role(actor=actor, user=user, role=role, reason=reason)
+
+
+def revoke_role_from_account(
+    *, actor: AuthenticationContext, user_id: int, role: Role, reason: str
+) -> RoleEvent:
+    """Revoke a role from the account with this number, as `revoke_role` does.
+
+    The permission is checked before the account is looked up. Raises what
+    `revoke_role` raises, and NoSuchAccountError if there is no such account.
+    """
+    user = _account_to_change(actor, user_id, Permission.ROLES_MANAGE)
+    return revoke_role(actor=actor, user=user, role=role, reason=reason)
+
+
 @sensitive_variables("token", "password")
 def create_user(
     *,
@@ -1792,6 +1821,26 @@ def disable_user(*, actor: AuthenticationContext, user: User) -> None:
     )
 
 
+def disable_account(*, actor: AuthenticationContext, user_id: int) -> None:
+    """Disable the account with this number, as `disable_user` does.
+
+    The permission is checked before the account is looked up. Raises what
+    `disable_user` raises, and NoSuchAccountError if there is no such account.
+    """
+    user = _account_to_change(actor, user_id, Permission.ACCOUNTS_DEACTIVATE)
+    disable_user(actor=actor, user=user)
+
+
+def enable_account(*, actor: AuthenticationContext, user_id: int) -> AccountStatus:
+    """Enable the account with this number, as `enable_user` does, returning its new state.
+
+    The permission is checked before the account is looked up. Raises what
+    `enable_user` raises, and NoSuchAccountError if there is no such account.
+    """
+    user = _account_to_change(actor, user_id, Permission.ACCOUNTS_ENABLE)
+    return enable_user(actor=actor, user=user)
+
+
 def enable_user(*, actor: AuthenticationContext, user: User) -> AccountStatus:
     """Enable a disabled account, returning it to the state it was disabled in.
 
@@ -2000,6 +2049,14 @@ def _audit_value(value: AuditValue) -> str:
     if len(text) > AUDIT_VALUE_MAX_LENGTH:
         raise AuditRecordError("A value is too long for an audit event.")
     return text
+
+
+def _account_to_change(actor: AuthenticationContext, user_id: int, permission: Permission) -> User:
+    selectors.require_permission(actor, permission)
+    user = User.objects.filter(pk=user_id).first()
+    if user is None:
+        raise NoSuchAccountError("No such account.")
+    return user
 
 
 def _serialize_account_changes() -> None:

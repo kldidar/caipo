@@ -237,12 +237,17 @@ The link is `http://127.0.0.1:8000/activate/#<token>`. Opening it shows a form w
 
 | Page | Method | What it does |
 |---|---|---|
-| `/administration/accounts/` | GET | For an Administrator signed in with a second factor: the form, and the accounts that await verification |
+| `/administration/accounts/` | GET | For an Administrator signed in with a second factor: the form, the accounts that await verification, and every account with its status, roles, and second factor |
 | `/administration/accounts/create/` | POST | Creates an account that awaits verification and sends its message |
 | `/administration/accounts/<id>/send-verification/` | POST | Sends the message again, with a new link |
+| `/administration/accounts/<id>/` | GET | One account: its status, roles, second factor, and role history, and the changes that can be made to it |
+| `/administration/accounts/<id>/grant-role/` | POST | Grants one role, with a reason |
+| `/administration/accounts/<id>/revoke-role/` | POST | Revokes one role, with a reason |
+| `/administration/accounts/<id>/disable/` | POST | Disables the account, once the confirmation is ticked |
+| `/administration/accounts/<id>/enable/` | POST | Enables a disabled account |
 | `/activate/` | GET, POST | Public. Verifies the address and sets the password, given the token from the message. |
 
-Disabling and enabling an account are `caipo.accounts.services.disable_user` and `enable_user`. They have no page yet.
+Roles are granted and revoked, and accounts disabled and enabled, on the account's page: open it from the list. Every change is recorded with the Administrator's account and, for a role, the reason. An Administrator is offered no change to their own account, and the last active Administrator can be neither disabled nor have the role revoked.
 
 The limits and the lifetime are `ACCOUNT_ACTIVATION_*` in `caipo/config/settings/base.py`. The address used in links is `PUBLIC_BASE_URL`: fixed in development, and read from `CAIPO_PUBLIC_URL` in production, which accepts only `https://host[:port]` and refuses to start without it. In production no email service is configured yet (ADR-0008), so there a message is refused and the page says it could not be sent.
 
@@ -264,7 +269,7 @@ Opening the link (`http://127.0.0.1:8000/activate/#<token>`) and choosing a pass
 |---|---|---|
 | `/register/` | GET, POST | Public. Takes an email address and, for an address with no account, creates a Reader's account awaiting verification and sends its message. Always the same answer. |
 
-Registering never gives another role. An Administrator grants one with `caipo.accounts.services.grant_role`; there is no page for it yet.
+Registering never gives another role. An Administrator grants one on the account's page, `/administration/accounts/<id>/`, with a reason.
 
 ## Contributed articles
 

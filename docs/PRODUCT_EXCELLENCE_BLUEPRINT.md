@@ -255,7 +255,7 @@ Sources: [2026 AI Index Report page](https://hai.stanford.edu/ai-index/2026-ai-i
 | Path | Page |
 |---|---|
 | `/administration/accounts/`, `/administration/recoveries/`, and the enrolment and recovery request pages | **Exist today** (§11) |
-| `/administration/roles/`, account disable and enable | Services exist, no page (SECURITY.md) |
+| `/administration/accounts/<id>/`: grant and revoke roles, disable and enable an account | **Exists** (built on 2026-11-05, after §11 was written) |
 | `/administration/audit/` | Reading the audit record: deferred (ADR-0018; finding I4) |
 | `/administration/redaction/` | Redaction procedure (DATA_MODEL §7) |
 | `/administration/operations/` | Stuck ingestion requests, attempt limits, AI budget use |

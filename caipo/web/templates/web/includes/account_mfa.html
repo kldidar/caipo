@@ -1,0 +1,1 @@
+{% load i18n %}{% if summary.mfa_state == "active" %}{% translate "Turned on" %}{% elif summary.mfa_state == "pending_approval" %}{% translate "Requested, awaiting approval" %}{% elif summary.mfa_state == "pending_verification" %}{% translate "Requested, awaiting its first code" %}{% else %}{% translate "Not turned on" %}{% endif %}

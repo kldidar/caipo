@@ -57,5 +57,34 @@
   </div>
   </section>
   </div>
+
+  {% if accounts is not None %}
+  <section class="panel section" aria-labelledby="all-title">
+  <div class="panel__header"><h2 id="all-title">{% translate "All accounts" %}</h2></div>
+  <div class="panel__body">
+  <p>{% translate "Open an account to grant or revoke a role, with a reason, or to disable or enable it. Every change is recorded with your name." %}</p>
+  <div class="table-wrap" tabindex="0"><table>
+    <thead><tr>
+      <th scope="col">{% translate "Email address" %}</th>
+      <th scope="col">{% translate "Status" %}</th>
+      <th scope="col">{% translate "Roles" %}</th>
+      <th scope="col">{% translate "Two-step verification" %}</th>
+      <th scope="col">{% translate "Created (UTC)" %}</th>
+    </tr></thead>
+    <tbody>
+      {% for summary in accounts %}
+        <tr>
+          <td><a href="{% url 'account' summary.user_id %}">{{ summary.email }}</a></td>
+          <td>{% include "web/includes/account_status.html" %}</td>
+          <td>{{ summary.role_labels|join:", "|default:_("None") }}</td>
+          <td>{% include "web/includes/account_mfa.html" %}</td>
+          <td>{{ summary.created_at|date:"Y-m-d" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  </div>
+  </section>
+  {% endif %}
   <p class="actions"><a class="button button--ghost" href="{% url 'login' %}">← {% translate "Back" %}</a></p>
 {% endblock %}

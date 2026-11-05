@@ -466,9 +466,12 @@ def test_the_list_shows_who_awaits_verification_and_never_a_link(
     _activate(client, other_token)
 
     body = administrator.get(ACCOUNTS).content.decode()
+    # Every account is also in the list of all accounts (Day 21); this panel
+    # is the one that lists who awaits verification.
+    awaiting = body.split('id="pending-title"', 1)[1].split("</section>", 1)[0]
 
-    assert EMAIL in body
-    assert OTHER_EMAIL not in body
+    assert EMAIL in awaiting
+    assert OTHER_EMAIL not in awaiting
     assert token not in body
     assert "#" + token not in body
     assert AccountActivation.objects.get().token_key not in body
