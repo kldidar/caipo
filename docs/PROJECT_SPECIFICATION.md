@@ -305,10 +305,10 @@ Owner decision of 2026-10-02 on Phase 1 scope: **CI on GitHub Actions is approve
 | ID | Issue | Needed |
 |---|---|---|
 | B7 | (remaining part) No rights policy for third-party documents: which kinds may be stored, shown in the workspace, shown publicly, redistributed, or sent to an AI provider, and on what basis. No licence for project-created research data and snapshots. No procedure for removal requests. | Define the policy items listed in [RIGHTS_AND_LICENSING.md](RIGHTS_AND_LICENSING.md) §4 |
-| B8 | Research questions and study period are drafts | Researcher confirms or revises [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §2 and §3.3 |
+| B8 | Research questions are drafts. The study period is set as a working basis, 2010 to 2024, by the owner's decision of 2026-11-05 ([RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.3) | Researcher revises the research questions (§2) against the definitions (O-11), decides O-6, and confirms the working period or revises it with a recorded reason before the corpus is collected |
 | B9 | Source inclusion criteria and initial source list are not finalised | Researcher provides and verifies the seed list |
 | B10 | Unknown share of scanned documents; OCR approach and language support undecided | Sample real documents; decide whether OCR is in scope |
-| B22 | "AI policy" domain boundary and "economic transformation" are undefined | Researcher defines both ([RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.1, §3.2) and revises the research questions accordingly |
+| B22 | "AI policy" domain boundary and "economic transformation" are undefined | All six conditions of [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.5, confirmed by the owner as the binding closure gate on 2026-11-05: O-1 to O-9 decided (O-4 after B20), verified terminology lists, the pilot run and reported, the research questions revised (O-11), O-10 decided, and the closure recorded |
 
 ### Blocks Phase 3 (policies and indicators)
 
