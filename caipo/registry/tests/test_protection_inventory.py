@@ -47,6 +47,13 @@ REGISTRY_PROTECTIONS = {
         "registry_institutionname_refuse_change",
         "O",
     ),
+    # The sources of registry names and dates (ADR-0023), append-only.
+    (
+        "registry_registrycitation",
+        "registry_citation_protect",
+        "registry_citation_refuse_change",
+        "O",
+    ),
 }
 EXPECTED = AUDIT_PROTECTIONS | REGISTRY_PROTECTIONS
 
@@ -93,5 +100,5 @@ def test_the_protections_of_adr_0018_are_exactly_these_on_exactly_these_tables()
     }
 
     assert found == EXPECTED
-    # Each of the six tables exists: none is protected by being absent.
+    # Each of the seven tables exists: none is protected by being absent.
     assert GOVERNED_TABLES <= set(connection.introspection.table_names())

@@ -25,6 +25,7 @@ from caipo.accounts.tests.fixtures import verified as acting_verified
 from caipo.registry import services
 from caipo.registry.models import Country, Institution, InstitutionName, Language
 from caipo.registry.services import NewName
+from caipo.registry.tests.helpers import TEST_SOURCE
 from caipo.web.tests.helpers import signed_in, verified
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
@@ -64,19 +65,25 @@ class Records:
         self.agency = services.create_institution(
             actor=actor,
             kind="statistical_agency",
-            first_name=NewName(text="TEST Agency", language=self.language, kind="official"),
+            first_name=NewName(
+                text="TEST Agency", language=self.language, kind="official", source=TEST_SOURCE
+            ),
         )
         self.ministry = services.create_institution(
             actor=actor,
             kind="ministry",
             country=self.country,
             parent=self.agency,
-            first_name=NewName(text="TEST Ministry", language=self.language, kind="official"),
+            first_name=NewName(
+                text="TEST Ministry", language=self.language, kind="official", source=TEST_SOURCE
+            ),
         )
         self.other_name = services.add_institution_name(
             actor=actor,
             institution=self.ministry,
-            name=NewName(text="TEST MIN", language=self.language, kind="abbreviation"),
+            name=NewName(
+                text="TEST MIN", language=self.language, kind="abbreviation", source=TEST_SOURCE
+            ),
         )
         name = InstitutionName.objects.filter(institution__public_id=self.ministry).first()
         assert name is not None
@@ -263,7 +270,10 @@ def test_a_label_in_the_link_is_escaped(researcher: Client, records: Records) ->
         actor=records.actor,
         kind="company",
         first_name=NewName(
-            text="TEST <b>Bold</b> & Co", language=records.language, kind="official"
+            text="TEST <b>Bold</b> & Co",
+            language=records.language,
+            kind="official",
+            source=TEST_SOURCE,
         ),
     )
 
@@ -540,7 +550,10 @@ def test_the_page_grows_linearly_with_the_number_of_institutions(
                 actor=records.actor,
                 kind="company",
                 first_name=NewName(
-                    text=f"TEST Company {step}-{number}", language=records.language, kind="official"
+                    text=f"TEST Company {step}-{number}",
+                    language=records.language,
+                    kind="official",
+                    source=TEST_SOURCE,
                 ),
             )
         measured["closed"].append(_measure(researcher, ENTRY))

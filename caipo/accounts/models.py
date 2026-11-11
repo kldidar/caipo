@@ -881,6 +881,10 @@ class AuditField(models.TextChoices):
     CORPUS_ASSIGNMENT = "corpus_assignment", _("Corpus assignment")
     AI_FOCUS = "ai_focus", _("AI focus")
     CONTEXTUAL_CATEGORY = "contextual_category", _("Contextual category")
+    # The source a registry name or an institution's dates were read from,
+    # recorded by the public identifier of its RegistryCitation (ADR-0023).
+    CITATION = "citation", _("Source")
+    DATES_CITATION = "dates_citation", _("Source of the dates")
 
 
 # The kinds of record each action applies to. Only a country or a language is

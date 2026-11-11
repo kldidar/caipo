@@ -25,6 +25,7 @@ from caipo.accounts.tests.fixtures import verified as acting_verified
 from caipo.registry import services
 from caipo.registry.models import Country, Institution, InstitutionName, Language
 from caipo.registry.services import NewName
+from caipo.registry.tests.helpers import TEST_SOURCE
 from caipo.web import registry
 from caipo.web.access import declared_access
 from caipo.web.tests.helpers import signed_in, verified
@@ -74,12 +75,16 @@ class Records:
             actor=actor,
             kind="ministry",
             country=self.country,
-            first_name=NewName(text="TEST Ministry", language=self.language, kind="official"),
+            first_name=NewName(
+                text="TEST Ministry", language=self.language, kind="official", source=TEST_SOURCE
+            ),
         )
         self.other_name = services.add_institution_name(
             actor=actor,
             institution=self.institution,
-            name=NewName(text="TEST MIN", language=self.language, kind="abbreviation"),
+            name=NewName(
+                text="TEST MIN", language=self.language, kind="abbreviation", source=TEST_SOURCE
+            ),
         )
         self.name = InstitutionName.objects.filter(institution__public_id=self.institution).first()
         assert self.name is not None
@@ -110,11 +115,17 @@ def _creation(records: Records, **values: str) -> dict[str, str]:
         "institution-successor": "",
         "institution-valid_from": "2001-02-03",
         "institution-valid_to": "",
+        "institution-dates_source_url": "https://source.example/test-registry",
+        "institution-dates_source_title": "TEST registry source",
+        "institution-dates_source_accessed_on": "2026-01-02",
         "first-name-text": "TEST University",
         "first-name-language": str(records.language),
         "first-name-kind": "official",
         "first-name-valid_from": "",
         "first-name-valid_to": "",
+        "first-name-source_url": "https://source.example/test-registry",
+        "first-name-source_title": "TEST registry source",
+        "first-name-source_accessed_on": "2026-01-02",
         **values,
     }
 
@@ -149,6 +160,9 @@ def _changes(
                 "kind": "transliteration",
                 "valid_from": "",
                 "valid_to": "",
+                "source_url": "https://source.example/test-registry",
+                "source_title": "TEST registry source",
+                "source_accessed_on": "2026-01-02",
             },
         ),
         "change the dates of a name": (
@@ -482,7 +496,9 @@ def test_a_change_the_service_refuses_is_not_saved_and_the_page_says_why(
     other = services.create_institution(
         actor=actor,
         kind="company",
-        first_name=NewName(text="TEST Company", language=records.language, kind="official"),
+        first_name=NewName(
+            text="TEST Company", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     )
     named = {
         "itself": str(records.institution),
@@ -514,6 +530,7 @@ def test_every_refusal_of_an_institution_service_is_answered_and_nothing_else_is
         services.CycleError,
         services.SuccessionError,
         services.LastNameError,
+        services.CitationExistsError,
     }
 
     def fail(**_: object) -> None:
@@ -586,7 +603,9 @@ def test_the_entry_page_shows_each_institution_with_what_is_stored(
     parent = services.create_institution(
         actor=actor,
         kind="legislature",
-        first_name=NewName(text="TEST Parent", language=records.language, kind="official"),
+        first_name=NewName(
+            text="TEST Parent", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     )
     services.change_institution(
         actor=actor,
@@ -597,6 +616,7 @@ def test_the_entry_page_shows_each_institution_with_what_is_stored(
         successor=None,
         valid_from=None,
         valid_to=None,
+        dates_source=TEST_SOURCE,
     )
 
     # The change form is shown for the institution opened for change (L4).
@@ -659,7 +679,9 @@ def test_the_browse_page_lists_an_institution_with_its_attributes_and_names(
     successor = services.create_institution(
         actor=actor,
         kind="company",
-        first_name=NewName(text="TEST Successor", language=records.language, kind="official"),
+        first_name=NewName(
+            text="TEST Successor", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     )
     services.change_institution(
         actor=actor,
@@ -670,6 +692,7 @@ def test_the_browse_page_lists_an_institution_with_its_attributes_and_names(
         successor=successor,
         valid_from=None,
         valid_to=date(2004, 5, 6),
+        dates_source=TEST_SOURCE,
     )
     services.change_institution_name_dates(
         actor=actor,
@@ -684,9 +707,11 @@ def test_the_browse_page_lists_an_institution_with_its_attributes_and_names(
 
     assert flat == (
         "TEST Ministry Kind Ministry Country XA Parent institution None Valid from Not recorded"
-        " Valid to 2004-05-06 Successor TEST Successor Names Name Language Kind of name"
-        " Valid from Valid to TEST Ministry qaa-Qaaa Official 2001-02-03 Not recorded TEST MIN"
-        " qaa-Qaaa Abbreviation Not recorded Not recorded"
+        " Valid to 2004-05-06 Source of the dates TEST registry source · read on 2026-01-02"
+        " Successor TEST Successor Names Name Language Kind of name Valid from Valid to Source"
+        " TEST Ministry qaa-Qaaa Official 2001-02-03 Not recorded TEST registry source · read on"
+        " 2026-01-02 TEST MIN qaa-Qaaa Abbreviation Not recorded Not recorded TEST registry"
+        " source · read on 2026-01-02"
     )
 
 
@@ -700,6 +725,7 @@ def test_a_name_is_escaped_on_both_pages(
             text='TEST <script>alert("x")</script> & more',
             language=records.language,
             kind="official",
+            source=TEST_SOURCE,
         ),
     )
 

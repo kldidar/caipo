@@ -155,6 +155,20 @@
     <h4>{% translate "Names" %}</h4>
     {% for entry in section.names %}
       <p>{{ entry.name.text }} · {{ entry.name.language_code }}-{{ entry.name.script_code }} · {{ entry.name.kind_label }}</p>
+      <p><small>{% translate "Source:" %} {% include "web/includes/citation.html" with source=entry.name.source %}</small></p>
+      {% if entry.source_form %}
+        <form method="post" action="{% url 'registry-institution-name-source' entry.name.public_id %}{{ selection }}" novalidate>
+          {% csrf_token %}
+          {% for field in entry.source_form %}
+            <p>
+              {{ field.label_tag }}
+              {{ field }}
+              {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
+            </p>
+          {% endfor %}
+          <button type="submit" class="button--secondary">{% translate "Record the source" %}</button>
+        </form>
+      {% endif %}
       <form method="post" action="{% url 'registry-institution-name-dates' entry.name.public_id %}{{ selection }}" novalidate>
         {% csrf_token %}
         {% for field in entry.dates_form %}

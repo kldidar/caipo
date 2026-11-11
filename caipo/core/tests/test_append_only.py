@@ -71,6 +71,8 @@ def test_the_three_event_models_and_the_two_audit_models_are_built_on_it() -> No
         # Contributed articles and the decisions about them (ADR-0022).
         "Article",
         "ArticleDecision",
+        # Where a registry name or date was read (ADR-0023).
+        "RegistryCitation",
     }
     for model in apps.get_models():
         if issubclass(model, AppendOnlyModel):

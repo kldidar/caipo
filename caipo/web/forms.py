@@ -343,6 +343,36 @@ def _registry_reference_field(*, required: bool = False) -> forms.UUIDField:
     return forms.UUIDField(required=required, widget=forms.Select())
 
 
+# The address, title, and day of reading of a source (ADR-0023). Shape only:
+# longer than a source's parts may be, and bounded. The service removes
+# surrounding whitespace and decides what is valid.
+
+
+def _source_url_field(*, required: bool) -> forms.CharField:
+    return forms.CharField(
+        label=_("Source: address of the page"),
+        max_length=4096,
+        required=required,
+        widget=forms.URLInput(attrs={"autocomplete": "off"}),
+    )
+
+
+def _source_title_field(*, required: bool) -> forms.CharField:
+    return forms.CharField(
+        label=_("Source: title of the page"),
+        max_length=2048,
+        required=required,
+        widget=forms.TextInput(attrs={"autocomplete": "off"}),
+    )
+
+
+def _source_read_on_field(*, required: bool) -> FullDateField:
+    field = _registry_date_field()
+    field.required = required
+    field.label = _("Source: read on")
+    return field
+
+
 def _offer(field: forms.Field, options: Options, *, empty: bool) -> None:
     nothing: list[tuple[str, Any]] = [("", _("None"))] if empty else []
     field.widget.choices = nothing + list(options)
@@ -362,6 +392,9 @@ class InstitutionForm(forms.Form):
     valid_from.label = _("Valid from")
     valid_to = _registry_date_field()
     valid_to.label = _("Valid to")
+    dates_source_url = _source_url_field(required=False)
+    dates_source_title = _source_title_field(required=False)
+    dates_source_accessed_on = _source_read_on_field(required=False)
 
     def __init__(
         self, *args: Any, countries: Options = (), institutions: Options = (), **kwargs: Any
@@ -390,6 +423,9 @@ class InstitutionNameForm(forms.Form):
     valid_from.label = _("Valid from")
     valid_to = _registry_date_field()
     valid_to.label = _("Valid to")
+    source_url = _source_url_field(required=True)
+    source_title = _source_title_field(required=True)
+    source_accessed_on = _source_read_on_field(required=True)
 
     def __init__(self, *args: Any, languages: Options = (), **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -403,3 +439,11 @@ class InstitutionNameDatesForm(forms.Form):
     valid_from.label = _("Valid from")
     valid_to = _registry_date_field()
     valid_to.label = _("Valid to")
+
+
+class NameSourceForm(forms.Form):
+    """Where a name entered before sources were recorded was read (ADR-0023). Shape only."""
+
+    source_url = _source_url_field(required=True)
+    source_title = _source_title_field(required=True)
+    source_accessed_on = _source_read_on_field(required=True)

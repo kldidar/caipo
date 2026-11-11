@@ -21,6 +21,7 @@ from caipo.registry.models import (
     InstitutionName,
     InstitutionNameKind,
     Language,
+    RegistryCitation,
 )
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
@@ -137,6 +138,7 @@ def test_the_institution_table_holds_exactly_these_columns() -> None:
         "valid_from": ("date", None, "YES"),
         "valid_to": ("date", None, "YES"),
         "successor_id": ("bigint", None, "YES"),
+        "dates_citation_id": ("bigint", None, "YES"),
     }
 
 
@@ -151,14 +153,26 @@ def test_the_institution_name_table_holds_exactly_these_columns() -> None:
         "valid_from": ("date", None, "YES"),
         "valid_to": ("date", None, "YES"),
         "entered_in_error": ("boolean", None, "NO"),
+        "citation_id": ("bigint", None, "YES"),
     }
 
 
 @pytest.mark.parametrize(
     ("model", "references"),
     [
-        (Institution, {"country": Country, "parent": Institution, "successor": Institution}),
-        (InstitutionName, {"institution": Institution, "language": Language}),
+        (
+            Institution,
+            {
+                "country": Country,
+                "parent": Institution,
+                "successor": Institution,
+                "dates_citation": RegistryCitation,
+            },
+        ),
+        (
+            InstitutionName,
+            {"institution": Institution, "language": Language, "citation": RegistryCitation},
+        ),
     ],
 )
 def test_each_reference_is_to_a_registry_record_and_protects_what_it_refers_to(

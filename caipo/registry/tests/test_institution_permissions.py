@@ -22,6 +22,7 @@ from caipo.accounts.selectors import AuthenticationContext, Role
 from caipo.registry import selectors, services
 from caipo.registry.services import NewName
 from caipo.registry.tests.helpers import (
+    TEST_SOURCE,
     UNKNOWN,
     ActingAs,
     events,
@@ -57,7 +58,9 @@ def records(administrator: AuthenticationContext) -> Records:
     services.add_institution_name(
         actor=administrator,
         institution=public_id,
-        name=NewName(text="TEST Second name", language=language, kind="abbreviation"),
+        name=NewName(
+            text="TEST Second name", language=language, kind="abbreviation", source=TEST_SOURCE
+        ),
     )
     name, other_name = names_of(public_id)
     return Records(country, language, public_id, name, other_name)
@@ -72,7 +75,9 @@ WRITES: dict[str, Operation] = {
         kind="university",
         country=records.country,
         parent=records.institution,
-        first_name=NewName(text="TEST University", language=records.language, kind="official"),
+        first_name=NewName(
+            text="TEST University", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     ),
     "change_institution": lambda actor, records: services.change_institution(
         actor=actor,
@@ -83,11 +88,14 @@ WRITES: dict[str, Operation] = {
         successor=None,
         valid_from=None,
         valid_to=None,
+        dates_source=TEST_SOURCE,
     ),
     "add_institution_name": lambda actor, records: services.add_institution_name(
         actor=actor,
         institution=records.institution,
-        name=NewName(text="TEST Third name", language=records.language, kind="official"),
+        name=NewName(
+            text="TEST Third name", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     ),
     "change_institution_name_dates": lambda actor, records: services.change_institution_name_dates(
         actor=actor, public_id=records.other_name, valid_from=None, valid_to=date(2001, 2, 3)
@@ -179,7 +187,7 @@ def test_the_read_of_institutions_is_allowed_exactly_to_the_accounts_that_read_t
 
 # --- The permission comes first -----------------------------------------------
 
-NOTHING = NewName(text="", language=UNKNOWN, kind="")
+NOTHING = NewName(text="", language=UNKNOWN, kind="", source=TEST_SOURCE)
 
 REFUSED_FIRST: dict[str, Callable[[Any], object]] = {
     "create an institution that is not valid": lambda actor: services.create_institution(
@@ -194,6 +202,7 @@ REFUSED_FIRST: dict[str, Callable[[Any], object]] = {
         successor=None,
         valid_from=None,
         valid_to=None,
+        dates_source=TEST_SOURCE,
     ),
     "add a name to an institution that does not exist": lambda actor: services.add_institution_name(
         actor=actor, institution=UNKNOWN, name=NOTHING

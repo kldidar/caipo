@@ -62,6 +62,9 @@ FIELDS = [
     "corpus_assignment",
     "ai_focus",
     "contextual_category",
+    # The sources of registry names and dates, by identifier (ADR-0023).
+    "citation",
+    "dates_citation",
 ]
 # Written out here, not read from the application: ADR-0018 point 31.
 ALLOWED_PAIRS = (

@@ -214,9 +214,10 @@ Countries, languages, institutions, and the names of institutions, the first rec
 - **No initial data.** No migration and no code creates a country, a language, or an institution, and the repository holds no real one. The tests use codes from the ranges the standards reserve for private use.
 - **The boundary is checked.** Registry code uses `accounts` only through its services and selectors; an import contract in CI forbids every other module of `accounts`, with the one exception that a registry test may read the two audit models.
 
+- **Where a name or a date was read is recorded, and its address is untrusted** ([ADR-0023](docs/adr/0023-registry-citations.md)). A source is an address, a title, and a day. The address must be `http` or `https` with no space, checked by the service and again by a database check, so no `javascript:` or other scheme can be stored. It is shown as an escaped link that opens outside the application with `rel="noopener noreferrer nofollow"`. Nothing is fetched from it. A source is append-only, and a name's source, once set, is never changed (triggers).
+
 **Not implemented**
 
-- A page or selector that reads the audit record.
 - A public page for the registry. Anonymous visitors read nothing of it.
 
 ### Authentication as implemented

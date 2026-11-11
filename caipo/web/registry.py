@@ -44,6 +44,8 @@ from caipo.accounts.selectors import AuthenticationContext, Permission
 from caipo.registry import selectors, services
 from caipo.registry.selectors import InstitutionEntry, InstitutionNameEntry
 from caipo.registry.services import (
+    Citation,
+    CitationExistsError,
     CycleError,
     DeactivatedReferenceError,
     DirectionControlError,
@@ -65,6 +67,7 @@ from caipo.web.forms import (
     InstitutionNameForm,
     LanguageCreationForm,
     MarkEnteredInErrorForm,
+    NameSourceForm,
     Options,
     RegistryNameForm,
 )
@@ -88,7 +91,12 @@ NOT_FOUND_MESSAGE = _("Nothing was changed: there is no such record.")
 INVALID_INSTITUTION_MESSAGE = _(
     "Nothing was saved. Choose a kind from the list, give each date as a full calendar date or"
     " leave it empty, with valid-from before valid-to, and give a name of at most 500"
-    " characters with its language and kind."
+    " characters with its language and kind. Give the source of each name, and of the dates"
+    " when a date is entered or changed: the address of the page (http:// or https://), its"
+    " title, and the day it was read, which is not in the future."
+)
+SOURCE_EXISTS_MESSAGE = _(
+    "Nothing was changed. This name has a source already, and a source is not replaced."
 )
 DEACTIVATED_REFERENCE_MESSAGE = _(
     "Nothing was saved. A deactivated country or language cannot be newly referred to."
@@ -133,6 +141,7 @@ INSTITUTION_REFUSALS: dict[type[RegistryError], tuple[Promise, int]] = {
     CycleError: (CYCLE_MESSAGE, 409),
     SuccessionError: (SUCCESSION_MESSAGE, 409),
     LastNameError: (LAST_NAME_MESSAGE, 409),
+    CitationExistsError: (SOURCE_EXISTS_MESSAGE, 409),
 }
 
 
@@ -145,7 +154,7 @@ class _Submitted:
     a new name, and the name's for its dates.
     """
 
-    form: Literal["change", "name", "dates"]
+    form: Literal["change", "name", "dates", "source"]
     public_id: uuid.UUID
     data: QueryDict
 
@@ -160,6 +169,8 @@ class _NameSection:
     name: InstitutionNameEntry
     dates_form: InstitutionNameDatesForm
     mark_form: MarkEnteredInErrorForm
+    # Offered only for a name entered before sources were recorded.
+    source_form: NameSourceForm | None
 
 
 @dataclass(frozen=True)
@@ -295,6 +306,12 @@ def _institution_sections(
                             auto_id=f"dates-{name.public_id}-%s",
                         ),
                         MarkEnteredInErrorForm(auto_id=f"mark-{name.public_id}-%s"),
+                        None
+                        if name.source is not None
+                        else NameSourceForm(
+                            sent("source", name.public_id),
+                            auto_id=f"source-{name.public_id}-%s",
+                        ),
                     )
                     for name in entry.names
                 ],
@@ -608,6 +625,7 @@ def create_institution(request: HttpRequest) -> HttpResponse:
             successor=attributes["successor"],
             valid_from=attributes["valid_from"],
             valid_to=attributes["valid_to"],
+            dates_source=_citation(attributes, "dates_source_"),
             first_name=_new_name(name),
         )
     except tuple(INSTITUTION_REFUSALS) as error:
@@ -644,6 +662,7 @@ def change_institution(request: HttpRequest, public_id: uuid.UUID) -> HttpRespon
             successor=attributes["successor"],
             valid_from=attributes["valid_from"],
             valid_to=attributes["valid_to"],
+            dates_source=_citation(attributes, "dates_source_"),
         ),
         submitted,
     )
@@ -716,6 +735,47 @@ def mark_institution_name_entered_in_error(
     )
 
 
+@requires(Permission.REGISTRY_INSTITUTIONS_MANAGE)
+@never_cache
+@csrf_protect
+@require_POST
+def add_institution_name_source(request: HttpRequest, public_id: uuid.UUID) -> HttpResponse:
+    """Record where a name entered before sources were recorded was read (ADR-0023)."""
+    actor = _actor(request)
+    submitted = _Submitted("source", public_id, request.POST)
+    form = NameSourceForm(request.POST)
+    if not form.is_valid():
+        return _entry_page(
+            request, actor, submitted=submitted, error=INVALID_INSTITUTION_MESSAGE, status=400
+        )
+    source = _citation(form.cleaned_data, "source_")
+    if source is None:
+        return _entry_page(
+            request, actor, submitted=submitted, error=INVALID_INSTITUTION_MESSAGE, status=400
+        )
+    return _institution_change(
+        request,
+        actor,
+        lambda: services.add_institution_name_source(
+            actor=actor, public_id=public_id, source=source
+        ),
+        submitted,
+    )
+
+
+def _citation(cleaned: dict[str, Any], prefix: str) -> Citation | None:
+    """The source a form was given, or None where all three of its fields were left empty.
+
+    A source given in part is passed on as it is, for the service to refuse.
+    """
+    url = cleaned[f"{prefix}url"]
+    title = cleaned[f"{prefix}title"]
+    read_on = cleaned[f"{prefix}accessed_on"]
+    if not url and not title and read_on is None:
+        return None
+    return Citation(url=url, title=title, accessed_on=read_on)
+
+
 def _new_name(cleaned: dict[str, Any]) -> NewName:
     return NewName(
         text=cleaned["text"],
@@ -723,4 +783,5 @@ def _new_name(cleaned: dict[str, Any]) -> NewName:
         kind=cleaned["kind"],
         valid_from=cleaned["valid_from"],
         valid_to=cleaned["valid_to"],
+        source=_citation(cleaned, "source_"),
     )

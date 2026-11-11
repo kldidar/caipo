@@ -42,6 +42,7 @@ from typing import Final
 
 import psycopg.errors
 from django.db import IntegrityError, connection, transaction
+from django.utils import timezone
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts import services as accounts_services
@@ -54,6 +55,8 @@ from caipo.accounts.selectors import (
 )
 from caipo.accounts.services import AuditChange
 from caipo.registry.models import (
+    CITATION_TITLE_MAX_LENGTH,
+    CITATION_URL_MAX_LENGTH,
     INSTITUTION_NAME_MAX_LENGTH,
     NAME_MAX_LENGTH,
     Country,
@@ -62,6 +65,7 @@ from caipo.registry.models import (
     InstitutionName,
     InstitutionNameKind,
     Language,
+    RegistryCitation,
 )
 
 logger = logging.getLogger(__name__)
@@ -88,6 +92,7 @@ _LANGUAGE_CODE_CONSTRAINTS: Final = frozenset({"registry_language_codes_unique"}
 # them, so a name that holds one is refused (diagnostic of 2026-10-20, L5).
 # The implicit marks U+200E, U+200F, and U+061C reorder nothing around them,
 # can be needed in right-to-left text, and are allowed.
+_WEB_ADDRESS: Final = re.compile(r"https?://[^\s]+")
 _DIRECTION_CONTROLS: Final = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
 
 
@@ -136,8 +141,25 @@ class SuccessionError(RegistryError):
     """
 
 
+class CitationExistsError(RegistryError):
+    """The name has a source already; a source, once set, is not changed (ADR-0023)."""
+
+
 class LastNameError(RegistryError):
     """The name is the only one of its institution not marked as entered in error."""
+
+
+@dataclass(frozen=True)
+class Citation:
+    """Where a registry fact was read, as it is entered (ADR-0023).
+
+    The address of the page (`http` or `https`), its title as written, and
+    the day it was read. Nothing is fetched from the address.
+    """
+
+    url: str
+    title: str
+    accessed_on: date
 
 
 @dataclass(frozen=True)
@@ -145,7 +167,8 @@ class NewName:
     """A name to add to an institution, as it is entered.
 
     The language is named by its public identifier. Dates are full calendar
-    dates, or None where they are not known to the day.
+    dates, or None where they are not known to the day. `source` is where the
+    name was read; the services require it (ADR-0023).
     """
 
     text: str
@@ -153,6 +176,7 @@ class NewName:
     kind: str
     valid_from: date | None = None
     valid_to: date | None = None
+    source: Citation | None = None
 
 
 def create_country(
@@ -335,8 +359,13 @@ def create_institution(
     successor: uuid.UUID | None = None,
     valid_from: date | None = None,
     valid_to: date | None = None,
+    dates_source: Citation | None = None,
 ) -> uuid.UUID:
     """Create an institution together with its first name, and return its public identifier.
+
+    Where either date is given, `dates_source` says where the dates were read
+    and is required; it is recorded with them (ADR-0023). Without a date it
+    is not used.
 
     Preconditions: the actor holds `REGISTRY_INSTITUTIONS_MANAGE`; the kind
     is one of InstitutionKind; the country, the parent, and the successor
@@ -375,6 +404,8 @@ def create_institution(
             current=None,
         )
         first = _valid_new_name(first_name)
+        dated = chosen.valid_from is not None or chosen.valid_to is not None
+        source = _dates_source(dates_source, dated)
         _require_succession(None, chosen.successor, chosen.valid_to)
         institution = Institution.objects.create(
             kind=chosen.kind,
@@ -383,6 +414,7 @@ def create_institution(
             successor=chosen.successor,
             valid_from=chosen.valid_from,
             valid_to=chosen.valid_to,
+            dates_citation=None if source is None else _create_citation(source),
         )
         name = _create_name(institution, first)
         _record(actor, AuditAction.CREATED, AuditTargetType.INSTITUTION, institution.public_id)
@@ -402,10 +434,17 @@ def change_institution(
     successor: uuid.UUID | None,
     valid_from: date | None,
     valid_to: date | None,
+    dates_source: Citation | None = None,
 ) -> None:
     """Set the kind, country, parent, successor, and validity dates of an institution.
 
     Every attribute is given, as it is to be: one left empty is cleared.
+
+    Where a date changes and either date is then known, `dates_source` says
+    where the dates were read and is required: a new citation is recorded
+    and the change of source is audited (ADR-0023). Where both dates are
+    cleared, the source of the dates is cleared with them. Where no date
+    changes, `dates_source` is not used.
 
     Preconditions: the actor holds `REGISTRY_INSTITUTIONS_MANAGE`; the
     institution exists; what is given is valid as for `create_institution`,
@@ -447,6 +486,9 @@ def change_institution(
         if not changed:
             raise NoChangeError("The institution is already as asked.")
         fields = {change.field for change in changed}
+        dates_changed = bool(fields & {AuditField.VALID_FROM, AuditField.VALID_TO})
+        dated = chosen.valid_from is not None or chosen.valid_to is not None
+        source = _dates_source(dates_source, dated) if dates_changed else None
         if fields & {AuditField.PARENT, AuditField.SUCCESSOR, AuditField.VALID_TO}:
             _take_succession_lock()
             _require_no_cycle(institution.pk, chosen.parent, "parent")
@@ -458,9 +500,15 @@ def change_institution(
         institution.successor = chosen.successor
         institution.valid_from = chosen.valid_from
         institution.valid_to = chosen.valid_to
-        institution.save(
-            update_fields=["kind", "country", "parent", "successor", "valid_from", "valid_to"]
-        )
+        update_fields = ["kind", "country", "parent", "successor", "valid_from", "valid_to"]
+        if dates_changed:
+            before = _identifier(institution.dates_citation)
+            institution.dates_citation = None if source is None else _create_citation(source)
+            after = _identifier(institution.dates_citation)
+            if before != after:
+                changed.append(AuditChange(AuditField.DATES_CITATION, before, after))
+            update_fields.append("dates_citation")
+        institution.save(update_fields=update_fields)
         accounts_services.record_audit_event(
             actor=actor,
             action=AuditAction.UPDATED,
@@ -553,6 +601,48 @@ def change_institution_name_dates(
             target_type=AuditTargetType.INSTITUTION_NAME,
             target_public_id=name.public_id,
             changes=changed,
+        )
+    _log(actor, AuditAction.UPDATED, AuditTargetType.INSTITUTION_NAME, name.public_id)
+
+
+def add_institution_name_source(
+    *, actor: AuthenticationContext, public_id: uuid.UUID, source: Citation
+) -> None:
+    """Record where a name entered before ADR-0023 was read. A name's source is set once.
+
+    Preconditions: the actor holds `REGISTRY_INSTITUTIONS_MANAGE`; the name
+    exists, is not marked as entered in error, and has no source; the source
+    is valid: an address of the form `http(s)://` with no space, at most
+    2,048 characters; a title, with surrounding whitespace removed, of 1 to
+    500 characters with no NUL and no direction control; and a calendar date
+    that is not in the future.
+
+    Side effects: one RegistryCitation, the name's source set to it, and one
+    `updated` audit event recording its public identifier, in one
+    transaction; a log line once it has committed.
+
+    Raises PermissionDenied if the actor may not maintain institutions,
+    before the name is looked up; RecordNotFoundError if no name has the
+    identifier; InvalidEntryError if the source is not valid or the name is
+    marked as entered in error; CitationExistsError if the name has a source
+    already. In every case nothing is changed and no audit event is written.
+    """
+    with transaction.atomic():
+        accounts_selectors.require_permission(actor, Permission.REGISTRY_INSTITUTIONS_MANAGE)
+        name = _locked_name(public_id)
+        if name.citation_id is not None:
+            raise CitationExistsError("The name has a source already.")
+        if name.entered_in_error:
+            raise InvalidEntryError("A name marked as entered in error is not given a source.")
+        citation = _create_citation(_valid_citation(source))
+        name.citation = citation
+        name.save(update_fields=["citation"])
+        accounts_services.record_audit_event(
+            actor=actor,
+            action=AuditAction.UPDATED,
+            target_type=AuditTargetType.INSTITUTION_NAME,
+            target_public_id=name.public_id,
+            changes=[AuditChange(AuditField.CITATION, None, citation.public_id)],
         )
     _log(actor, AuditAction.UPDATED, AuditTargetType.INSTITUTION_NAME, name.public_id)
 
@@ -698,6 +788,7 @@ class _ValidName:
     kind: str
     valid_from: date | None
     valid_to: date | None
+    source: Citation
 
 
 def _valid_attributes(
@@ -767,7 +858,9 @@ def _valid_new_name(name: NewName) -> _ValidName:
         raise RecordNotFoundError("No language has this public identifier.")
     if not language.is_active:
         raise DeactivatedReferenceError("A deactivated language cannot be newly referred to.")
-    return _ValidName(text, language, name.kind, start, end)
+    if name.source is None:
+        raise InvalidEntryError("A name is entered with the source it was read in.")
+    return _ValidName(text, language, name.kind, start, end, _valid_citation(name.source))
 
 
 def _create_name(institution: Institution, name: _ValidName) -> InstitutionName:
@@ -778,6 +871,56 @@ def _create_name(institution: Institution, name: _ValidName) -> InstitutionName:
         kind=name.kind,
         valid_from=name.valid_from,
         valid_to=name.valid_to,
+        citation=_create_citation(name.source),
+    )
+
+
+def _valid_citation(source: object) -> Citation:
+    """Return a source as it is stored, from what was entered (ADR-0023).
+
+    The address and the title have surrounding whitespace removed; the
+    title is put into Unicode Normalization Form C. Raises InvalidEntryError
+    if any part is not valid, DirectionControlError (a kind of it) if the
+    title holds a direction control.
+    """
+    if not isinstance(source, Citation):
+        raise InvalidEntryError("A source is entered as a Citation.")
+    if not isinstance(source.url, str) or not isinstance(source.title, str):
+        raise InvalidEntryError("The address and the title of a source are text.")
+    url = source.url.strip()
+    if len(url) > CITATION_URL_MAX_LENGTH or _WEB_ADDRESS.fullmatch(url) is None:
+        raise InvalidEntryError("The address of a source starts with http:// or https://.")
+    title = unicodedata.normalize("NFC", source.title.strip())
+    if not title:
+        raise InvalidEntryError("The title of a source is required.")
+    if len(title) > CITATION_TITLE_MAX_LENGTH:
+        raise InvalidEntryError("The title of a source is too long.")
+    if "\x00" in title:
+        raise InvalidEntryError("The title holds a character that cannot be stored.")
+    _require_no_direction_control(title)
+    read_on = source.accessed_on
+    if not isinstance(read_on, date) or isinstance(read_on, datetime):
+        raise InvalidEntryError("A source is read on a calendar date.")
+    if read_on > timezone.localdate():
+        raise InvalidEntryError("A source cannot be read on a day still to come.")
+    return Citation(url, title, read_on)
+
+
+def _dates_source(source: Citation | None, dated: bool) -> Citation | None:
+    """Return the validated source of an institution's dates: required when it is dated.
+
+    Without a date there is nothing to cite, and a source given is not used.
+    """
+    if not dated:
+        return None
+    if source is None:
+        raise InvalidEntryError("A date is entered with the source it was read in.")
+    return _valid_citation(source)
+
+
+def _create_citation(source: Citation) -> RegistryCitation:
+    return RegistryCitation.objects.create(
+        url=source.url, title=source.title, accessed_on=source.accessed_on
     )
 
 
@@ -815,7 +958,7 @@ def _institution_changes(institution: Institution, chosen: _Attributes) -> Itera
             yield AuditChange(field, old, new)
 
 
-def _identifier(record: Country | Institution | None) -> uuid.UUID | None:
+def _identifier(record: Country | Institution | RegistryCitation | None) -> uuid.UUID | None:
     return None if record is None else record.public_id
 
 

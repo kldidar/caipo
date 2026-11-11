@@ -15,7 +15,12 @@ from caipo.accounts.selectors import AuthenticationContext
 from caipo.registry import services
 from caipo.registry.models import Country, InstitutionName, Language
 from caipo.registry.services import DirectionControlError, InvalidEntryError, NewName
-from caipo.registry.tests.helpers import institution, reference_records, stored_with_institutions
+from caipo.registry.tests.helpers import (
+    TEST_SOURCE,
+    institution,
+    reference_records,
+    stored_with_institutions,
+)
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
 
@@ -82,7 +87,9 @@ def _operations(records: Records) -> dict[str, Operation]:
         "add a name": lambda actor, text: services.add_institution_name(
             actor=actor,
             institution=records.institution,
-            name=NewName(text=text, language=records.language, kind="english_rendering"),
+            name=NewName(
+                text=text, language=records.language, kind="english_rendering", source=TEST_SOURCE
+            ),
         ),
     }
 
@@ -148,6 +155,9 @@ def test_a_direction_control_is_refused_after_normalisation(
             actor=administrator,
             institution=records.institution,
             name=NewName(
-                text="TEST Do\u0308wlet\u202e", language=records.language, kind="official"
+                text="TEST Do\u0308wlet\u202e",
+                language=records.language,
+                kind="official",
+                source=TEST_SOURCE,
             ),
         )

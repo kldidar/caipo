@@ -25,6 +25,7 @@ from caipo.registry import services
 from caipo.registry.models import Institution, InstitutionName
 from caipo.registry.services import NewName
 from caipo.registry.tests.helpers import (
+    TEST_SOURCE,
     events,
     institution,
     names_of,
@@ -47,7 +48,9 @@ class Records:
         services.add_institution_name(
             actor=actor,
             institution=self.institution,
-            name=NewName(text="TEST Second name", language=self.language, kind="official"),
+            name=NewName(
+                text="TEST Second name", language=self.language, kind="official", source=TEST_SOURCE
+            ),
         )
         self.name, self.other_name = names_of(self.institution)
 
@@ -73,6 +76,7 @@ def _change(actor: AuthenticationContext, records: Records, **values: Any) -> No
             "valid_to": None,
             **values,
         },
+        dates_source=TEST_SOURCE,
     )
 
 
@@ -84,7 +88,9 @@ OPERATIONS: dict[str, Operation] = {
     "add_institution_name": lambda actor, records: services.add_institution_name(
         actor=actor,
         institution=records.institution,
-        name=NewName(text="TEST Third name", language=records.language, kind="official"),
+        name=NewName(
+            text="TEST Third name", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     ),
     "change_institution_name_dates": lambda actor, records: services.change_institution_name_dates(
         actor=actor, public_id=records.name, valid_from=D1, valid_to=D2

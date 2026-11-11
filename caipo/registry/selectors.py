@@ -23,6 +23,7 @@ from caipo.registry.models import (
 )
 
 __all__ = [
+    "CitationEntry",
     "CountryEntry",
     "InstitutionEntry",
     "InstitutionKind",
@@ -98,6 +99,15 @@ def languages(context: AuthenticationContext | None) -> list[LanguageEntry]:
 
 
 @dataclass(frozen=True)
+class CitationEntry:
+    """Where a registry fact was read (ADR-0023): the page's address and title, and the day."""
+
+    url: str
+    title: str
+    accessed_on: date
+
+
+@dataclass(frozen=True)
 class InstitutionNameEntry:
     """A name of an institution, as a reader of the registry is shown it.
 
@@ -114,6 +124,8 @@ class InstitutionNameEntry:
     valid_from: date | None
     valid_to: date | None
     entered_in_error: bool
+    # None for a name entered before sources were recorded.
+    source: CitationEntry | None = None
 
     @property
     def kind_label(self) -> str:
@@ -148,6 +160,9 @@ class InstitutionEntry:
     valid_to: date | None
     names: tuple[InstitutionNameEntry, ...]
     names_entered_in_error: tuple[InstitutionNameEntry, ...]
+    # Where its dates were read; None where it has no date, or its dates were
+    # entered before sources were recorded.
+    dates_source: CitationEntry | None = None
 
     @property
     def kind_label(self) -> str:
@@ -184,6 +199,9 @@ def institutions(context: AuthenticationContext | None) -> list[InstitutionEntry
             "successor_id",
             "valid_from",
             "valid_to",
+            "dates_citation__url",
+            "dates_citation__title",
+            "dates_citation__accessed_on",
         )
     )
     names: dict[int, list[InstitutionNameEntry]] = {row["id"]: [] for row in rows}
@@ -201,6 +219,9 @@ def institutions(context: AuthenticationContext | None) -> list[InstitutionEntry
             "valid_from",
             "valid_to",
             "entered_in_error",
+            "citation__url",
+            "citation__title",
+            "citation__accessed_on",
         )
     ):
         names[row["institution_id"]].append(
@@ -214,6 +235,9 @@ def institutions(context: AuthenticationContext | None) -> list[InstitutionEntry
                 valid_from=row["valid_from"],
                 valid_to=row["valid_to"],
                 entered_in_error=row["entered_in_error"],
+                source=_citation(
+                    row["citation__url"], row["citation__title"], row["citation__accessed_on"]
+                ),
             )
         )
     entries = {
@@ -229,6 +253,11 @@ def institutions(context: AuthenticationContext | None) -> list[InstitutionEntry
             names=tuple(name for name in names[row["id"]] if not name.entered_in_error),
             names_entered_in_error=tuple(
                 name for name in names[row["id"]] if name.entered_in_error
+            ),
+            dates_source=_citation(
+                row["dates_citation__url"],
+                row["dates_citation__title"],
+                row["dates_citation__accessed_on"],
             ),
         )
         for row in rows
@@ -247,6 +276,12 @@ def institutions(context: AuthenticationContext | None) -> list[InstitutionEntry
         )
         for row in rows
     ]
+
+
+def _citation(url: str | None, title: str | None, read_on: date | None) -> CitationEntry | None:
+    if url is None or title is None or read_on is None:
+        return None
+    return CitationEntry(url, title, read_on)
 
 
 # --- References for the services of higher apps -------------------------------------------------
