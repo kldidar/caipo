@@ -1997,6 +1997,20 @@ details.disclosure > .disclosure__body {
   margin: var(--s-4) 0;
 }
 
+/* On a narrow screen a chart keeps a readable width and scrolls sideways in
+   its frame (charts are excepted from reflow, WCAG 1.4.10); the table of
+   values beside it holds everything. The frame takes keyboard focus so that
+   it can be scrolled; the points inside never do. */
+.chart__scroll {
+  overflow-x: auto;
+}
+
+@media (max-width: 640px) {
+  .chart__svg {
+    min-width: 36rem;
+  }
+}
+
 .chart__svg {
   display: block;
   width: 100%;
