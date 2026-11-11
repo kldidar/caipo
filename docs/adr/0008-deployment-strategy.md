@@ -1,13 +1,39 @@
 # ADR-0008: Deployment strategy
 
 - Status: Proposed
-- Date: 2026-10-01
+- Date: 2026-10-01; revised 2026-11-11 with a concrete proposal
 
 ## Context
 
 Expected load is low and the team is small. The system needs several processes with different privileges and network access (ADR-0009, ADR-0011), a database, Redis, and an artifact store. The hosting target, budget, and any jurisdictional requirements for data location are unknown. Docker is required by the project brief. Docker and Docker Compose work in the development environment (verified 2026-10-02), and a development-only `docker-compose.yml` with PostgreSQL and Redis exists. That file is not the deployment this ADR describes: it publishes data ports on the loopback interface and runs no application containers.
 
+**Revision of 2026-11-11.** The owner asked on 2026-11-05 for a comparison of hosting options. It is in [the deployment options report](../reports/deployment-options-2026-11.md):
+- the law on where personal data are stored;
+- servers abroad and in Uzbekistan;
+- email;
+- the domain;
+- backups.
+
+ADR-0011, which sets the network and volume layout of the isolated workers, was accepted on 2026-11-05. The concrete choices below are proposed with it. They take effect only if the owner accepts this ADR.
+
 ## Decision (proposed)
+
+**Concrete choices proposed on 2026-11-11:**
+
+1. **Host:** one Hetzner Cloud server in Germany. The plan is CPX22 (2 vCPU, 4 GB, 80 GB), or the nearest available plan of at least that size. The law allows a server in Germany for the personal data CAIPO holds (report §2). The alternative is Pro-Data Generic 4 in Tashkent, if the owner prefers the data to stay in Uzbekistan.
+2. **Reverse proxy:** Caddy, which obtains and renews Let's Encrypt certificates itself and terminates TLS. It passes requests to the web container on an internal network. It is the one header source that the application trusts for the client address (diagnostic finding I2).
+3. **First deployment:** the reverse proxy, the web application, and PostgreSQL. Redis, the workers, and the egress proxy are added with Phase 2, when its gate is READY, in the layout of ADR-0011.
+4. **Email:** an SMTP relay through Django's built-in SMTP backend, with Brevo's free plan as the proposed service, sending from the project's domain with SPF and DKIM.
+5. **Domain:** registered by the owner in the owner's name.
+6. **Backups:**
+   - the provider's daily server backups;
+   - encrypted database dumps sent to storage in another location;
+   - a restore test before the first real user registers, and then on a schedule.
+7. **Error tracking:** none at first. Structured logs on the server, kept for a stated period, are the record; an external error tracker would be another processor of request data and needs its own decision.
+8. **Before real users register:** a privacy notice and a security-incident procedure, as the report's §2 lists, checked by a lawyer (Q-8).
+
+**The shape of the deployment, unchanged from 2026-10-01:**
+
 
 - **One image** built in CI from the repository, tagged with the git commit, base image pinned by digest, running as a non-root user.
 - **Docker Compose** for development, CI, staging, and production. Production is a single server.
@@ -40,10 +66,10 @@ Expected load is low and the team is small. The system needs several processes w
 
 Acceptance requires:
 
-1. A hosting target, with any data-location or institutional requirements stated (blocker B17).
-2. Server size, informed by the embedding model decision (ADR-0006).
-3. Choice of reverse proxy, error tracking service, and backup destination.
-4. The isolation mechanism from ADR-0011, which determines the network and volume layout.
+1. A hosting target, with any data-location or institutional requirements stated (blocker B17). **Proposed on 2026-11-11:** see the concrete choices above and the report; the owner's acceptance is outstanding.
+2. Server size, informed by the embedding model decision (ADR-0006). For the first deployment, 2 vCPU and 4 GB; Phase 5 may resize it.
+3. Choice of reverse proxy, error tracking service, and backup destination. **Proposed:** Caddy; no error tracker at first; the off-site backup storage is chosen with the owner when the server is bought.
+4. The isolation mechanism from ADR-0011, which determines the network and volume layout. **Resolved:** ADR-0011 was accepted on 2026-11-05.
 
 Resolved since this ADR was written: Docker works in the development environment (B1, closed), and the repository is hosted on GitHub (B2, closed). CI was approved separately as Phase 1 tooling and is not an open point of this ADR.
 
