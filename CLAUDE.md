@@ -15,7 +15,7 @@ Phase 1. The architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY 
 
 ADR-0003, 0006, and 0008 are Proposed and must not be built on. Every other ADR from 0001 to 0022 is Accepted. The index is `docs/adr/README.md`. Only the project owner accepts an ADR.
 
-**What is built, what is not, and what comes next are recorded only in `docs/EXECUTION_TRACKER.md`**, and the security controls as built in `SECURITY.md`. Do not assume that anything they do not list as built exists. In particular, these are not built: a page or selector that reads the general audit record; the operational audit trail of the break-glass command, which waits for ADR-0008; and email delivery in production, which also waits for ADR-0008.
+**What is built, what is not, and what comes next are recorded only in `docs/EXECUTION_TRACKER.md`**, and the security controls as built in `SECURITY.md`. Do not assume that anything they do not list as built exists. In particular, these are not built: the operational audit trail of the break-glass command, which waits for ADR-0008; and email delivery in production, which also waits for ADR-0008.
 
 If a task requires a decision that is listed as unresolved, ask; do not decide it yourself. The project owner has delegated ordinary technical and design decisions, first for the delivery sprint and, since 2026-11-06, without an end date. Where one is needed, choose a reasonable default, record it as provisional in `docs/EXECUTION_TRACKER.md`, and continue. Accepting an ADR, closing a blocker, changing a gate, and research decisions stay with the owner.
 

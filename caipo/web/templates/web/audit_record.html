@@ -1,0 +1,65 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Audit record" %}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Administration" %}</p>
+    <h1>{% translate "Audit record" %}</h1>
+    <p class="lede">{% translate "Every change made to a record of the registry, the demonstrator, or the articles: who made it, when, and what each field was before and after. The latest is first. The record cannot be changed or deleted, and this page changes nothing." %}</p>
+  </header>
+
+  <form method="get" class="filters" role="search" aria-label="{% translate 'Filter the audit record' %}">
+    <p class="field">
+      <label for="filter-kind">{% translate "Kind of record" %}</label>
+      <select id="filter-kind" name="{{ kind_parameter }}">
+        <option value="">{% translate "Every kind" %}</option>
+        {% for value, label in kinds %}<option value="{{ value }}"{% if value == record.target_type %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </p>
+    <div class="filters__actions">
+      <button type="submit" class="button--secondary">{% translate "Apply" %}</button>
+      {% if record.target_type %}<a href="?">{% translate "Clear" %}</a>{% endif %}
+    </div>
+  </form>
+
+  {% if record.entries %}
+    <div class="table-wrap" tabindex="0"><table>
+      <caption class="visually-hidden">{% translate "Audit record" %}</caption>
+      <thead><tr>
+        <th scope="col">{% translate "When (UTC)" %}</th>
+        <th scope="col">{% translate "Change" %}</th>
+        <th scope="col">{% translate "Record" %}</th>
+        <th scope="col">{% translate "Changed by" %}</th>
+        <th scope="col">{% translate "Fields" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for entry in record.entries %}
+          <tr>
+            <td class="date">{{ entry.occurred_at|date:"Y-m-d H:i:s" }}</td>
+            <td>{{ entry.action_label }}</td>
+            <td>{{ entry.target_label }}<br><code class="hash">{{ entry.target_public_id }}</code></td>
+            <td>{{ entry.actor_email }}{% if entry.correlation_id %}<br><small class="muted">{% translate "Request" %} <code>{{ entry.correlation_id }}</code></small>{% endif %}</td>
+            <td>
+              {% for change in entry.changes %}
+                <div><strong>{{ change.field_label }}</strong>: {{ change.old_value|default:"—" }} → {{ change.new_value|default:"—" }}</div>
+              {% empty %}
+                <span class="muted">{% translate "No field recorded" %}</span>
+              {% endfor %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  {% else %}
+    <div class="empty"><p class="empty__title">{% translate "No change of this kind is on record." %}</p></div>
+  {% endif %}
+
+  {% if record.has_previous %}
+    <p class="pager"><a href="?{% if record.target_type %}{{ kind_parameter }}={{ record.target_type|urlencode }}&amp;{% endif %}{{ page_parameter }}={{ record.number|add:"-1" }}" rel="prev" class="button button--secondary button--small">{% translate "Later" %}</a></p>
+  {% endif %}
+  {% if record.has_next %}
+    <p class="pager"><a href="?{% if record.target_type %}{{ kind_parameter }}={{ record.target_type|urlencode }}&amp;{% endif %}{{ page_parameter }}={{ record.number|add:"1" }}" rel="next" class="button button--secondary button--small">{% translate "Earlier" %}</a></p>
+  {% endif %}
+{% endblock %}

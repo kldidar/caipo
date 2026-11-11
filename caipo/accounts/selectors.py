@@ -12,6 +12,7 @@ decision for code that must stop when the answer is no.
 """
 
 import logging
+import uuid
 from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import datetime
@@ -21,7 +22,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db.models import OuterRef, Q, QuerySet, Subquery
+from django.db.models import OuterRef, Prefetch, Q, QuerySet, Subquery
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -33,6 +34,8 @@ from caipo.accounts.models import (
     AccountEventType,
     AccountStatus,
     AuditAction,
+    AuditEvent,
+    AuditEventChange,
     AuditField,
     AuditTargetType,
     AuthenticationEvent,
@@ -53,7 +56,10 @@ __all__ = [
     "AccountSummary",
     "Assurance",
     "AuditAction",
+    "AuditChangeEntry",
     "AuditField",
+    "AuditRecordEntry",
+    "AuditRecordPage",
     "AuditTargetType",
     "AuthenticationContext",
     "EnrollmentRequest",
@@ -72,6 +78,7 @@ __all__ = [
     "administrators_on_record",
     "an_administrator_is_able_to_act",
     "an_administrator_was_ever_created",
+    "audit_record",
     "authentication_context",
     "can",
     "enrollment_request_number_of",
@@ -943,4 +950,94 @@ def account_for_administration(
         role_history=history,
         is_actor=context.user.pk == user.pk,
         grantable=tuple(role for role in Role if role not in summary.roles),
+    )
+
+
+AUDIT_RECORD_PAGE_SIZE = 50
+
+
+@dataclass(frozen=True)
+class AuditChangeEntry:
+    """One field of a record, before and after a change. An empty value was empty."""
+
+    field_label: str
+    old_value: str
+    new_value: str
+
+
+@dataclass(frozen=True)
+class AuditRecordEntry:
+    """One change to a record, as the audit record holds it (ADR-0018)."""
+
+    occurred_at: datetime
+    action_label: str
+    target_label: str
+    target_public_id: uuid.UUID
+    actor_email: str
+    correlation_id: str
+    changes: tuple[AuditChangeEntry, ...]
+
+
+@dataclass(frozen=True)
+class AuditRecordPage:
+    """One page of the audit record, latest change first.
+
+    `target_type` is the kind of record the page is narrowed to, or None for
+    every kind.
+    """
+
+    entries: tuple[AuditRecordEntry, ...]
+    number: int
+    has_previous: bool
+    has_next: bool
+    target_type: str | None
+
+
+def audit_record(
+    context: AuthenticationContext, *, page: int = 1, target_type: str | None = None
+) -> AuditRecordPage:
+    """Return one page of the general audit record, latest change first.
+
+    `target_type` narrows it to one kind of record; anything that is not one
+    of `AuditTargetType` counts as no narrowing. Events are ordered by their
+    identifiers, which the database issues in sequence (ADR-0018). A page
+    number that is not a page gets the nearest one.
+
+    Reads only. Raises PermissionDenied unless the context may read the audit
+    record, which only an Administrator verified with a trusted second
+    factor may.
+    """
+    require_permission(context, Permission.AUDIT_READ)
+    narrowed = target_type if target_type in AuditTargetType.values else None
+    events = AuditEvent.objects.order_by("-id").select_related("actor")
+    if narrowed is not None:
+        events = events.filter(target_type=narrowed)
+    shown = Paginator(
+        events.prefetch_related(
+            Prefetch("changes", queryset=AuditEventChange.objects.order_by("id"))
+        ),
+        AUDIT_RECORD_PAGE_SIZE,
+    ).get_page(max(page, 1))
+    return AuditRecordPage(
+        entries=tuple(
+            AuditRecordEntry(
+                occurred_at=event.created_at,
+                action_label=str(AuditAction(event.action).label),
+                target_label=str(AuditTargetType(event.target_type).label),
+                target_public_id=event.target_public_id,
+                actor_email=event.actor.email,
+                correlation_id=event.correlation_id,
+                changes=tuple(
+                    AuditChangeEntry(
+                        str(AuditField(change.field).label), change.old_value, change.new_value
+                    )
+                    for change in event.changes.all()
+                ),
+            )
+            for event in shown.object_list
+        ),
+        number=shown.number,
+        has_previous=shown.has_previous(),
+        has_next=shown.has_next(),
+        target_type=narrowed,
     )

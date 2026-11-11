@@ -147,6 +147,7 @@ def test_what_each_role_can_do_on_a_password_alone(
                 OWN_MFA,
                 Permission.MFA_ENROLLMENT_APPROVE,
                 Permission.MFA_RECOVERY_AUTHORIZE,
+                Permission.AUDIT_READ,
                 REGISTRY_READ,
                 REGISTRY_REFERENCE,
                 REGISTRY_INSTITUTIONS,

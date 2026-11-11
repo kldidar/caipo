@@ -471,6 +471,7 @@ def test_the_only_administrator_deactivating_themselves_changes_nothing(
         Permission.MFA_MANAGE_OWN,
         Permission.MFA_ENROLLMENT_APPROVE,
         Permission.MFA_RECOVERY_AUTHORIZE,
+        Permission.AUDIT_READ,
         Permission.REGISTRY_READ,
         Permission.REGISTRY_REFERENCE_MANAGE,
         Permission.REGISTRY_INSTITUTIONS_MANAGE,

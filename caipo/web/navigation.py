@@ -58,7 +58,18 @@ _ADMINISTRATION: tuple[_Entry, ...] = (
     (
         "accounts",
         _("Accounts"),
-        frozenset({"accounts", "account-create", "account-send-verification"}),
+        frozenset(
+            {
+                "accounts",
+                "account-create",
+                "account-send-verification",
+                "account",
+                "account-grant-role",
+                "account-revoke-role",
+                "account-disable",
+                "account-enable",
+            }
+        ),
     ),
     (
         "second-factor-requests",
@@ -77,6 +88,7 @@ _ADMINISTRATION: tuple[_Entry, ...] = (
         frozenset({"recovery-requests", "recovery-request-authorize", "recovery-request-reject"}),
     ),
     ("recoveries", _("Recoveries"), frozenset({"recoveries"})),
+    ("audit-record", _("Audit record"), frozenset({"audit-record"})),
     ("articles-review", _("Article review"), frozenset({"articles-review", "article-review"})),
 )
 _ACCOUNT: tuple[_Entry, ...] = (

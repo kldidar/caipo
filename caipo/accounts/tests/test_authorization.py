@@ -23,6 +23,7 @@ DEACTIVATE = Permission.ACCOUNTS_DEACTIVATE
 OWN_MFA = Permission.MFA_MANAGE_OWN
 APPROVE = Permission.MFA_ENROLLMENT_APPROVE
 AUTHORIZE_RECOVERY = Permission.MFA_RECOVERY_AUTHORIZE
+READ_AUDIT = Permission.AUDIT_READ
 CREATE = Permission.ACCOUNTS_CREATE
 ENABLE = Permission.ACCOUNTS_ENABLE
 REGISTRY_READ = Permission.REGISTRY_READ
@@ -51,6 +52,7 @@ def test_the_permission_vocabulary_is_exactly_this() -> None:
         "accounts.mfa.manage_own",
         "accounts.mfa.approve_enrollment",
         "accounts.mfa.authorize_recovery",
+        "accounts.audit.read",
         "registry.read",
         "registry.reference.manage",
         "registry.institutions.manage",
@@ -105,6 +107,7 @@ def test_every_role_has_an_explicit_entry_in_the_policy() -> None:
                 OWN_MFA,
                 APPROVE,
                 AUTHORIZE_RECOVERY,
+                READ_AUDIT,
                 REGISTRY_READ,
                 REGISTRY_REFERENCE,
                 REGISTRY_INSTITUTIONS,
@@ -189,7 +192,7 @@ def test_only_administrator_holds_the_administrative_permissions(permission: Per
 @pytest.mark.parametrize("role", [Role.READER, Role.RESEARCHER, Role.REVIEWER])
 def test_research_roles_hold_no_administrative_permission(role: Role) -> None:
     assert ROLE_PERMISSIONS[role].isdisjoint(
-        {MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, APPROVE, AUTHORIZE_RECOVERY}
+        {MANAGE_ROLES, CREATE, DEACTIVATE, ENABLE, APPROVE, AUTHORIZE_RECOVERY, READ_AUDIT}
     )
 
 
@@ -260,6 +263,7 @@ def test_several_roles_confer_the_union_of_their_permissions() -> None:
         OWN_MFA,
         APPROVE,
         AUTHORIZE_RECOVERY,
+        READ_AUDIT,
         REGISTRY_READ,
         REGISTRY_REFERENCE,
         REGISTRY_INSTITUTIONS,

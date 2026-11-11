@@ -4,6 +4,7 @@ from caipo.web import (
     accounts,
     activation,
     articles,
+    audit,
     authentication,
     health,
     home,
@@ -98,6 +99,7 @@ urlpatterns = [
         name="recovery-request-reject",
     ),
     path("administration/recoveries/", recovery_history.every_account, name="recoveries"),
+    path("administration/audit/", audit.record, name="audit-record"),
     path("registry/", registry.browse, name="registry"),
     path("registry/entry/", registry.entry, name="registry-entry"),
     path(

@@ -102,6 +102,7 @@ The Compose file is for local development only, not for deployment.
 | [docs/AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) | Retrieval, verification, synthesis, evaluation (designed; not built) |
 | [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) | What is pinned, recorded, and replayable |
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What this research and system cannot support |
+| [docs/INTERFACE_TEXT.md](docs/INTERFACE_TEXT.md) | How pages and messages are worded: no causal claims, no absence presented as proof |
 | [docs/adr/](docs/adr/README.md) | Architecture decision records |
 | [docs/PRODUCT_EXCELLENCE_BLUEPRINT.md](docs/PRODUCT_EXCELLENCE_BLUEPRINT.md) | Product proposal: user journeys, design direction, roadmap, and open owner decisions. Not authorisation to implement |
 | [docs/EXECUTION_TRACKER.md](docs/EXECUTION_TRACKER.md) | Progress, execution Days, pending owner decisions. A progress record only: the documents above govern |

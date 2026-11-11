@@ -153,6 +153,7 @@ def test_a_verified_administrator_sees_the_administration_pages(
         "/administration/second-factor-requests/",
         "/administration/recovery-requests/",
         "/administration/recoveries/",
+        "/administration/audit/",
         "/articles/review/",
         "/account/second-factor/",
         "/login/",
