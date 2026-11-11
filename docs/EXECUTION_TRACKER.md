@@ -78,15 +78,15 @@ Counted from the packages in §4. No percentage is estimated.
 | Master-roadmap packages | 56 (57 listed, of which G1 is REMOVED) |
 | Sprint packages (S1 to S8) | 8 |
 | DONE | 25: S1 to S8, and 17 of the master roadmap (A1, A4, A5, B4 as a working basis, C1, C2, D0, E1, F2 and F4 in their demonstrator forms, G2, G3, H1, H2, H3, H4, H6) |
-| AWAITING OWNER MERGE | 0; Day 24's pull request is a comparison for the owner's decision Q-17 (I1) |
-| Master-roadmap packages IN PROGRESS | 4 (A2, B1, B12, I1) |
+| AWAITING OWNER MERGE | 0; Day 24's pull request records a comparison on which the owner decided to stay local (Q-17) |
+| Master-roadmap packages IN PROGRESS | 3 (A2, B1, B12) |
 | Sprint packages NOT STARTED or BLOCKED on another sprint package | 0 |
 | Master-roadmap packages PARTIAL | 6 (A3, E2, E4, F1, G4, J1; §4.2 and §12 say what is missing) |
 | Master-roadmap packages BLOCKED | 26 |
-| DEFERRED | 3 (D6, G6, G7) |
-| Owner decisions pending | 3 (§10: Q-10 in part, Q-14, Q-17) |
+| DEFERRED | 4 (D6, G6, G7, I1) |
+| Owner decisions pending | 2 (§10: Q-10 in part, Q-14) |
 
-Recounted on 2026-11-05 from the tables in §4 (Day 21): the counts above had not followed the packages that Days 16 to 20 moved. The 56 master-roadmap packages are 11 DONE, 3 AWAITING OWNER MERGE, 3 IN PROGRESS, 5 PARTIAL, 31 BLOCKED, and 3 DEFERRED. After the merges of #49 and #50 (Day 22): 14 DONE, 1 AWAITING OWNER MERGE (F1), 3 IN PROGRESS, 5 PARTIAL, 1 NOT STARTED (I1, no longer blocked by C2), 29 BLOCKED, and 3 DEFERRED. With Day 23's pull request open: 14 DONE, 3 AWAITING OWNER MERGE (H2 to H4), 3 IN PROGRESS, 6 PARTIAL (F1 added), 1 NOT STARTED, 26 BLOCKED, and 3 DEFERRED. After the merge of #52 and with Day 24's pull request open: 17 DONE, 4 IN PROGRESS (I1 added), 6 PARTIAL, 26 BLOCKED, and 3 DEFERRED.
+Recounted on 2026-11-05 from the tables in §4 (Day 21): the counts above had not followed the packages that Days 16 to 20 moved. The 56 master-roadmap packages are 11 DONE, 3 AWAITING OWNER MERGE, 3 IN PROGRESS, 5 PARTIAL, 31 BLOCKED, and 3 DEFERRED. After the merges of #49 and #50 (Day 22): 14 DONE, 1 AWAITING OWNER MERGE (F1), 3 IN PROGRESS, 5 PARTIAL, 1 NOT STARTED (I1, no longer blocked by C2), 29 BLOCKED, and 3 DEFERRED. With Day 23's pull request open: 14 DONE, 3 AWAITING OWNER MERGE (H2 to H4), 3 IN PROGRESS, 6 PARTIAL (F1 added), 1 NOT STARTED, 26 BLOCKED, and 3 DEFERRED. After the merge of #52 and with Day 24's pull request open: 17 DONE, 3 IN PROGRESS, 6 PARTIAL, 26 BLOCKED, and 4 DEFERRED (I1 added by Q-17).
 
 ## 4. Roadmap and sprint classification
 
@@ -208,7 +208,7 @@ All POST: the demonstrator runs locally (ADR-0020 point 3).
 
 | ID | Package | Class | Status | Waits for | Executor |
 |---|---|---|---|---|---|
-| I1 | B17 and ADR-0008 | POST | IN PROGRESS: the [comparison](reports/deployment-options-2026-11.md) and a concrete ADR-0008 proposal (Day 24) await the owner's decision Q-17; then the purchases in the owner's name, then a deployment Day | Q-17 | Owner, Day |
+| I1 | B17 and ADR-0008 | POST | DEFERRED by the owner on 2026-11-11 (Q-17): CAIPO stays local for now. The [comparison](reports/deployment-options-2026-11.md) and ADR-0008's concrete proposal (Day 24) are ready for when the owner revisits it; prices are to be checked again then | The owner's decision to deploy | Owner, Day |
 | I2 | Production hardening (diagnostic I1, I2, I5) | POST | BLOCKED | I1 | Day |
 | I3 | Release images, image scan, tags | POST | BLOCKED | I1 | Day |
 | I4 | Backups with a restore test, monitoring, runbooks, rollback | POST | BLOCKED | I1 | Day |
@@ -332,6 +332,8 @@ Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 
 | 2026-11-06 | Change of CLAUDE.md, "Current phase": reduced to its rules (the gate, the two exceptions, which ADRs are Proposed, what is not built, the delegation); progress is kept only in this file. The four points of 2026-10-20 that it held are kept in §2 | Owner (approval of that change) | `CLAUDE.md` |
 | 2026-11-06 | The delegation of ordinary technical and design decisions continues after the delivery sprint, without an end date, on the same terms | Owner | `CLAUDE.md`, "Current phase" |
 | 2026-11-06 | The demonstrator track of ADR-0020 stays open after the sprint, within the same limits, until the Phase 2 gate is READY | Owner | `CLAUDE.md`, "Current phase"; [adr/README.md](adr/README.md) |
+| 2026-11-11 | Q-17: CAIPO stays local for now. ADR-0008 stays Proposed with its concrete proposal, and B17 stays open. The domain is the owner's later choice | Owner | I1 (DEFERRED) |
+| 2026-11-11 | The owner reports the first check of the Turkmen, Russian, and English terminology lists done. Its results are not yet in `kldidar/caipo-research`; the re-check sheets are prepared from them once they are | Owner | B1 |
 | 2026-11-05 | Languages and readers for the pilot (O-5): five languages and scripts, Turkmen in Latin script only; the owner reads Turkmen, Russian, and English; no reader of Uzbek, so Uzbek instruments are assessed on their Russian versions with the translation recorded, while the owner looks for a reader of Uzbek; the re-check interval without a second reader is 7 days | Owner | [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.7 (O-5); [LIMITATIONS.md](LIMITATIONS.md) §2.5 |
 | 2026-11-05 | Q-3 and Q-5: the study period is set first, on grounds independent of AI policy dates, as a working basis: one common window from 2010 to 2024, both included, with a fixed end cutoff. The record states that the demonstrator had displayed indicator values for those years before the choice | Owner | [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.3 |
 | 2026-11-05 | Q-2: the six conditions of protocol §3.5 are the binding closure gate for B22; O-4 waits for B20; with one reader the re-check after an interval is used, with its limitation; B8 closes before B22 or in the same change. F-9 resolved | Owner | [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md) §3.5; [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 |
@@ -351,12 +353,11 @@ Recommended defaults are recommendations, not decisions. None of them blocks the
 |---|---|---|---|---|---|
 | Q-10 (rest) | P-11 (sources of names), P-14 (text style guide); confirm or replace the provisional P-1 | C4 and E3 depend on them | The Blueprint's recommended options | Reject or defer each | A3, C4, E3 |
 | Q-14 | Housekeeping | Clutter and stored account data | Item by item; nothing deleted without the owner's word | Keep everything | A6 |
-| Q-17 | Deployment: accept the recommendation of the [deployment options report](reports/deployment-options-2026-11.md)? A Hetzner Cloud server in Germany (CPX22, about €20 a month), Brevo's free email plan, and a domain the owner registers | Nothing goes online until it is decided; then the owner buys the server and domain and opens the email account | Accept, with a lawyer's check of the privacy notice and incident procedure before real users register | Pro-Data in Tashkent ($59 a month, data in Uzbekistan); or keep CAIPO local | I1, I2 to I5 |
 
 ## 11. Next executable Day
 
 - **Day 24** (the deployment comparison and the ADR-0008 proposal) is the pull request that changes this file. Days 1 to 23 are DONE; the last merge is `bda7f80`.
-- **Next:** the owner's decision Q-17. If accepted, the owner buys the server, registers the domain, and opens the email account; Claude Code then writes the deployment configuration (image, Compose file, Caddy, backups, instructions) and the CI image build, which needs the owner's approval as a change of CI.
+- **Next:** with deployment deferred (Q-17), the engineering work that needs no further decision is small; the rest waits for Q-10 (P-11, P-14), Q-14, and whether D6 (a reader of the audit record) is taken up. The research path waits for the first check's results in `kldidar/caipo-research`, then the re-check at least 7 days after it.
 - **The owner's next steps in the research:** the first check of the Turkmen, Russian, and English terminology lists in `kldidar/caipo-research`, and the re-check at least 7 days later; looking for a reader of Uzbek; the ethics enquiry (B20).
 - **Next:** the Phase 2 gate stays NOT READY. Its remaining blockers are research and rights decisions (B7 to B10, B22, and the protocol items), not engineering. The research path now runs through the pilot: the corpus languages and verified terminology lists (B1), then the pilot itself (B2) and the OPEN points it informs (B3). Those are the owner's research work, which Claude Code can prepare. The other open owner decisions are Q-10, in part, and Q-14 (§10). Also queued: whether the bound of twelve apps still holds now that `demo` and `articles` exist ([ARCHITECTURE.md](ARCHITECTURE.md) §2.1).
 - **Correction of 2026-11-03.** #40 was built on #39 and opened against `main`. After #39 was squash-merged, the squash merge of #40 kept two rows of this file that Day 11 had added and Day 12 had deleted (the planned Day 12 and the open Q-15). Every other file on `main` is identical to what Day 12's checks ran on (`git diff c3fd485 efd4c6b`). Day 13 deletes the two rows again. A pull request built on another is compared with its own head after both merges.
