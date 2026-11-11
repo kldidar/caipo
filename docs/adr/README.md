@@ -15,7 +15,7 @@ Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-001
 | [0005](0005-evidence-and-provenance-model.md) | Evidence and provenance model | Accepted | — (amended before ratification) |
 | [0006](0006-ai-provider-abstraction.md) | AI provider abstraction | Proposed | Provider, model, and budget decisions (B14) |
 | [0007](0007-authentication.md) | Authentication and access model | Accepted | — (rule 3, no self-registration, superseded by [ADR-0021](0021-registration-for-the-reader-role.md)) |
-| [0008](0008-deployment-strategy.md) | Deployment strategy | Proposed | Hosting decision (B17); isolation mechanism (ADR-0011). CI on GitHub Actions was approved separately as Phase 1 tooling and does not depend on this ADR. |
+| [0008](0008-deployment-strategy.md) | Deployment strategy | Proposed | Hosting decision (B17): a concrete proposal and its [comparison](../reports/deployment-options-2026-11.md) of 2026-11-11 await the owner; ADR-0011, the isolation mechanism, was accepted on 2026-11-05. CI on GitHub Actions was approved separately as Phase 1 tooling and does not depend on this ADR. |
 | [0009](0009-untrusted-content-handling.md) | Untrusted content handling: principles | Accepted | — |
 | [0010](0010-web-interface-and-api.md) | Web interface and API style | Accepted | — |
 | [0011](0011-worker-isolation-mechanism.md) | Worker isolation mechanism | Accepted | — (accepted on 2026-11-05 after the spike, which demonstrated its eleven requirements; Phase 2 demonstrates them again against its deployed configuration; production specifics wait for ADR-0008) |
