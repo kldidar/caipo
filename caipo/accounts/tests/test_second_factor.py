@@ -72,6 +72,7 @@ ADMINISTRATIVE = {
     Permission.ACCOUNTS_ENABLE,
     Permission.MFA_ENROLLMENT_APPROVE,
     Permission.MFA_RECOVERY_AUTHORIZE,
+    Permission.AUDIT_READ,
 }
 OWN_MFA = Permission.MFA_MANAGE_OWN
 # The registry permissions of an Administrator (ADR-0018 point 11). They are

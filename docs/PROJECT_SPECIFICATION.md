@@ -144,7 +144,7 @@ Priority order when they conflict: correctness, security, maintainability, testa
 | NFR-11 | Access is deny-by-default. Every view declares the access it requires; a view without a declaration is refused, and a test proves no such view exists. |
 | NFR-12 | Document rights are checked independently of authentication on every display, export, and transmission. |
 | NFR-13 | The interface is server-rendered Django templates with HTMX and small targeted JavaScript. There is no separate frontend application and no API at launch. Services and selectors are free of HTTP types, so a versioned API can be added later without changing the domain apps. |
-| NFR-14 | Public pages are readable without JavaScript, accessible, and have one permanent URL per public record, built on its stable public identifier, with citation information. |
+| NFR-14 | Public pages are readable without JavaScript, accessible to WCAG 2.2 level AA (decided by the project owner on 2026-11-11, Blueprint P-1), and have one permanent URL per public record, built on its stable public identifier, with citation information. |
 | NFR-15 | The interface launches in English. Django's internationalisation infrastructure is enabled and all interface text is marked for translation. No translations are produced yet. |
 
 ## 6. Extensibility: adding a country

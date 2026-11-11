@@ -57,7 +57,7 @@ class Permission(StrEnum):
     Kept as small as the system is. ROLES_MANAGE, the three ACCOUNTS
     permissions, MFA_MANAGE_OWN, MFA_ENROLLMENT_APPROVE, and
     MFA_RECOVERY_AUTHORIZE are checked by services and selectors today, and so
-    are REGISTRY_READ and REGISTRY_REFERENCE_MANAGE. The
+    are REGISTRY_READ, REGISTRY_REFERENCE_MANAGE, and AUDIT_READ. The
     three research permissions exist so that the four roles are
     distinguishable and views can declare the access they require; no
     operation consumes them yet. They are deliberately coarse and are to be
@@ -101,6 +101,8 @@ class Permission(StrEnum):
     # Authorise or reject another account's request to recover a lost second
     # factor.
     MFA_RECOVERY_AUTHORIZE = "accounts.mfa.authorize_recovery"
+    # Read the general audit record of changes to records (ADR-0018).
+    AUDIT_READ = "accounts.audit.read"
     # Read the registry: countries and languages.
     REGISTRY_READ = "registry.read"
     # Maintain the lists of countries and languages.
@@ -160,6 +162,7 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.MFA_MANAGE_OWN,
                 Permission.MFA_ENROLLMENT_APPROVE,
                 Permission.MFA_RECOVERY_AUTHORIZE,
+                Permission.AUDIT_READ,
                 Permission.REGISTRY_READ,
                 Permission.REGISTRY_REFERENCE_MANAGE,
                 Permission.REGISTRY_INSTITUTIONS_MANAGE,
