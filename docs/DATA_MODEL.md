@@ -129,7 +129,10 @@ Mutable reference records, not provenance records and not append-only ([ADR-0018
 - A name is a historical record. Its institution, text, language, and kind never change after creation; the trigger refuses it. A body that is renamed gets a new name, and the old one gets a valid-to date. Only the two dates can be changed, and they follow the rules of the institution's dates.
 - A name entered by mistake is **marked as entered in error**, not edited and not removed. The mark is empty when the name is created, is set once, and is never cleared; the trigger refuses clearing it. A marked name stays and stays readable, and is not shown as a name of its institution. A mark set by mistake is answered by adding the name again. Because the mark cannot be undone, the entry page sets it only with a ticked confirmation (a fix from the diagnostic of 2026-10-20, finding M2).
 - Every institution has at least one name that is not marked. The service refuses to mark an institution's only unmarked name; the right name is added first. Marking a name locks its institution's row as well as the name's, so that two names of one institution are never marked at once (owner decision of 2026-10-20).
-- Three operations exist, each for an account that holds `registry.institutions.manage`: add a name, change its dates, and mark it as entered in error. A name cannot be given a deactivated language. Nothing is deleted.
+- Four operations exist, each for an account that holds `registry.institutions.manage`: add a name, change its dates, mark it as entered in error, and add the source of a name that has none. A name cannot be given a deactivated language. Nothing is deleted.
+- Every name entered since [ADR-0023](adr/0023-registry-citations.md) names its **source**, a RegistryCitation, which the services require. A name entered before has none until one is added; a name's source, once set, never changes (the trigger refuses it). An institution's valid-from and valid-to dates name their source as well, required whenever a date is entered or changed while one remains.
+
+**RegistryCitation.** Where a registry name or an institution's dates were read ([ADR-0023](adr/0023-registry-citations.md)): public identifier (§5); the page's address, `http` or `https` with no space, at most 2,048 characters (database check and service); its title as written, 1 to 500 characters; the day it was read, not in the future; when it was recorded. Append-only: a trigger refuses every UPDATE and DELETE, and a wrong citation is answered by a new one. It is not a Source, a Document, or evidence, and nothing is fetched from its address.
 
 **Language.** Public identifier (§5), language code, script code, English name, active flag. A record is a language in a script: Uzbek in Latin and Uzbek in Cyrillic are two records.
 - The language code is exactly three lower-case ASCII letters, the form of an ISO 639-3 code. The script code is exactly four ASCII letters, one capital followed by three lower-case, the form of an ISO 15924 code ([ADR-0019](adr/0019-phased-registry-implementation.md) points 29 to 32). Each is checked for form only, by a database check and by the service. No other representation is accepted: not a two-letter language code, and not a language and a script joined in one value.
@@ -500,6 +503,7 @@ Each rule is enforced in the service layer, by a database constraint where possi
 | I-14 | Policy formal status is never stored; it is computed from PolicyEvents |
 | I-15 | A Passage is never created to represent the absence of a source |
 | I-16 | Embeddings reference RetrievalChunks only |
+| I-17 | A RegistryCitation is never changed or deleted, and a name's source is never changed once set ([ADR-0023](adr/0023-registry-citations.md)); every name entered since ADR-0023 has one |
 
 ## 7. Redaction exception
 

@@ -139,7 +139,8 @@ def test_it_is_the_first_registry_migration_and_depends_on_no_other() -> None:
     loader = MigrationExecutor(connection).loader
     migration = loader.get_migration(*MIGRATION)
 
-    assert loader.graph.leaf_nodes("registry") == [SECOND]
+    assert loader.graph.leaf_nodes("registry") == [("registry", "0003_registry_citations")]
+    assert loader.get_migration("registry", "0003_registry_citations").dependencies == [SECOND]
     assert loader.graph.root_nodes("registry") == [MIGRATION]
     assert migration.dependencies == []
     assert migration.run_before == []

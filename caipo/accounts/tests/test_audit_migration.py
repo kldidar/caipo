@@ -26,6 +26,7 @@ THIRD_WIDENING = ("accounts", "0012_audit_research_targets")
 REGISTRATION = ("accounts", "0013_self_registration")
 # Widens the target types to contributed articles (ADR-0022).
 ARTICLE_WIDENING = ("accounts", "0014_audit_article_targets")
+CITATION_FIELDS = ("accounts", "0015_registry_citations")
 
 TABLES = {"accounts_auditevent", "accounts_auditeventchange"}
 FUNCTIONS = {"accounts_auditevent_refuse_change", "accounts_auditeventchange_refuse_change"}
@@ -120,7 +121,8 @@ def test_it_follows_the_one_before_it_and_only_a_widening_follows_it() -> None:
     assert loader.get_migration(*THIRD_WIDENING).dependencies == [SECOND_WIDENING]
     assert loader.get_migration(*REGISTRATION).dependencies == [THIRD_WIDENING]
     assert loader.get_migration(*ARTICLE_WIDENING).dependencies == [REGISTRATION]
-    assert loader.graph.leaf_nodes("accounts") == [ARTICLE_WIDENING]
+    assert loader.get_migration(*CITATION_FIELDS).dependencies == [ARTICLE_WIDENING]
+    assert loader.graph.leaf_nodes("accounts") == [CITATION_FIELDS]
 
 
 def test_applied_it_has_made_the_tables_their_constraints_and_their_triggers() -> None:

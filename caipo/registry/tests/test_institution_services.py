@@ -32,6 +32,7 @@ from caipo.registry.services import (
 )
 from caipo.registry.tests.helpers import (
     COUNTRIES,
+    TEST_SOURCE,
     UNKNOWN,
     ActingAs,
     events,
@@ -106,6 +107,7 @@ def _change(actor: AuthenticationContext, public_id: uuid.UUID, **values: Any) -
             "valid_to": current["valid_to"],
             **values,
         },
+        dates_source=TEST_SOURCE,
     )
 
 
@@ -137,7 +139,9 @@ def test_an_institution_is_created_together_with_its_first_name(
             kind="abbreviation",
             valid_from=D1,
             valid_to=D2,
+            source=TEST_SOURCE,
         ),
+        dates_source=TEST_SOURCE,
     )
 
     assert isinstance(public_id, uuid.UUID) and public_id.version == 4
@@ -171,7 +175,9 @@ def test_an_institution_needs_no_country_parent_successor_or_date(
     public_id = services.create_institution(
         actor=researcher,
         kind="international_organisation",
-        first_name=NewName(text="TEST Body", language=records.language, kind="official"),
+        first_name=NewName(
+            text="TEST Body", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     )
 
     assert _state(public_id) == {
@@ -206,7 +212,9 @@ def test_a_first_name_of_a_kind_not_on_the_list_is_refused(
         services.create_institution(
             actor=researcher,
             kind="ministry",
-            first_name=NewName(text="TEST Name", language=records.language, kind=kind),
+            first_name=NewName(
+                text="TEST Name", language=records.language, kind=kind, source=TEST_SOURCE
+            ),
         )
 
     assert stored_with_institutions() == before
@@ -231,9 +239,14 @@ def test_a_date_that_is_not_a_calendar_date_is_refused(
             actor=researcher,
             kind="ministry",
             first_name=NewName(
-                text="TEST Name", language=records.language, kind="official", **name
+                text="TEST Name",
+                language=records.language,
+                kind="official",
+                **name,
+                source=TEST_SOURCE,
             ),
             **attributes,
+            dates_source=TEST_SOURCE,
         )
 
     assert stored_with_institutions() == before
@@ -261,8 +274,10 @@ def test_dates_that_are_not_in_order_are_refused(
                 language=records.language,
                 kind="official",
                 **(dates if whose == "name" else {}),
+                source=TEST_SOURCE,
             ),
             **(dates if whose == "institution" else {}),
+            dates_source=TEST_SOURCE,
         )
 
     assert stored_with_institutions() == before
@@ -408,7 +423,12 @@ def test_a_name_cannot_be_given_a_deactivated_language(
             services.add_institution_name(
                 actor=researcher,
                 institution=owner,
-                name=NewName(text="TEST Name", language=records.languages[1], kind="official"),
+                name=NewName(
+                    text="TEST Name",
+                    language=records.languages[1],
+                    kind="official",
+                    source=TEST_SOURCE,
+                ),
             )
 
     assert stored_with_institutions() == before
@@ -635,6 +655,7 @@ def test_a_change_overwrites_each_attribute_and_records_its_old_and_new_value(
         successor=successor,
         valid_from=D1,
         valid_to=D2,
+        dates_source=TEST_SOURCE,
     )
 
     assert _state(public_id) == {
@@ -655,12 +676,19 @@ def test_a_change_overwrites_each_attribute_and_records_its_old_and_new_value(
     event = AuditEvent.objects.latest("id")
     assert sorted(event.changes.values_list("field", "old_value", "new_value")) == [
         ("country", "", str(records.country)),
+        ("dates_citation", "", _dates_citation(public_id)),
         ("kind", "ministry", "regulator"),
         ("parent", "", str(parent)),
         ("successor", "", str(successor)),
         ("valid_from", "", "2001-02-03"),
         ("valid_to", "", "2002-03-04"),
     ]
+
+
+def _dates_citation(public_id: uuid.UUID) -> str:
+    """The public identifier of the source of an institution's dates, or "" if it has none."""
+    citation = Institution.objects.get(public_id=public_id).dates_citation
+    return "" if citation is None else str(citation.public_id)
 
 
 def test_a_cleared_attribute_is_recorded_as_nothing(
@@ -677,6 +705,7 @@ def test_a_cleared_attribute_is_recorded_as_nothing(
         valid_from=D1,
         valid_to=D2,
     )
+    cited = _dates_citation(public_id)
 
     _change(
         researcher,
@@ -691,6 +720,7 @@ def test_a_cleared_attribute_is_recorded_as_nothing(
     event = AuditEvent.objects.latest("id")
     assert sorted(event.changes.values_list("field", "old_value", "new_value")) == [
         ("country", str(records.country), ""),
+        ("dates_citation", cited, ""),
         ("parent", str(parent), ""),
         ("successor", str(successor), ""),
         ("valid_from", "2001-02-03", ""),
@@ -717,9 +747,12 @@ def test_only_what_changed_is_recorded(
 
     _change(researcher, public_id, **{field: value})
 
-    assert list(
+    recorded = list(
         AuditEvent.objects.latest("id").changes.values_list("field", "old_value", "new_value")
-    ) == [(field, *rendered)]
+    )
+    # A changed date records the change of its source with it (ADR-0023).
+    cited = [("dates_citation", "", _dates_citation(public_id))] if field != "kind" else []
+    assert recorded == [(field, *rendered), *cited]
 
 
 def test_a_change_that_changes_nothing_is_refused_and_records_nothing(
@@ -752,6 +785,7 @@ def test_a_change_to_an_institution_that_does_not_exist_is_refused(
             successor=None,
             valid_from=None,
             valid_to=None,
+            dates_source=TEST_SOURCE,
         )
 
     assert stored_with_institutions() == before
@@ -773,6 +807,7 @@ def test_an_institution_is_not_changed_through_the_identifier_of_its_name(
             successor=None,
             valid_from=None,
             valid_to=None,
+            dates_source=TEST_SOURCE,
         )
 
     assert _state(public_id)["kind"] == "ministry"
@@ -814,6 +849,7 @@ def test_a_name_is_added_to_an_institution_and_recorded(
             language=records.languages[2],
             kind="transliteration",
             valid_from=D2,
+            source=TEST_SOURCE,
         ),
     )
 
@@ -839,7 +875,9 @@ def test_the_same_name_may_be_added_again(
     services.add_institution_name(
         actor=researcher,
         institution=public_id,
-        name=NewName(text="TEST Name", language=records.language, kind="official"),
+        name=NewName(
+            text="TEST Name", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     )
 
     assert [name.text for name in _entry(researcher, public_id).names] == ["TEST Name"] * 2
@@ -856,7 +894,7 @@ def test_a_name_with_no_usable_text_is_not_added(
         services.add_institution_name(
             actor=researcher,
             institution=public_id,
-            name=NewName(text=text, language=records.language, kind="official"),
+            name=NewName(text=text, language=records.language, kind="official", source=TEST_SOURCE),
         )
 
     assert stored_with_institutions() == before
@@ -875,7 +913,9 @@ def test_a_name_is_not_added_to_an_institution_that_does_not_exist(
             services.add_institution_name(
                 actor=researcher,
                 institution=missing,
-                name=NewName(text="TEST Name", language=records.language, kind="official"),
+                name=NewName(
+                    text="TEST Name", language=records.language, kind="official", source=TEST_SOURCE
+                ),
             )
 
     assert stored_with_institutions() == before
@@ -948,7 +988,9 @@ def _two_names(
     right = services.add_institution_name(
         actor=researcher,
         institution=public_id,
-        name=NewName(text="TEST Right name", language=records.language, kind="official"),
+        name=NewName(
+            text="TEST Right name", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     )
     (wrong, _) = names_of(public_id)
     return public_id, wrong, right
@@ -1017,7 +1059,9 @@ def test_a_mark_set_by_mistake_is_answered_by_adding_the_name_again(
     again = services.add_institution_name(
         actor=researcher,
         institution=public_id,
-        name=NewName(text="TEST Wrong name", language=records.language, kind="official"),
+        name=NewName(
+            text="TEST Wrong name", language=records.language, kind="official", source=TEST_SOURCE
+        ),
     )
     services.mark_institution_name_entered_in_error(actor=researcher, public_id=right)
 
@@ -1154,7 +1198,9 @@ def test_every_event_names_the_account_that_acted_the_record_and_the_request(
         added = services.add_institution_name(
             actor=researcher,
             institution=public_id,
-            name=NewName(text="TEST Second", language=records.language, kind="official"),
+            name=NewName(
+                text="TEST Second", language=records.language, kind="official", source=TEST_SOURCE
+            ),
         )
     with correlation_scope() as fourth:
         services.change_institution_name_dates(
@@ -1224,7 +1270,12 @@ def test_no_event_holds_a_name_an_email_address_or_anything_but_the_change(
         services.add_institution_name(
             actor=researcher,
             institution=public_id,
-            name=NewName(text="TEST Another Name", language=records.language, kind="official"),
+            name=NewName(
+                text="TEST Another Name",
+                language=records.language,
+                kind="official",
+                source=TEST_SOURCE,
+            ),
         )
 
     written = " ".join(
@@ -1237,6 +1288,7 @@ def test_no_event_holds_a_name_an_email_address_or_anything_but_the_change(
     assert set(AuditEventChange.objects.values_list("field", flat=True)) <= {
         "kind",
         "valid_from",
+        "dates_citation",
         "name_en",
     }
 
@@ -1254,7 +1306,12 @@ def test_each_change_is_logged_with_the_identifier_and_no_value(
         added = services.add_institution_name(
             actor=researcher,
             institution=public_id,
-            name=NewName(text="TEST Other Logged", language=records.language, kind="official"),
+            name=NewName(
+                text="TEST Other Logged",
+                language=records.language,
+                kind="official",
+                source=TEST_SOURCE,
+            ),
         )
         services.change_institution_name_dates(
             actor=researcher, public_id=added, valid_from=D2, valid_to=None

@@ -18,11 +18,13 @@ from caipo.accounts.selectors import AuthenticationContext
 from caipo.registry import services
 from caipo.registry.models import Country, Institution, InstitutionName, Language
 from caipo.registry.services import NewName
+from caipo.registry.tests.helpers import TEST_SOURCE
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db(transaction=True)]
 
 FIRST = ("registry", "0001_initial")
 MIGRATION = ("registry", "0002_institutions")
+CITATIONS = ("registry", "0003_registry_citations")
 
 FIRST_TABLES = {"registry_country", "registry_language"}
 TABLES = {"registry_institution", "registry_institutionname"}
@@ -132,7 +134,9 @@ def test_it_depends_on_the_first_registry_migration_and_on_nothing_else() -> Non
 
     assert migration.dependencies == [FIRST]
     assert migration.run_before == []
-    assert loader.graph.leaf_nodes("registry") == [MIGRATION]
+    # The one registry migration after it is ADR-0023's, the sources.
+    assert loader.graph.leaf_nodes("registry") == [CITATIONS]
+    assert loader.get_migration(*CITATIONS).dependencies == [MIGRATION]
     assert set(loader.graph.forwards_plan(MIGRATION)) == {FIRST, MIGRATION}
 
 
@@ -166,7 +170,8 @@ def test_it_writes_no_row() -> None:
 
 
 def test_applied_it_has_made_the_two_tables_their_constraints_and_their_triggers() -> None:
-    assert _tables() == FIRST_TABLES | TABLES
+    # The table of the sources (ADR-0023) is added by the next migration.
+    assert _tables() == FIRST_TABLES | TABLES | {"registry_registrycitation"}
     assert _functions() == FUNCTIONS
     assert _triggers() == TRIGGERS
     assert _constraints() == CONSTRAINTS
@@ -274,8 +279,12 @@ def test_the_tables_are_protected_as_soon_as_it_is_applied(reversed_migration: N
             with connection.cursor() as cursor:
                 cursor.execute(statement)
 
-    assert InstitutionName.objects.get().text == "TEST Name"
-    assert Institution.objects.count() == 1
+    # Read without the models, which know the columns of later migrations.
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT text FROM registry_institutionname")
+        assert cursor.fetchall() == [("TEST Name",)]
+        cursor.execute("SELECT count(*) FROM registry_institution")
+        assert cursor.fetchone() == (1,)
 
 
 def test_reversing_it_destroys_the_records_and_leaves_countries_languages_and_the_events(
@@ -297,7 +306,9 @@ def test_reversing_it_destroys_the_records_and_leaves_countries_languages_and_th
         actor=administrator,
         kind="ministry",
         country=country,
-        first_name=NewName(text="TEST Institution", language=language, kind="official"),
+        first_name=NewName(
+            text="TEST Institution", language=language, kind="official", source=TEST_SOURCE
+        ),
     )
     events_before = list(
         AuditEvent.objects.order_by("id").values_list("action", "target_type", "target_public_id")

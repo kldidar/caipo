@@ -211,6 +211,7 @@ def test_the_registry_has_these_routes_and_no_others() -> None:
         "registry-institution-name-add": Permission.REGISTRY_INSTITUTIONS_MANAGE,
         "registry-institution-name-dates": Permission.REGISTRY_INSTITUTIONS_MANAGE,
         "registry-institution-name-mark": Permission.REGISTRY_INSTITUTIONS_MANAGE,
+        "registry-institution-name-source": Permission.REGISTRY_INSTITUTIONS_MANAGE,
     }
 
 
@@ -460,6 +461,7 @@ def test_every_institution_route_declares_the_institutions_permission() -> None:
         "registry-institution-name-add",
         "registry-institution-name-dates",
         "registry-institution-name-mark",
+        "registry-institution-name-source",
     ]
     for entry in routes.values():
         assert declared_access(entry.callback) == Permission.REGISTRY_INSTITUTIONS_MANAGE

@@ -75,8 +75,10 @@ def test_no_route_is_a_break_glass_route() -> None:
     # one the page that adds an indicator (Day 13). Five more are an
     # account's page and its four changes: granting and revoking a role,
     # disabling, and enabling (Day 21). None touches a second factor. One
-    # more reads the audit record (Day 25), and changes nothing.
-    assert len(routes) == 75
+    # more reads the audit record (Day 25), and changes nothing. One more
+    # adds the source of a registry name entered before sources were recorded
+    # (ADR-0023, Day 26).
+    assert len(routes) == 76
     for route in routes:
         described = f"{route.name} {route.pattern} {route.callback.__module__}"
         assert "break" not in described.lower()

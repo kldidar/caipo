@@ -1,0 +1,1 @@
+{% load i18n %}{% if source %}<a href="{{ source.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ source.title }}</a> <span class="muted">· {% blocktranslate with day=source.accessed_on|date:"Y-m-d" %}read on {{ day }}{% endblocktranslate %}</span>{% else %}<span class="muted">{% translate "No source recorded" %}</span>{% endif %}

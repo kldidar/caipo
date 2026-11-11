@@ -9,13 +9,14 @@ the two audit models are imported, to read what a registry service recorded
 
 import uuid
 from collections.abc import Callable
+from datetime import date
 from typing import Any
 
 from caipo.accounts.models import AuditEvent, AuditEventChange
 from caipo.accounts.selectors import AuthenticationContext
 from caipo.registry import services
 from caipo.registry.models import Country, Institution, InstitutionName, Language
-from caipo.registry.services import NewName
+from caipo.registry.services import Citation, NewName
 
 type ActingAs = Callable[..., AuthenticationContext]
 
@@ -34,6 +35,12 @@ LANGUAGES = [
 ]
 # The identifier of no record.
 UNKNOWN = uuid.UUID("00000000-0000-4000-8000-00000000ffff")
+
+
+# A visibly synthetic source for every name and date the tests enter (ADR-0023).
+TEST_SOURCE = Citation(
+    "https://source.example/test-registry", "TEST registry source", date(2026, 1, 2)
+)
 
 
 def stored() -> dict[str, list[Any]]:
@@ -97,7 +104,8 @@ def institution(
     return services.create_institution(
         actor=actor,
         **{"kind": "ministry", **attributes},
-        first_name=NewName(text=text, language=language, kind="official"),
+        first_name=NewName(text=text, language=language, kind="official", source=TEST_SOURCE),
+        dates_source=TEST_SOURCE,
     )
 
 

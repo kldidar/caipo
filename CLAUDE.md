@@ -13,7 +13,7 @@ Phase 1. The architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY 
 - **The demonstrator track of ADR-0020**: reduced forms of `sources`, `policies`, `indicators`, and `research`, every record classed `demonstration` or `reference`, built within the limits that ADR sets. It was decided for the delivery sprint of 2026-10-30 to 2026-11-06. On 2026-11-06 the project owner kept it open after the sprint, within the same limits, until the Phase 2 gate is READY.
 - **The contributed articles of ADR-0022**: an author's own text under CC BY 4.0, published only after review, labelled as its author's view, and never treated as evidence.
 
-ADR-0003, 0006, and 0008 are Proposed and must not be built on. Every other ADR from 0001 to 0022 is Accepted. The index is `docs/adr/README.md`. Only the project owner accepts an ADR.
+ADR-0003, 0006, and 0008 are Proposed and must not be built on. Every other ADR from 0001 to 0023 is Accepted. The index is `docs/adr/README.md`. Only the project owner accepts an ADR.
 
 **What is built, what is not, and what comes next are recorded only in `docs/EXECUTION_TRACKER.md`**, and the security controls as built in `SECURITY.md`. Do not assume that anything they do not list as built exists. In particular, these are not built: the operational audit trail of the break-glass command, which waits for ADR-0008; and email delivery in production, which also waits for ADR-0008.
 

@@ -35,7 +35,7 @@ from caipo.indicators import services as indicators_services
 from caipo.indicators.services import ObservationRow
 from caipo.policies import services as policies_services
 from caipo.registry.models import Country, Language
-from caipo.registry.services import NewName, create_institution
+from caipo.registry.services import Citation, NewName, create_institution
 from caipo.research import services as research_services
 from caipo.sources import services as sources_services
 from caipo.sources.models import Source
@@ -102,6 +102,8 @@ class Command(BaseCommand):
                 code=code, script_code=script, defaults={"name_en": name}
             )
             languages[(code, script)] = language.public_id
+        url, title = catalogue.institution_source
+        demo_source = Citation(url=url, title=title, accessed_on=catalogue.accessed)
         institutions: dict[str, uuid.UUID] = {}
         for key, kind, alpha2, name in catalogue.institutions:
             institutions[key] = create_institution(
@@ -109,7 +111,10 @@ class Command(BaseCommand):
                 kind=kind,
                 country=countries[alpha2],
                 first_name=NewName(
-                    text=name, language=languages[catalogue.english], kind="official"
+                    text=name,
+                    language=languages[catalogue.english],
+                    kind="official",
+                    source=demo_source,
                 ),
             )
         sources = {

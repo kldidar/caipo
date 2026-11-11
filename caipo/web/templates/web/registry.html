@@ -87,6 +87,7 @@
           <th scope="col">{% translate "Kind of name" %}</th>
           <th scope="col">{% translate "Valid from" %}</th>
           <th scope="col">{% translate "Valid to" %}</th>
+          <th scope="col">{% translate "Source" %}</th>
         </tr>
       </thead>
       <tbody>
@@ -97,6 +98,7 @@
             <td>{{ name.kind_label }}</td>
             <td>{{ name.valid_from|date:"Y-m-d"|default:not_recorded }}</td>
             <td>{{ name.valid_to|date:"Y-m-d"|default:not_recorded }}</td>
+            <td>{% include "web/includes/citation.html" with source=name.source %}</td>
           </tr>
         {% endfor %}
       </tbody>

@@ -50,6 +50,7 @@
       "Turkmen"
     ]
   ],
+  "institution_source": {"url": "https://registry.demo.example/institutions", "title": "DEMO register of the synthetic institutions of Northland and Southland"},
   "institutions": [
     [
       "xa-digital",

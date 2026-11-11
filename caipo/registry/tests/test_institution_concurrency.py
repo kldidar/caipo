@@ -28,7 +28,7 @@ from caipo.accounts.selectors import AuthenticationContext, Role
 from caipo.registry import services
 from caipo.registry.models import Institution, InstitutionName
 from caipo.registry.services import CycleError, LastNameError, NewName, SuccessionError
-from caipo.registry.tests.helpers import ActingAs, events, institution, names_of
+from caipo.registry.tests.helpers import TEST_SOURCE, ActingAs, events, institution, names_of
 from caipo.registry.tests.test_concurrency import ROUNDS, WAIT_SECONDS, _one_of_each, _together
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db(transaction=True)]
@@ -66,6 +66,7 @@ def _change(actor: AuthenticationContext, public_id: uuid.UUID, **values: Any) -
             "valid_to": current.valid_to,
             **values,
         },
+        dates_source=TEST_SOURCE,
     )
 
 
@@ -306,7 +307,9 @@ def test_two_names_of_one_institution_marked_at_once_leave_one_unmarked(
     services.add_institution_name(
         actor=researchers[0],
         institution=public_id,
-        name=NewName(text="TEST Second name", language=language, kind="official"),
+        name=NewName(
+            text="TEST Second name", language=language, kind="official", source=TEST_SOURCE
+        ),
     )
     first, second = names_of(public_id)
 
@@ -366,7 +369,7 @@ def test_a_name_added_while_its_institution_changes_succession_both_complete(
     added = services.add_institution_name(
         actor=researchers[1],
         institution=public_id,
-        name=NewName(text="TEST Added", language=language, kind="official"),
+        name=NewName(text="TEST Added", language=language, kind="official", source=TEST_SOURCE),
     )
 
     assert held == [None] and follower == [None]

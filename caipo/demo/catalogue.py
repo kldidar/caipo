@@ -133,6 +133,9 @@ class Catalogue:
     countries: tuple[tuple[str, str, str], ...]
     languages: tuple[tuple[str, str, str], ...]
     institutions: tuple[tuple[str, str, str, str], ...]
+    # The synthetic page the demonstration institutions' names are cited to
+    # (ADR-0023): its address and title, read on `accessed`.
+    institution_source: tuple[str, str]
     sources: tuple[SourceSpec, ...]
     documents: tuple[DocumentSpec, ...]
     policies: tuple[PolicySpec, ...]
@@ -185,6 +188,7 @@ def load(path: Path = PATH) -> Catalogue:
         countries=tuple((a, b, c) for a, b, c in data["countries"]),
         languages=tuple((a, b, c) for a, b, c in data["languages"]),
         institutions=tuple((a, b, c, d) for a, b, c, d in data["institutions"]),
+        institution_source=(data["institution_source"]["url"], data["institution_source"]["title"]),
         sources=tuple(SourceSpec(**item) for item in data["sources"]),
         documents=tuple(
             DocumentSpec(

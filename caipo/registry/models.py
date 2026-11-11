@@ -16,6 +16,8 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from caipo.core.append_only import AppendOnlyModel, AppendOnlyQuerySet
+
 # The forms of the codes, as PostgreSQL regular expressions. Form only: no
 # list of assigned codes is held (ADR-0018 point 6, ADR-0019 points 29 to 31).
 #
@@ -207,6 +209,16 @@ class Institution(models.Model):
         related_name="+",
         verbose_name=_("successor"),
     )
+    # The source of valid-from and valid-to (ADR-0023). It changes only
+    # together with a date.
+    dates_citation = models.ForeignKey(
+        "RegistryCitation",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("source of the dates"),
+    )
 
     class Meta:
         verbose_name = _("institution")
@@ -233,6 +245,48 @@ class Institution(models.Model):
             models.CheckConstraint(
                 condition=models.Q(successor__isnull=True) | models.Q(valid_to__isnull=False),
                 name="registry_institution_successor_needs_valid_to",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return str(self.public_id)
+
+
+CITATION_URL_MAX_LENGTH = 2048
+CITATION_TITLE_MAX_LENGTH = 500
+_WEB_ADDRESS = r"^https?://[^\s]+$"
+
+
+class RegistryCitation(AppendOnlyModel):
+    """Where a registry name or an institution's dates were read (ADR-0023).
+
+    The address and the title of a page, and the day it was read. It is not
+    a Source or a Document of the evidence base, and nothing is fetched from
+    the address. Append-only: a wrong citation is answered by recording a new
+    one, and a database trigger refuses every UPDATE and DELETE. Who recorded
+    it is in the audit event of the change that first names it.
+    """
+
+    public_id = models.UUIDField(_("public identifier"), default=uuid.uuid4, editable=False)
+    url = models.CharField(_("address"), max_length=CITATION_URL_MAX_LENGTH)
+    title = models.CharField(_("title"), max_length=CITATION_TITLE_MAX_LENGTH)
+    accessed_on = models.DateField(_("read on"))
+    created_at = models.DateTimeField(_("recorded at"), auto_now_add=True)
+
+    objects = AppendOnlyQuerySet["RegistryCitation"].as_manager()
+
+    class Meta:
+        verbose_name = _("registry citation")
+        verbose_name_plural = _("registry citations")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["public_id"], name="registry_citation_public_id_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(url__regex=_WEB_ADDRESS), name="registry_citation_url_form"
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(title=""), name="registry_citation_title_present"
             ),
         ]
 
@@ -270,6 +324,16 @@ class InstitutionName(models.Model):
     valid_from = models.DateField(_("valid from"), null=True, blank=True)
     valid_to = models.DateField(_("valid to"), null=True, blank=True)
     entered_in_error = models.BooleanField(_("entered in error"), default=False)
+    # Set when the name is created, or added once to a name entered before
+    # ADR-0023; never changed after that (database trigger).
+    citation = models.ForeignKey(
+        RegistryCitation,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("source"),
+    )
 
     class Meta:
         verbose_name = _("institution name")

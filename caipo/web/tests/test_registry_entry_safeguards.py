@@ -25,6 +25,7 @@ from caipo.accounts.tests.fixtures import verified as acting_verified
 from caipo.registry import services
 from caipo.registry.models import Country, Institution, InstitutionName, Language
 from caipo.registry.services import NewName
+from caipo.registry.tests.helpers import TEST_SOURCE
 from caipo.web.forms import FullDateField, MarkEnteredInErrorForm
 from caipo.web.tests.helpers import signed_in, verified
 
@@ -51,12 +52,16 @@ class Records:
             actor=actor,
             kind="ministry",
             country=self.country,
-            first_name=NewName(text="TEST Ministry", language=self.language, kind="official"),
+            first_name=NewName(
+                text="TEST Ministry", language=self.language, kind="official", source=TEST_SOURCE
+            ),
         )
         self.other_name = services.add_institution_name(
             actor=actor,
             institution=self.institution,
-            name=NewName(text="TEST MIN", language=self.language, kind="abbreviation"),
+            name=NewName(
+                text="TEST MIN", language=self.language, kind="abbreviation", source=TEST_SOURCE
+            ),
         )
 
 
@@ -169,6 +174,9 @@ def test_a_refused_change_of_an_institution_is_shown_again_as_typed(
         "successor": "",
         "valid_from": "2001-02-03",
         "valid_to": "",
+        "dates_source_url": "https://source.example/test-registry",
+        "dates_source_title": "TEST registry source",
+        "dates_source_accessed_on": "2026-01-02",
     }
     before = _stored()
 
@@ -210,6 +218,9 @@ def test_a_refused_new_name_is_shown_again_as_typed(researcher: Client, records:
         "kind": "transliteration",
         "valid_from": "2002-01-01",
         "valid_to": "2001-01-01",
+        "source_url": "https://source.example/test-registry",
+        "source_title": "TEST registry source",
+        "source_accessed_on": "2026-01-02",
     }
     before = _stored()
 
@@ -274,6 +285,9 @@ def test_a_new_name_with_a_direction_control_is_refused_and_the_page_says_why(
             "kind": "official",
             "valid_from": "",
             "valid_to": "",
+            "source_url": "https://source.example/test-registry",
+            "source_title": "TEST registry source",
+            "source_accessed_on": "2026-01-02",
         },
     )
 
@@ -301,6 +315,9 @@ def test_a_new_institution_with_a_direction_control_in_its_name_is_refused(
             "first-name-kind": "official",
             "first-name-valid_from": "",
             "first-name-valid_to": "",
+            "first-name-source_url": "https://source.example/test-registry",
+            "first-name-source_title": "TEST registry source",
+            "first-name-source_accessed_on": "2026-01-02",
         },
     )
 
@@ -394,6 +411,9 @@ def test_a_date_not_in_the_one_form_is_refused_on_every_form_of_the_page(
                 "language": str(records.language),
                 "kind": "official",
                 "valid_from": value,
+                "source_url": "https://source.example/test-registry",
+                "source_title": "TEST registry source",
+                "source_accessed_on": "2026-01-02",
             },
         ),
         (_dates_url(records.other_name), {"valid_from": value, "valid_to": ""}),

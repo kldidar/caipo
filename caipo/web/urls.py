@@ -161,6 +161,11 @@ urlpatterns = [
         name="registry-institution-name-dates",
     ),
     path(
+        "registry/entry/institution-names/<uuid:public_id>/source/",
+        registry.add_institution_name_source,
+        name="registry-institution-name-source",
+    ),
+    path(
         "registry/entry/institution-names/<uuid:public_id>/mark-entered-in-error/",
         registry.mark_institution_name_entered_in_error,
         name="registry-institution-name-mark",

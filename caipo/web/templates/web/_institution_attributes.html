@@ -9,6 +9,10 @@
       <dd>{{ institution.valid_from|date:"Y-m-d"|default:not_recorded }}</dd>
       <dt>{% translate "Valid to" %}</dt>
       <dd>{{ institution.valid_to|date:"Y-m-d"|default:not_recorded }}</dd>
+      {% if institution.valid_from or institution.valid_to %}
+      <dt>{% translate "Source of the dates" %}</dt>
+      <dd>{% include "web/includes/citation.html" with source=institution.dates_source %}</dd>
+      {% endif %}
       <dt>{% translate "Successor" %}</dt>
       <dd>{% if institution.successor %}{{ institution.successor.label }}{% else %}{{ none }}{% endif %}</dd>
     </dl>

@@ -23,7 +23,7 @@ from django.db.models import Model
 import caipo.accounts
 import caipo.registry
 from caipo.registry import selectors, services
-from caipo.registry.models import Country, Institution, InstitutionName, Language
+from caipo.registry.models import Country, Institution, InstitutionName, Language, RegistryCitation
 
 REPOSITORY = Path(settings.BASE_DIR)
 APPLICATION = REPOSITORY / "caipo"
@@ -262,10 +262,10 @@ def test_the_repository_holds_no_registry_fixture_file() -> None:
 # --- What the registry holds (ADR-0018 points 5, 13, and 61) -----------------
 
 
-def test_the_registry_has_exactly_the_four_models_of_adr_0018() -> None:
+def test_the_registry_has_exactly_the_models_of_adr_0018_and_adr_0023() -> None:
     models: list[type[Model]] = list(apps.get_app_config("registry").get_models())
 
-    assert models == [Country, Language, Institution, InstitutionName]
+    assert models == [Country, Language, Institution, RegistryCitation, InstitutionName]
 
 
 def test_the_registry_offers_exactly_these_operations_and_reads() -> None:
@@ -293,8 +293,11 @@ def test_the_registry_offers_exactly_these_operations_and_reads() -> None:
         "add_institution_name",
         "change_institution_name_dates",
         "mark_institution_name_entered_in_error",
+        # Where a name entered before ADR-0023 was read.
+        "add_institution_name_source",
     }
     assert set(selectors.__all__) == {
+        "CitationEntry",
         "CountryEntry",
         "LanguageEntry",
         "InstitutionEntry",
