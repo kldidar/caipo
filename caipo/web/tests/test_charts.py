@@ -83,11 +83,16 @@ def test_values_are_shown_rounded_and_never_changed() -> None:
 
 
 def test_chart_points_are_not_tab_stops() -> None:
-    """A chart is one image to assistive technology; its values are in the table beside it."""
+    """A chart is one image to assistive technology; its values are in the table beside it.
+
+    Its scrolling frame is the one tab stop, so that a keyboard can scroll a
+    chart that is wider than a narrow screen.
+    """
     for name in ("line_chart.html", "event_axis.html"):
         template = (INCLUDES / name).read_text()
 
-        assert "tabindex" not in template, name
+        assert template.count("tabindex") == 1, name
+        assert '<div class="chart__scroll" tabindex="0" role="group"' in template, name
         assert 'role="img"' in template, name
 
 
