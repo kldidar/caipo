@@ -113,6 +113,22 @@ def test_a_source_added_on_the_page_is_recorded_and_audited(
             "source_accessed_on": "2026-01-03",
         },
         {"source_url": "https://source.example/", "source_title": "TEST", "source_accessed_on": ""},
+        # As a person may type them: no scheme, a local date form, a day to come.
+        {
+            "source_url": "stat.example/about",
+            "source_title": "TEST",
+            "source_accessed_on": "2026-01-03",
+        },
+        {
+            "source_url": "https://source.example/",
+            "source_title": "TEST",
+            "source_accessed_on": "13.11.2026",
+        },
+        {
+            "source_url": "https://source.example/",
+            "source_title": "TEST",
+            "source_accessed_on": "2999-01-01",
+        },
     ],
 )
 def test_an_incomplete_or_unsafe_source_is_refused_and_nothing_is_recorded(
@@ -123,6 +139,8 @@ def test_an_incomplete_or_unsafe_source_is_refused_and_nothing_is_recorded(
     response = researcher.post(_source_url(records.older), body)
 
     assert response.status_code == 400
+    # The page says what a source needs, not what a whole institution needs.
+    assert "Give the source in full" in response.content.decode()
     assert InstitutionName.objects.get(public_id=records.older).citation is None
     assert AuditEvent.objects.count() == events
 
