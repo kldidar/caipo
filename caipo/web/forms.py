@@ -370,7 +370,16 @@ def _source_read_on_field(*, required: bool) -> FullDateField:
     field = _registry_date_field()
     field.required = required
     field.label = _("Source: read on")
+    field.help_text = _(
+        "The day you opened the page, not a date of the name or of the institution."
+    )
     return field
+
+
+# A valid-from date and the day a source was read sit side by side on the
+# registry's forms; the hints keep one from being entered as the other.
+INSTITUTION_FROM_HINT = _("The first day the institution existed, not the day you read its source.")
+NAME_FROM_HINT = _("The first day the name was in use, not the day you read its source.")
 
 
 def _offer(field: forms.Field, options: Options, *, empty: bool) -> None:
@@ -390,6 +399,7 @@ class InstitutionForm(forms.Form):
     successor.label = _("Successor")
     valid_from = _registry_date_field()
     valid_from.label = _("Valid from")
+    valid_from.help_text = INSTITUTION_FROM_HINT
     valid_to = _registry_date_field()
     valid_to.label = _("Valid to")
     dates_source_url = _source_url_field(required=False)
@@ -421,6 +431,7 @@ class InstitutionNameForm(forms.Form):
     kind = forms.ChoiceField(label=_("Kind of name"), choices=InstitutionNameKind.choices)
     valid_from = _registry_date_field()
     valid_from.label = _("Valid from")
+    valid_from.help_text = NAME_FROM_HINT
     valid_to = _registry_date_field()
     valid_to.label = _("Valid to")
     source_url = _source_url_field(required=True)
@@ -437,6 +448,7 @@ class InstitutionNameDatesForm(forms.Form):
 
     valid_from = _registry_date_field()
     valid_from.label = _("Valid from")
+    valid_from.help_text = NAME_FROM_HINT
     valid_to = _registry_date_field()
     valid_to.label = _("Valid to")
 
