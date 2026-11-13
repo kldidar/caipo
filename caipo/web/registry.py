@@ -95,6 +95,11 @@ INVALID_INSTITUTION_MESSAGE = _(
     " when a date is entered or changed: the address of the page (http:// or https://), its"
     " title, and the day it was read, which is not in the future."
 )
+SOURCE_INVALID_MESSAGE = _(
+    "Nothing was saved. Give the source in full: the address of the page, starting with"
+    " http:// or https://, the title of the page, and the day you read it, as a full date that"
+    " is not in the future."
+)
 SOURCE_EXISTS_MESSAGE = _(
     "Nothing was changed. This name has a source already, and a source is not replaced."
 )
@@ -744,23 +749,25 @@ def add_institution_name_source(request: HttpRequest, public_id: uuid.UUID) -> H
     actor = _actor(request)
     submitted = _Submitted("source", public_id, request.POST)
     form = NameSourceForm(request.POST)
-    if not form.is_valid():
-        return _entry_page(
-            request, actor, submitted=submitted, error=INVALID_INSTITUTION_MESSAGE, status=400
-        )
-    source = _citation(form.cleaned_data, "source_")
+    source = _citation(form.cleaned_data, "source_") if form.is_valid() else None
     if source is None:
         return _entry_page(
-            request, actor, submitted=submitted, error=INVALID_INSTITUTION_MESSAGE, status=400
+            request, actor, submitted=submitted, error=SOURCE_INVALID_MESSAGE, status=400
         )
-    return _institution_change(
-        request,
-        actor,
-        lambda: services.add_institution_name_source(
-            actor=actor, public_id=public_id, source=source
-        ),
-        submitted,
-    )
+    try:
+        services.add_institution_name_source(actor=actor, public_id=public_id, source=source)
+    except DirectionControlError:
+        return _entry_page(
+            request, actor, submitted=submitted, error=DIRECTION_CONTROL_MESSAGE, status=400
+        )
+    except InvalidEntryError:
+        return _entry_page(
+            request, actor, submitted=submitted, error=SOURCE_INVALID_MESSAGE, status=400
+        )
+    except tuple(INSTITUTION_REFUSALS) as error:
+        message, status = INSTITUTION_REFUSALS[type(error)]
+        return _entry_page(request, actor, submitted=submitted, error=message, status=status)
+    return _saved()
 
 
 def _citation(cleaned: dict[str, Any], prefix: str) -> Citation | None:
