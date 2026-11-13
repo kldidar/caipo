@@ -14,7 +14,9 @@ Expected load is low and the team is small. The system needs several processes w
 - the domain;
 - backups.
 
-ADR-0011, which sets the network and volume layout of the isolated workers, was accepted on 2026-11-05. The concrete choices below are proposed with it. They take effect only if the owner accepts this ADR.
+ADR-0011, which sets the network and volume layout of the isolated workers, was accepted on 2026-11-05.
+
+**Note of 2026-11-14.** A public instance of the demonstrator alone, on free hosting, is proposed separately in [ADR-0024](0024-public-demonstration-instance.md). It has no workers, so this ADR's reason for rejecting a platform-as-a-service does not apply to it. This ADR remains the deployment of the research platform. The concrete choices below are proposed with it. They take effect only if the owner accepts this ADR.
 
 ## Decision (proposed)
 
