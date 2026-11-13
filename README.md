@@ -16,6 +16,19 @@ CAIPO records public policy sources with their provenance, keeps the **core AI p
 - The architecture gate stays **NOT READY for Phase 2 and later** ([specification §10](docs/PROJECT_SPECIFICATION.md#10-architecture-gate)). The research decisions it waits for — the domain boundary, the study period, the indicator selection, the rights policy, the ethics review — are open, and nothing in the demonstrator closes them.
 - Progress, Day by Day, is recorded in [docs/EXECUTION_TRACKER.md](docs/EXECUTION_TRACKER.md), the only progress record.
 
+## How CAIPO is built
+
+CAIPO is an independent project with one owner, who is also its researcher and operator. The owner chose the study and its questions. The owner sets the rules the project works by, accepts or rejects every architecture decision record, makes the research decisions, and merges each pull request by hand.
+
+The software and most of the documentation are written by an AI coding agent, Claude Code (Anthropic). The agent works under the binding rules in [CLAUDE.md](CLAUDE.md), in units of work recorded one by one in [docs/EXECUTION_TRACKER.md](docs/EXECUTION_TRACKER.md). It may not accept a decision record, close a research question, or merge a change; those stay with the owner. Since 2026-10-03 every change has been a pull request, checked by the required CI jobs.
+
+At a glance, on 2026-11-13:
+
+- 23 [architecture decision records](docs/adr/README.md), of which three are still proposals and are not built on.
+- More than 5,000 automated tests, run with lint, strict type checking, import-layer contracts, a dependency audit, and a secret scan on every pull request.
+- Append-only provenance enforced by database triggers, not only by application code.
+- Every page reachable by link checked with axe-core at three widths in both themes, against the WCAG 2.2 AA target.
+
 ## What you can do in it
 
 | | |
