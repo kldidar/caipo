@@ -10,6 +10,7 @@
   padded with zeros.
 """
 
+import re
 import uuid
 from datetime import date
 from typing import Any
@@ -28,6 +29,14 @@ from caipo.registry.services import NewName
 from caipo.registry.tests.helpers import TEST_SOURCE
 from caipo.web.forms import FullDateField, MarkEnteredInErrorForm
 from caipo.web.tests.helpers import signed_in, verified
+
+
+def _value(page: str, field_id: str) -> str | None:
+    """The value an input shows, whatever the order of its attributes."""
+    (tag,) = re.findall(rf'<input[^>]*\sid="{field_id}"[^>]*>', page)
+    found = re.search(r'\svalue="([^"]*)"', tag)
+    return found.group(1) if found else None
+
 
 pytestmark = [pytest.mark.services, pytest.mark.django_db]
 
@@ -185,7 +194,7 @@ def test_a_refused_change_of_an_institution_is_shown_again_as_typed(
     assert response.status_code == 409
     assert "cannot be its own parent" in _text(response)
     page = _text(response)
-    assert f'value="2001-02-03" id="institution-{records.institution}-valid_from"' in page
+    assert _value(page, f"institution-{records.institution}-valid_from") == "2001-02-03"
     assert '<option value="regulator" selected>' in page
     assert _stored() == before
 
@@ -246,8 +255,8 @@ def test_refused_dates_of_a_name_are_shown_again_as_typed(
 
     assert response.status_code == 400
     page = _text(response)
-    assert f'value="2003-04-05" id="dates-{records.other_name}-valid_from"' in page
-    assert f'value="2003-04-05" id="dates-{records.other_name}-valid_to"' in page
+    assert _value(page, f"dates-{records.other_name}-valid_from") == "2003-04-05"
+    assert _value(page, f"dates-{records.other_name}-valid_to") == "2003-04-05"
     assert _stored() == before
 
 
@@ -265,7 +274,7 @@ def test_what_was_typed_is_shown_only_in_the_form_it_was_sent_from(
         public_id=records.other_name
     )
     (name,) = first
-    assert f'value="2003-04-05" id="dates-{name.public_id}-valid_from"' not in page
+    assert _value(page, f"dates-{name.public_id}-valid_from") != "2003-04-05"
     assert page.count('value="2003-04-05"') == 2
 
 

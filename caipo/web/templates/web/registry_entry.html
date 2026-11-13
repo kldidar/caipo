@@ -23,13 +23,7 @@
     <p>{% translate "The alpha-2 code is two capital letters and the alpha-3 code is three. Only their form is checked." %}</p>
     <form method="post" action="{% url 'registry-country-create' %}{{ selection }}" novalidate>
       {% csrf_token %}
-      {% for field in country_form %}
-        <p>
-          {{ field.label_tag }}
-          {{ field }}
-          {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-        </p>
-      {% endfor %}
+      {% include "web/includes/fields.html" with form=country_form %}
       <button type="submit">{% translate "Add the country" %}</button>
     </form>
 
@@ -65,13 +59,7 @@
     <p>{% translate "A language is entered once for each script it is written in. The language code is three lower-case letters. The script code is one capital letter followed by three lower-case letters. Only their form is checked." %}</p>
     <form method="post" action="{% url 'registry-language-create' %}{{ selection }}" novalidate>
       {% csrf_token %}
-      {% for field in language_form %}
-        <p>
-          {{ field.label_tag }}
-          {{ field }}
-          {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-        </p>
-      {% endfor %}
+      {% include "web/includes/fields.html" with form=language_form %}
       <button type="submit">{% translate "Add the language" %}</button>
     </form>
 
@@ -109,21 +97,9 @@
   <p>{% translate "A date is a full calendar date. Valid-from is the first day, and valid-to the first day that is no longer covered. A date that is not known to the day is left empty: do not enter the first of January or the first of a month to stand for a year or a month." %}</p>
   <form method="post" action="{% url 'registry-institution-create' %}{{ selection }}" novalidate>
     {% csrf_token %}
-    {% for field in institution_form %}
-      <p>
-        {{ field.label_tag }}
-        {{ field }}
-        {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-      </p>
-    {% endfor %}
+    {% include "web/includes/fields.html" with form=institution_form %}
     <h3>{% translate "First name" %}</h3>
-    {% for field in first_name_form %}
-      <p>
-        {{ field.label_tag }}
-        {{ field }}
-        {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-      </p>
-    {% endfor %}
+    {% include "web/includes/fields.html" with form=first_name_form %}
     <button type="submit">{% translate "Add the institution" %}</button>
   </form>
 
@@ -137,13 +113,7 @@
     {% if section.change_form %}
       <form method="post" action="{% url 'registry-institution-change' section.institution.public_id %}{{ selection }}" novalidate>
         {% csrf_token %}
-        {% for field in section.change_form %}
-          <p>
-            {{ field.label_tag }}
-            {{ field }}
-            {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-          </p>
-        {% endfor %}
+        {% include "web/includes/fields.html" with form=section.change_form %}
         <button type="submit">{% translate "Change the institution" %}</button>
       </form>
       <p><a href="{% url 'registry-entry' %}">{% translate "Close the form" %}</a></p>
@@ -159,25 +129,19 @@
       {% if entry.source_form %}
         <form method="post" action="{% url 'registry-institution-name-source' entry.name.public_id %}{{ selection }}" novalidate>
           {% csrf_token %}
-          {% for field in entry.source_form %}
-            <p>
-              {{ field.label_tag }}
-              {{ field }}
-              {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-            </p>
-          {% endfor %}
+          <fieldset>
+            <legend>{% translate "Where this name was read" %}</legend>
+            {% include "web/includes/fields.html" with form=entry.source_form %}
+          </fieldset>
           <button type="submit" class="button--secondary">{% translate "Record the source" %}</button>
         </form>
       {% endif %}
       <form method="post" action="{% url 'registry-institution-name-dates' entry.name.public_id %}{{ selection }}" novalidate>
         {% csrf_token %}
-        {% for field in entry.dates_form %}
-          <p>
-            {{ field.label_tag }}
-            {{ field }}
-            {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-          </p>
-        {% endfor %}
+        <fieldset>
+          <legend>{% translate "When this name was in use" %}</legend>
+          {% include "web/includes/fields.html" with form=entry.dates_form %}
+        </fieldset>
         <button type="submit" class="button--secondary">{% translate "Change the dates" %}</button>
       </form>
       {% if section.names|length > 1 %}
@@ -200,13 +164,7 @@
     <h4>{% translate "Add a name" %}</h4>
     <form method="post" action="{% url 'registry-institution-name-add' section.institution.public_id %}{{ selection }}" novalidate>
       {% csrf_token %}
-      {% for field in section.name_form %}
-        <p>
-          {{ field.label_tag }}
-          {{ field }}
-          {% for field_error in field.errors %}<span role="alert">{{ field_error }}</span>{% endfor %}
-        </p>
-      {% endfor %}
+      {% include "web/includes/fields.html" with form=section.name_form %}
       <button type="submit">{% translate "Add the name" %}</button>
     </form>
     </section>

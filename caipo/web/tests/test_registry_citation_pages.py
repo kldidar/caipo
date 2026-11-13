@@ -1,5 +1,7 @@
 """The sources of registry names and dates on the registry pages (ADR-0023)."""
 
+import re
+
 import pytest
 from django.test import Client
 
@@ -179,3 +181,54 @@ def test_a_reader_cannot_add_a_source(records: Records, user_with_roles: UserFac
 
     assert response.status_code == 403
     assert InstitutionName.objects.get(public_id=records.older).citation is None
+
+
+def _form(page: str, action: str) -> str:
+    start = page.index(f'action="{action}')
+    return page[start : page.index("</form>", start)]
+
+
+def test_the_source_and_the_dates_of_a_name_are_separate_labelled_groups(
+    records: Records, researcher: Client
+) -> None:
+    """The day a source was read is not entered as the day a name came into use."""
+    page = researcher.get(ENTRY).content.decode()
+
+    source = _form(page, _source_url(records.older))
+    dates = _form(page, f"/registry/entry/institution-names/{records.older}/dates/")
+
+    assert "<legend>Where this name was read</legend>" in source
+    assert f'id="source-{records.older}-source_accessed_on"' in source
+    assert "valid_from" not in source
+    assert "<legend>When this name was in use</legend>" in dates
+    assert f'id="dates-{records.older}-valid_from"' in dates
+    assert "source_accessed_on" not in dates
+
+
+@pytest.mark.parametrize(
+    ("field", "hint"),
+    [
+        ("dates-{name}-valid_from", "The first day the name was in use, not the day you read"),
+        ("source-{name}-source_accessed_on", "The day you opened the page, not a date of the name"),
+    ],
+)
+def test_a_date_field_is_described_by_its_hint(
+    records: Records, researcher: Client, field: str, hint: str
+) -> None:
+    page = researcher.get(ENTRY).content.decode()
+    field_id = field.format(name=records.older)
+
+    assert re.search(
+        rf'<input[^>]*aria-describedby="{field_id}_helptext"[^>]*id="{field_id}"', page
+    )
+    assert re.search(rf'<small id="{field_id}_helptext">{hint}', page)
+
+
+def test_every_description_on_the_entry_page_exists(records: Records, researcher: Client) -> None:
+    page = researcher.get(ENTRY).content.decode()
+
+    described = set(re.findall(r'aria-describedby="([^"]+)"', page))
+    present = set(re.findall(r'\sid="([^"]+)"', page))
+
+    assert described
+    assert described <= present
