@@ -1,7 +1,7 @@
 # ADR-0025: An evidence-bound assistant and a help assistant in the demonstrator
 
-- Status: Proposed
-- Date: 2026-11-15
+- Status: Accepted
+- Date: 2026-11-15; accepted by the project owner the same day, with ADR-0006
 
 ## Context
 
@@ -23,7 +23,7 @@ The demonstrator holds two kinds of material an assistant could answer from:
 
 It holds no text of a real document (ADR-0020 point 5; B7 is open).
 
-## Decision (proposed)
+## Decision
 
 1. **One pipeline, the one already designed.** Both assistants run the fixed sequence of AI_ARCHITECTURE.md §2:
    - input guard, query analysis, retrieval, evidence verification with abstention, synthesis;
@@ -58,8 +58,8 @@ It holds no text of a real document (ADR-0020 point 5; B7 is open).
    - Answers are given in English or Russian, the language of the question.
    - Russian is evaluated separately and marked `language_not_evaluated` until it is.
 
-6. **The provider: one free tier, behind ADR-0006's interface.** This ADR asks for ADR-0006 to be accepted with it, and decides two of ADR-0006's open points for the demonstrator:
-   - **Generation and the support check:** one provider's free tier, chosen by a measured spike (point 10). The model identifier and settings are held in a versioned file.
+6. **The provider: one free tier, behind ADR-0006's interface.** ADR-0006 was accepted with this ADR. This ADR decides two of ADR-0006's former open points for the demonstrator:
+   - **Generation and the support check:** one provider's free tier, chosen by a measured spike (point 10): Groq, `openai/gpt-oss-120b`, on 2026-11-15 ([spike report](../reports/spike-day35-free-providers.md)). The model identifier and settings are held in a versioned file.
    - **Budget:** zero. No billing account or payment method is attached to the provider account, so no call can be charged.
 
    The embedding model (ADR-0006 open point 2) and the rights policy for real documents (open point 3) are not needed here.
@@ -98,12 +98,12 @@ It holds no text of a real document (ADR-0020 point 5; B7 is open).
 - CLAUDE.md's list of Proposed ADRs and the current-phase exceptions change when this ADR and ADR-0006 are accepted. That change needs the owner's approval on its own.
 - Real document text stays out until the owner decides the rights of official texts (B7). Adding it later changes the corpus, not the pipeline.
 
-## Open points
+## Conditions
 
-Acceptance needs:
+These were open points of the proposal. They are settled or carried into the work:
 
-1. The owner's acceptance of ADR-0006 with points 6 and 7 here.
-2. The wording of the notice of point 8.
+1. ADR-0006 was accepted with this ADR on 2026-11-15.
+2. The owner approves the wording of the notice of point 8, in the pull request that adds it.
 
 ## Revisit when
 

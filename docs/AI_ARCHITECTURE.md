@@ -2,7 +2,7 @@
 
 Status: Draft for owner review · Last updated: 2026-10-02
 
-Design of the evidence-grounded assistant. Not implemented. Provider and model choices are open ([ADR-0006](adr/0006-ai-provider-abstraction.md), [ADR-0003](adr/0003-vector-search.md)). Entity and state names are those of [DATA_MODEL.md](DATA_MODEL.md).
+Design of the evidence-grounded assistant. Not implemented for the research platform. The provider interface is decided ([ADR-0006](adr/0006-ai-provider-abstraction.md), accepted on 2026-11-15); the research platform's provider, model, and embedding choices are open ([ADR-0003](adr/0003-vector-search.md)). The demonstrator builds this pipeline ahead of Phase 5, in the reduced form of [ADR-0025](adr/0025-demonstrator-assistants.md). Entity and state names are those of [DATA_MODEL.md](DATA_MODEL.md).
 
 ## 1. Goals and non-goals
 

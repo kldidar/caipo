@@ -1,15 +1,15 @@
 # ADR-0006: AI provider abstraction
 
-- Status: Proposed
-- Date: 2026-10-01
+- Status: Accepted
+- Date: 2026-10-01; accepted by the project owner on 2026-11-15, with ADR-0025
 
 ## Context
 
 The assistant needs text generation with structured output, a support-checking call, query and chunk embeddings, and optionally reranking. Hosted models change and are retired, prices change, and data-handling terms differ between providers. Generation and embedding may come from different providers, and a generation provider may offer no embedding model. The research needs every prompt to be inspectable and every interaction to record exactly which model produced it.
 
-## Decision (proposed)
+## Decision
 
-### Proposed in principle
+### Decided
 
 - A small internal interface with three operations: generate structured output, embed texts, and optionally rerank.
 - Application code depends on this interface only. Vendor SDKs are imported only inside provider implementations; their network calls to the provider are part of the design.
@@ -20,12 +20,15 @@ The assistant needs text generation with structured output, a support-checking c
 - Generation and embedding are selected independently.
 - Document text is sent to an external provider only where the document version's recorded rights permit it.
 
-### Not yet decided
+### Decided elsewhere
 
-- Which provider and model are used for generation and for the support check
-- Which embedding model is used, and whether it runs locally or as a hosted service
-- Whether reranking is used
-- Budget limits
+The interface above is what this ADR decides. The choices that fill it are decided where they apply:
+
+- **For the demonstrator:** [ADR-0025](0025-demonstrator-assistants.md) points 6 and 7.
+  - Generation and the support check use one free tier, chosen by a measured spike.
+  - The budget is zero.
+  - No embedding and no reranking are used.
+- **For the research platform:** the generation provider and model (B14), the embedding model (B15), whether reranking is used, the documents that may be sent to a provider (B7), and the budget. They are decided before Phase 5, in an ADR of their own, by the criteria below.
 
 ## Alternatives considered
 
@@ -40,12 +43,24 @@ The assistant needs text generation with structured output, a support-checking c
 - Switching or comparing providers is a reviewed change to versioned settings plus an evaluation run.
 - Features specific to one provider are used only behind the interface.
 
-## Open points
+## Criteria for the choices decided elsewhere
 
-Acceptance requires decisions on:
+These were this ADR's open points before its acceptance. They remain the criteria for the choices it leaves to other decisions.
 
-1. **Generation provider and model.** Criteria: quality on the evaluation set in all corpus languages, reliable structured output, data-handling terms (no training on submitted content, retention period), cost, version stability. Hosted and self-hosted options are both to be assessed.
-2. **Embedding model.** Criteria: measured retrieval quality for Turkmen, Uzbek, Russian, and English, including cross-language (blocker B15); ability to pin the version; resource needs on the development machine and on the production server. An open-weights model that can be pinned indefinitely is preferable for reproducibility; whether one can run on the available hardware has not been assessed.
+1. **Generation provider and model.** Criteria:
+   - quality on the evaluation set in all corpus languages;
+   - reliable structured output;
+   - data-handling terms: no training on submitted content, and the retention period;
+   - cost;
+   - version stability.
+
+   Hosted and self-hosted options are both to be assessed.
+2. **Embedding model.** Criteria:
+   - measured retrieval quality for Turkmen, Uzbek, Russian, and English, including cross-language (blocker B15);
+   - the ability to pin the version;
+   - resource needs on the development machine and on the production server.
+
+   An open-weights model that can be pinned indefinitely is preferable for reproducibility; whether one can run on the available hardware has not been assessed.
 3. **Data handling.** The rights policy that determines which documents may be sent to the chosen provider (blocker B7).
 4. **Budget.** Monthly limit and per-user limits (blocker B14).
 

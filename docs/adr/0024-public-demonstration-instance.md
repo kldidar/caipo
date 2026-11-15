@@ -1,7 +1,7 @@
 # ADR-0024: A public demonstration instance on free hosting
 
-- Status: Proposed
-- Date: 2026-11-14
+- Status: Accepted
+- Date: 2026-11-14; accepted by the project owner on 2026-11-15
 
 ## Context
 
@@ -16,7 +16,7 @@ What it needs is one web process and one PostgreSQL database. That is within wha
 
 Three findings of the frozen diagnostic report were deferred to a deployment decision (I1, I2, I5). Email delivery in production also waits for ADR-0008 (ADR-0015, ADR-0016, ADR-0021).
 
-## Decision (proposed)
+## Decision
 
 1. **What is deployed.** One public instance of the demonstrator, built from `main`. It holds demonstration data and reference data only (ADR-0020 point 5). It never holds research records, personal data of anyone but the owner, or any document text.
    - It is not the deployment of the research platform. ADR-0008 stays Proposed for that.
@@ -76,13 +76,16 @@ Three findings of the frozen diagnostic report were deferred to a deployment dec
 - One person can lock the shared account for others for the length of the sign-in throttling window, by failing its sign-in on purpose. This is accepted for a demonstration.
 - The break-glass command is not used on the instance, and no Administrator exists there, so I5 does not arise on it.
 
-## Open points
+## Checks before the link is given out
 
-Acceptance needs:
+These were open points of the proposal. On acceptance they became conditions of the deployment, done in the Days that build it.
 
-1. The current terms of Neon's free plan, and the region and container support of Render's, checked on their own pages when the accounts are opened. Render's page, read on 2026-11-14, confirms the sleep after 15 minutes, a wake of about a minute, no shell, and no payment card needed for a free service.
-2. How Render's proxy sets `X-Forwarded-For` and `X-Forwarded-Proto`, which points 6 and 7 depend on. Only community reports were found on 2026-11-14. It is measured on the instance itself, with a forged header, before anyone is given the link.
-3. The owner's acceptance of the wording that point 8 shows to visitors.
+1. The current terms of Neon's free plan, and the region and container support of Render's, are checked on their own pages when the accounts are opened. Render's page, read on 2026-11-14, confirms:
+   - the sleep after 15 minutes, and a wake of about a minute;
+   - no shell;
+   - no payment card needed for a free service.
+2. How Render's proxy sets `X-Forwarded-For` and `X-Forwarded-Proto` is measured on the instance itself, with a forged header. Points 6 and 7 depend on it; only community reports were found on 2026-11-14.
+3. The owner approves the wording that point 8 shows to visitors, in the pull request that adds it.
 
 ## Revisit when
 
