@@ -68,7 +68,7 @@ Questions it is worth being ready for:
 
 ### Simulated
 
-- Everything marked **Demo data**: the countries DEMO Northland and DEMO Southland, their sources, documents, policies, provisions, indicators, observations, one search run, and one analysis run. They exist to show the software and say nothing about any real country.
+- Everything marked **Demo data**: the countries DEMO Northland and DEMO Southland, their sources, documents and the synthetic texts of eight of them, policies, provisions, indicators, observations, one search run, and one analysis run. They exist to show the software and say nothing about any real country.
 - The two demonstration accounts, created by a development-only command that refuses to run unless `DEBUG` is on.
 
 ### Future work

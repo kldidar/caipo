@@ -1294,5 +1294,147 @@
       "outcome": "inconclusive",
       "summary": "Synthetic example of an inconclusive outcome: an ambiguous mention was escalated and not decided."
     }
-  ]
+  ],
+  "texts": {
+    "xa-decree-101": [
+      [
+        "Art. 1",
+        "The National Strategy for Artificial Intelligence of DEMO Northland for 2025–2030 is approved, as set out in the annex to this Decree."
+      ],
+      [
+        "Art. 2",
+        "A National Council for Artificial Intelligence is established to coordinate the implementation of this Strategy. The Council is chaired by the Minister of Digital Affairs and meets at least four times a year."
+      ],
+      [
+        "Art. 3",
+        "The Strategy pursues three aims: to build public capacity for research in artificial intelligence, to support the use of artificial intelligence in public services, and to protect the rights of persons affected by automated systems."
+      ],
+      [
+        "Art. 4(1)",
+        "By 2028, five public research laboratories in artificial intelligence shall be established."
+      ],
+      [
+        "Art. 4(2)",
+        "Each laboratory shall publish an annual report of its work, which the Council reviews."
+      ],
+      [
+        "Art. 7",
+        "A competitive grant programme shall support start-ups developing artificial intelligence products. The Ministry of Digital Affairs sets the rules of the programme and publishes the list of grants awarded."
+      ],
+      [
+        "Art. 9",
+        "Public bodies that use an artificial intelligence system to support a decision shall keep a record of the system used and of the decisions it supported."
+      ],
+      [
+        "Art. 12",
+        "This Decree enters into force on 1 April 2025."
+      ]
+    ],
+    "xa-egov-law": [
+      [
+        "Art. 1",
+        "This Law sets the rules by which public bodies of DEMO Northland provide services electronically."
+      ],
+      [
+        "Art. 5",
+        "Every public service listed in the national register of services shall be available through the single portal of electronic government."
+      ],
+      [
+        "Art. 12",
+        "A person may ask for any decision made through the portal to be reviewed by a civil servant."
+      ],
+      [
+        "Art. 30",
+        "This Law enters into force on 1 September 2019."
+      ]
+    ],
+    "xa-egov-amendment": [
+      [
+        "Art. 1",
+        "The Law on Electronic Government is amended by inserting the following article after Article 12."
+      ],
+      [
+        "Art. 1, new Art. 12-1",
+        "Public bodies may use automated decision-support systems, including systems based on artificial intelligence, provided that a civil servant reviews each decision."
+      ],
+      [
+        "Art. 2",
+        "This Law enters into force on the day after its publication."
+      ]
+    ],
+    "xa-digital-concept": [
+      [
+        "Para. 1",
+        "The Digital Economy Concept of DEMO Northland for 2021–2026 is approved."
+      ],
+      [
+        "Para. 2",
+        "The Concept sets the direction of public policy on digital infrastructure, digital skills, and the digital services of the state."
+      ],
+      [
+        "Para. 3",
+        "The ministries named in the annex shall report each year on the measures they have taken under the Concept."
+      ]
+    ],
+    "xa-data-law": [
+      [
+        "Art. 1",
+        "This Law governs the processing of personal data in DEMO Northland."
+      ],
+      [
+        "Art. 4",
+        "Personal data are processed only for a purpose stated before the processing begins."
+      ],
+      [
+        "Art. 18",
+        "This Law enters into force on 1 July 2020."
+      ]
+    ],
+    "xa-data-repeal": [
+      [
+        "Art. 1",
+        "The Law on Personal Data of 15 April 2020 is repealed."
+      ],
+      [
+        "Art. 2",
+        "This Law enters into force on the day of its publication."
+      ]
+    ],
+    "xb-roadmap": [
+      [
+        "Para. 1",
+        "The Roadmap for Artificial Intelligence in Public Administration of DEMO Southland for 2024–2025 is approved, as set out in the annex."
+      ],
+      [
+        "Para. 4",
+        "The ministries named in the annex report on each item of the Roadmap to the Government Office every six months."
+      ],
+      [
+        "Para. 9",
+        "This Resolution ceases to apply on 1 January 2026."
+      ],
+      [
+        "Annex, item 1",
+        "Prepare guidance for public bodies on the use of artificial intelligence."
+      ],
+      [
+        "Annex, item 3",
+        "Pilot an AI-based assistant for citizen enquiries in two ministries."
+      ]
+    ],
+    "xb-telecom": [
+      [
+        "Sect. 1",
+        "The Telecommunications Development Programme of DEMO Southland for 2023–2027 is adopted."
+      ],
+      [
+        "Sect. 2",
+        "The Programme aims to extend broadband networks to every district centre of DEMO Southland."
+      ],
+      [
+        "Sect. 5",
+        "The Ministry of Transport and Communications reports on the Programme each year."
+      ]
+    ]
+  }
 }

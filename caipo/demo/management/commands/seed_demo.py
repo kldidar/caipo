@@ -154,6 +154,12 @@ class Command(BaseCommand):
             )
             for spec in catalogue.documents
         }
+        for key, parts in catalogue.texts.items():
+            sources_services.attach_demonstration_text(
+                actor=actor,
+                document=documents[key],
+                parts=[sources_services.TextPart(locator, text) for locator, text in parts],
+            )
         self._indicators(actor, catalogue, sources)
         self._research(actor, catalogue)
         for policy in catalogue.policies:

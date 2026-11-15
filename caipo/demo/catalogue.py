@@ -145,6 +145,9 @@ class Catalogue:
     demo_observations: tuple[tuple[str, str, int, str | None, str], ...]
     analyses: tuple[AnalysisSpec, ...]
     searches: tuple[SearchSpec, ...]
+    # The synthetic text of each demonstration document that has one, by the
+    # document's key: its parts, each a locator and a text (ADR-0025 point 4).
+    texts: dict[str, tuple[tuple[str, str], ...]]
 
     @property
     def english(self) -> tuple[str, str]:
@@ -208,4 +211,8 @@ def load(path: Path = PATH) -> Catalogue:
             SearchSpec(**{**item, "searched_on": date.fromisoformat(item["searched_on"])})
             for item in data["searches"]
         ),
+        texts={
+            key: tuple((locator, text) for locator, text in parts)
+            for key, parts in data["texts"].items()
+        },
     )

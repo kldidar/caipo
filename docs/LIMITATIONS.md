@@ -143,7 +143,7 @@ The software demonstrator built for the delivery sprint ([ADR-0020](adr/0020-dem
 
 - Records classed **demonstration** are synthetic. They belong only to synthetic countries and say nothing about any real country.
 - Records classed **reference** are real public metadata and openly licensed indicator values. They are a small sample found by a bounded search, not a complete or verified seed list (B9), and an absent record does not show that a policy or value does not exist.
-- Legal and policy texts are registered as metadata only; their text is not held, so provisions cannot be checked against a stored text.
+- Real legal and policy texts are registered as metadata only; their text is not held, so their provisions cannot be checked against a stored text. Only the synthetic demonstration documents have a text ([ADR-0025](adr/0025-demonstrator-assistants.md) point 4), written for the demonstration and labelled as such.
 - Whether a document is core AI policy or contextual, and which layer an indicator belongs to, are provisional working assignments, not the eligibility decisions or indicator selection the protocol requires (B22, B12).
 - Analysis runs are descriptive. They make no correlation, causal, or interpretive statement.
 

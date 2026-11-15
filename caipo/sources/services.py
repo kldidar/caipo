@@ -5,8 +5,12 @@ and records its audit event, in one transaction. A record is named by its
 public identifier, and nothing takes a request. Nothing is deleted.
 """
 
+import hashlib
 import logging
+import unicodedata
 import uuid
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import date
 
 from django.db import transaction
@@ -14,7 +18,14 @@ from django.utils.translation import gettext as _
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts import services as accounts_services
-from caipo.accounts.selectors import AuditAction, AuditTargetType, AuthenticationContext, Permission
+from caipo.accounts.selectors import (
+    AuditAction,
+    AuditField,
+    AuditTargetType,
+    AuthenticationContext,
+    Permission,
+)
+from caipo.accounts.services import AuditChange
 from caipo.core.data_class import DataClass, country_fits
 from caipo.core.entry import (
     DataClassError,
@@ -22,15 +33,19 @@ from caipo.core.entry import (
     RecordNotFoundError,
     clean_address,
     clean_text,
+    has_direction_control,
 )
 from caipo.registry import selectors as registry_selectors
 from caipo.sources.models import (
+    LOCATOR_MAX_LENGTH,
     NAME_MAX_LENGTH,
+    SEGMENT_MAX_LENGTH,
     TITLE_MAX_LENGTH,
     URL_MAX_LENGTH,
     Document,
     DocumentType,
     PermittedUse,
+    Segment,
     Source,
     SourceTier,
 )
@@ -221,3 +236,129 @@ def create_document(
         _record(actor, AuditTargetType.DOCUMENT, document.public_id)
     _log(actor, "sources.document_created", document.public_id)
     return document.public_id
+
+
+# A demonstration text has at least one part and is bounded in its number of parts.
+TEXT_MAX_PARTS = 200
+
+
+@dataclass(frozen=True)
+class TextPart:
+    """One part of a document's text: where it is in the document, and what it says."""
+
+    locator: str
+    text: str
+
+
+def _segment_text(value: str) -> str:
+    # Held in NFC and otherwise as given (DATA_MODEL.md §5): no whitespace is
+    # removed or collapsed. Only its form is checked.
+    text = unicodedata.normalize("NFC", value)
+    if not text.strip():
+        raise InvalidEntryError(_("Each part of the text says something."))
+    if len(text) > SEGMENT_MAX_LENGTH:
+        raise InvalidEntryError(
+            _("Each part of the text is at most %(limit)d characters.")
+            % {"limit": SEGMENT_MAX_LENGTH}
+        )
+    if has_direction_control(text):
+        raise InvalidEntryError(_("The text holds a direction control character."))
+    return text
+
+
+def _sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def attach_demonstration_text(
+    *, actor: AuthenticationContext, document: uuid.UUID, parts: Sequence[TextPart]
+) -> str:
+    """Give a demonstration document its synthetic text, once, and return its fingerprint.
+
+    Preconditions: the actor holds `RESEARCH_CONTRIBUTE`; the document exists
+    and is demonstration data; it has no text yet; there are 1 to
+    TEXT_MAX_PARTS parts, each with a locator of at most LOCATOR_MAX_LENGTH
+    characters and a text that is not blank, of at most SEGMENT_MAX_LENGTH
+    characters, and free of direction controls. A text is held in NFC and is
+    otherwise stored as given (ADR-0025 point 4).
+
+    The fingerprint is the SHA-256 of the segments' own SHA-256 values, in
+    order, one per line. It names the whole text in the audit record, which
+    never holds the text itself.
+
+    Side effects: one Segment per part, in the order given, and one `updated`
+    audit event on the document whose change is the fingerprint, in one
+    transaction, and a log line after it commits.
+
+    Raises PermissionDenied before anything else is examined;
+    RecordNotFoundError if the document does not exist; DataClassError if it
+    is reference data; InvalidEntryError if it already has a text or a part is
+    not acceptable. Nothing is stored in any of those cases.
+    """
+    accounts_selectors.require_permission(actor, Permission.RESEARCH_CONTRIBUTE)
+    if not 1 <= len(parts) <= TEXT_MAX_PARTS:
+        raise InvalidEntryError(
+            _("A text has from 1 to %(limit)d parts.") % {"limit": TEXT_MAX_PARTS}
+        )
+    cleaned = [
+        (
+            clean_text(
+                part.locator,
+                field=_("locator"),
+                max_length=LOCATOR_MAX_LENGTH,
+                required=False,
+            ),
+            _segment_text(part.text),
+        )
+        for part in parts
+    ]
+    with transaction.atomic():
+        found = (
+            Document.objects.select_for_update()
+            .filter(public_id=document)
+            .values_list("pk", "data_class")
+            .first()
+        )
+        if found is None:
+            raise RecordNotFoundError(_("The document does not exist."))
+        document_pk, data_class = found
+        if data_class != DataClass.DEMONSTRATION:
+            raise DataClassError(
+                _(
+                    "Only a demonstration document holds a text:"
+                    " a reference document's rights are not decided."
+                )
+            )
+        if Segment.objects.filter(document_id=document_pk).exists():
+            raise InvalidEntryError(
+                _("The document has its text already, and it is never replaced.")
+            )
+        hashes = []
+        for position, (locator, text) in enumerate(cleaned, start=1):
+            digest = _sha256(text)
+            Segment.objects.create(
+                document_id=document_pk,
+                position=position,
+                locator=locator,
+                text=text,
+                text_sha256=digest,
+            )
+            hashes.append(digest)
+        fingerprint = _sha256("\n".join(hashes))
+        accounts_services.record_audit_event(
+            actor=actor,
+            action=AuditAction.UPDATED,
+            target_type=AuditTargetType.DOCUMENT,
+            target_public_id=document,
+            changes=[AuditChange(AuditField.TEXT, None, fingerprint)],
+        )
+    logger.info(
+        "Demonstration text attached",
+        extra={
+            "event": "sources.document_text_attached",
+            "public_id": str(document),
+            "actor_id": actor.user.pk,
+            "segments": len(cleaned),
+        },
+    )
+    return fingerprint

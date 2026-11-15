@@ -885,6 +885,9 @@ class AuditField(models.TextChoices):
     # recorded by the public identifier of its RegistryCitation (ADR-0023).
     CITATION = "citation", _("Source")
     DATES_CITATION = "dates_citation", _("Source of the dates")
+    # The synthetic text of a demonstration document, recorded by the
+    # SHA-256 of its segments (ADR-0025 point 4). Never the text itself.
+    TEXT = "text", _("Text (SHA-256)")
 
 
 # The kinds of record each action applies to. Only a country or a language is
