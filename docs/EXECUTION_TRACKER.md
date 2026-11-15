@@ -137,7 +137,7 @@ All research work; the owner does it as the researcher. None is needed for the d
 | B9 | B7: rights policy, project-data licence, removal procedure | POST | BLOCKED | A competent rights reviewer (Q-8) | External, Owner |
 | B10 | B12: indicator selection and layer assignment | POST | BLOCKED | B6, B9 | Owner |
 | B11 | B11 codebook, B23 decision, English prohibited-wording list | POST | BLOCKED | B6. Q-1 is answered: the owner writes the list | Owner |
-| B12 | B13 team and B20 ethics review | POST | IN PROGRESS for B20: Q-4 answered, the owner asks an institution now (§9). B13: the team is one person (§9); the self-review rule still needs confirming | The institution's answer | Owner, External |
+| B12 | B13 team and B20 ethics review | POST | DEFERRED for B20: the owner withdrew the enquiry to an institution on 2026-11-15 (§9); B20 stays open and blocks Phase 4. B13: the team is one person (§9); the self-review rule still needs confirming | The owner's later choice of a reviewer | Owner, External |
 
 #### C. Data model and ingestion readiness
 
@@ -263,7 +263,7 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 31 | The tracker after Days 29 and 30 | — | 2026-11-13 | **DONE**: merged as `744abaa`; CI run 43461141150 passed all four checks; `5159 passed` | #60 |
 | 32 | A name's source and its dates are separate, described groups on the entry page (the day a source was read had been entered as a valid-from date) | C4, G4 | 2026-11-13 | **DONE**: merged as `7762ef8`; CI run 43478590483 passed all four checks; `5163 passed` | #61 |
 | 33 | How CAIPO is built: who decides what, and that an AI coding agent writes the software, in the README for a reader from outside | H | 2026-11-13 | **DONE**: merged as `6313cbc`; CI run 43482931611 passed all four checks; `5163 passed` | #62 |
-| 34 | ADR-0024 proposed: a public demonstration instance on free hosting (Render and Neon); the tracker after Days 31 to 33 | I1 | 2026-11-14 | AWAITING OWNER MERGE | The pull request that changes this file |
+| 34 | ADR-0024 proposed (a public demonstration instance on free hosting, Render and Neon) and ADR-0025 proposed (an evidence-bound assistant and a help assistant in the demonstrator); the application plan to 2027-01-14; the tracker after Days 31 to 33 | I1, D4 | 2026-11-14 | AWAITING OWNER MERGE | The pull request that changes this file |
 
 ### Planned Days
 
@@ -271,6 +271,27 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 
 | Day | Sprint day | Objective | Packages | Ready when |
 |---|---|---|---|---|
+
+**The application plan of 2026-11-15** (the owner's decision, §9). It replaces the post-sprint queue below until 2027-01-14. Days are numbered provisionally; the pace is about two Days a day. Its aim is a demonstrator that a reader from outside can open and test, with its flagship verified. Nothing here closes a blocker or changes a gate.
+
+| Day | Week | Objective | Packages | Ready when |
+|---|---|---|---|---|
+| 35 | 1 | Spike: at least two free-tier providers compared on schema-valid output, English and Russian answers, limits, and data terms; the choice recorded (ADR-0025 point 10) | D4 | ADR-0025 and ADR-0006 accepted; the owner has made a free API key for each provider and put it in `.env` |
+| 36 | 1 | Demonstration texts as Segments (demonstrator form, a database check against reference documents); the help corpus written | D4, H | Day 35 |
+| 37 | 2 | `retrieval`: chunks from Segments and help sections, full-text and trigram search, tests | D4 | Day 36 |
+| 38 | 2 | `assistant`: the append-only interaction records, the provider interface and the fake provider, the input guard and the quotas | D4 | Day 37 |
+| 39 | 2–3 | The pipeline: analysis, evidence verification and abstention, synthesis, the deterministic checks (handles, quotes, numbers, labels, wording), the support check | D4 | Day 38 |
+| 40 | 3 | The research assistant's page, with the evidence panel for each statement | D4, E4 | Day 39 |
+| 41 | 3 | The help panel at the bottom right of every workspace page | D4, E4 | Day 39 |
+| 42 | 4 | Evaluation: gold sets in English and Russian for both assistants, refusals, abstentions, prompt-injection and verifier attacks; the report per language, in the repository | D4, G | Days 40 and 41 |
+| 43 | 5 | Design pass on every page; a public page that tells what CAIPO is | E1, E4 | Day 42 |
+| 44 | 5 | A page of guarantees: each with the test or database rule that enforces it | H | Day 43 |
+| 45 | 6 | The instance (ADR-0024): container image, instance settings, the shared account's refusals, the notice to visitors | I1 | ADR-0024 accepted |
+| 46 | 6 | Deployment on Render and Neon with the owner; the forged-header measurement before anyone is given the link | I1 | Day 45; the owner's two accounts |
+| 47 | 7 | Feature freeze: fixes found by the owner's own use; the facts in the owner's project description checked | J1 | Day 46 |
+
+Cut first if time runs short: Russian (the assistants answer in English only), then Day 44. The deployment is not cut.
+
 
 **Post-sprint queue (unnumbered).** Recording the research governance decisions (A2, when Q-2 to Q-5, Q-7, Q-8 are answered); the job-system and isolation spike (C1, Q-9); the Blueprint revision (H5); the ADR-0004 and ADR-0011 decisions (C2); the Phase 1 exit and account-administration pages (A5, D0, Q-11); status consolidation and the self-review practice (H2 to H4, Q-12); CI reliability (G2, G3, Q-13); the ADR for registry name sources (C4); then the research-grade phases behind their gates.
 
@@ -362,17 +383,19 @@ Authoritative status: [PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md) §10 
 | 2026-10-30 | P-1 (part of Q-10), **provisional**: WCAG 2.2 level AA as the accessibility target of the demonstrator's pages, checked in S2 and S7 | Claude Code, under the owner's delegation to choose a reasonable default and record it as provisional | This file. The owner may replace it |
 | 2026-11-14 | Q-17 revisited: a public link to the demonstrator, at no cost. Proposed as ADR-0024 (Render and Neon free plans, demonstration and reference data only, registration closed, a shared Reader account that cannot change itself); its acceptance is the owner's. ADR-0008 stays Proposed for the research platform | Owner (the request); Claude Code (the proposal) | [ADR-0024](adr/0024-public-demonstration-instance.md); I1 |
 | 2026-11-13 | Clear the valid-from date of 2026-11-13 that the owner's own attempt had set on the English rendering of the Ministry of Digital Technologies in the development database. Done the same day through the entry page, as the owner's Administrator, after a backup; audit event 107 records it, and the name keeps its source | Owner | §11 |
+| 2026-11-15 | The application plan (§5): the demonstrator gains an evidence-bound assistant and a help panel at the bottom right of each page (ADR-0025, Proposed), on a free tier; nothing is spent on the project; it is deployed only for free (ADR-0024) and only when its flagship is verified; the plan replaces the Day queue to 2027-01-14 | Owner | §5; [ADR-0025](adr/0025-demonstrator-assistants.md) |
+| 2026-11-15 | No letter or request is sent to anyone outside the project: the ethics enquiry (Q-4, 2026-11-04) is withdrawn, and no external rights reviewer is sought now (Q-8). The owner may show the finished project to a professor later. B20 and B7 stay open: they block research publication and the admission of real document text, not the demonstrator | Owner | B12, B9 (§4.2) |
 
 ## 10. Decisions awaiting the owner
 
-**ADR-0024** (a public demonstration instance on free hosting) awaits the owner's acceptance. Why it matters: it is the only way, at no cost, for someone outside the project to open the demonstrator. Recommended: accept it, after reading point 5 (the shared account) and point 8 (what visitors are told). Alternatives: ADR-0008's rented server (about €20 a month), or screenshots only. Consequences: two new dependencies, an instance settings module, and the refusals of point 5, built in the Days after acceptance; the owner opens the two accounts and enters the secrets. Nothing else waits on it. The other decisions that remain open are research and rights decisions, set by the specification (§10 there, the blockers) and the research protocol (O-1 to O-11), not by this file.
+**ADR-0025** (the assistants) and **ADR-0006** (the provider interface, with its open points 1 and 4 decided by ADR-0025 for the demonstrator) await the owner's acceptance; they block Day 35. Recommended: accept both. The alternative is no assistant before Phase 5. **ADR-0024** (a public demonstration instance on free hosting) also awaits the owner's acceptance; it blocks Day 45. Why it matters: it is the only way, at no cost, for someone outside the project to open the demonstrator. Recommended: accept it, after reading point 5 (the shared account) and point 8 (what visitors are told). Alternatives: ADR-0008's rented server (about €20 a month), or screenshots only. Consequences: two new dependencies, an instance settings module, and the refusals of point 5, built in the Days after acceptance; the owner opens the two accounts and enters the secrets. Nothing else waits on it. The other decisions that remain open are research and rights decisions, set by the specification (§10 there, the blockers) and the research protocol (O-1 to O-11), not by this file.
 
 ## 11. Next executable Day
 
 - **Day 34** (ADR-0024 proposed; the tracker after Days 31 to 33) is the pull request that changes this file. Days 1 to 33 are DONE; the last merge is `6313cbc`.
 - **If ADR-0024 is accepted:** the instance is built in the Days that follow (container image, instance settings, the shared account's refusals, the notice to visitors), then the owner opens the Render and Neon accounts, enters the secrets, and runs `migrate` and the seed against the new database. The forged-header measurement of its open point 2 comes before anyone is given the link.
 - **The owner's development database** is at `6802027` with `registry 0003` and `accounts 0015` applied (checked on 2026-11-13). On 2026-11-13, at the owner's request, Claude Code recorded a source for each of its seven institution names through the registry's source form, one audited change each: the five real ones from the official sites listed in the frozen diagnostic report, §15.2, and the two `DEMO` ones from the demonstration catalogue. All seven now name a citation (checked read-only the same day). Earlier that day, in the owner's own attempt through the dates form, one name (the English rendering of the Ministry of Digital Technologies) was given a valid-from date of 2026-11-13, the day the page was read; the audit record holds it as an ordinary change. The owner asked for it to be cleared, and it was, on 2026-11-13 (§9). Entering them showed that the source form's refusal did not say what was missing; Day 30 fixed that.
-- **Next, with no owner decision pending:** the owner's re-check of the term lists from 2026-11-18, after which Claude Code compares the two checks and the lists become version 1; then the pilot (B2). Meanwhile: the Uzbek reader, the ethics enquiry (B20), and a screen-reader pass (G4).
+- **Research path, alongside the application plan (§5):** the owner's re-check of the term lists from 2026-11-18, after which Claude Code compares the two checks and the lists become version 1; then the pilot (B2). Meanwhile: the Uzbek reader, and a screen-reader pass (G4).
 - **Next:** the Phase 2 gate stays NOT READY. Its remaining blockers are research and rights decisions (B7 to B10, B22, and the protocol items), not engineering. The research path now runs through the pilot: the corpus languages and verified terminology lists (B1), then the pilot itself (B2) and the OPEN points it informs (B3). Those are the owner's research work, which Claude Code can prepare. The other open owner decisions are Q-10, in part, and Q-14 (§10). Also queued: whether the bound of twelve apps still holds now that `demo` and `articles` exist ([ARCHITECTURE.md](ARCHITECTURE.md) §2.1).
 - **Correction of 2026-11-03.** #40 was built on #39 and opened against `main`. After #39 was squash-merged, the squash merge of #40 kept two rows of this file that Day 11 had added and Day 12 had deleted (the planned Day 12 and the open Q-15). Every other file on `main` is identical to what Day 12's checks ran on (`git diff c3fd485 efd4c6b`). Day 13 deletes the two rows again. A pull request built on another is compared with its own head after both merges.
 - **After the merges of Days 11 to 14:** the owner ran `migrate` on the development database; accounts 0013 and 0014 and articles 0001 are applied (checked read-only on 2026-11-04).
