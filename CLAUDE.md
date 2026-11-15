@@ -8,12 +8,14 @@ CAIPO (Central Asia AI Policy Observatory) is the research platform for the stud
 
 ## Current phase
 
-Phase 1. The architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY for Phase 1 only. **Do not write application code for a later phase until its gate is READY.** There are two exceptions. Neither changes a gate status or closes a blocker:
+Phase 1. The architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY for Phase 1 only. **Do not write application code for a later phase until its gate is READY.** There are four exceptions. None changes a gate status or closes a blocker:
 
 - **The demonstrator track of ADR-0020**: reduced forms of `sources`, `policies`, `indicators`, and `research`, every record classed `demonstration` or `reference`, built within the limits that ADR sets. It was decided for the delivery sprint of 2026-10-30 to 2026-11-06. On 2026-11-06 the project owner kept it open after the sprint, within the same limits, until the Phase 2 gate is READY.
 - **The contributed articles of ADR-0022**: an author's own text under CC BY 4.0, published only after review, labelled as its author's view, and never treated as evidence.
+- **The demonstrator's assistants of ADR-0025** (2026-11-15): an evidence-bound research assistant and a help assistant, on the pipeline of `docs/AI_ARCHITECTURE.md` with every check it requires. They answer only from reference Observations, demonstration texts, and the help corpus, with lexical retrieval only, on a free tier with a zero budget, and are shown outside the project only after the evaluation that ADR requires.
+- **The public demonstration instance of ADR-0024** (2026-11-15): one instance of the demonstrator alone, on free hosting, with demonstration and reference data only, registration closed, and the checks that ADR lists before its link is given out.
 
-ADR-0003, 0006, and 0008 are Proposed and must not be built on. Every other ADR from 0001 to 0023 is Accepted. The index is `docs/adr/README.md`. Only the project owner accepts an ADR.
+ADR-0003 and 0008 are Proposed and must not be built on. Every other ADR from 0001 to 0025 is Accepted. The index is `docs/adr/README.md`. Only the project owner accepts an ADR.
 
 **What is built, what is not, and what comes next are recorded only in `docs/EXECUTION_TRACKER.md`**, and the security controls as built in `SECURITY.md`. Do not assume that anything they do not list as built exists. In particular, these are not built: the operational audit trail of the break-glass command, which waits for ADR-0008; and email delivery in production, which also waits for ADR-0008.
 
@@ -52,7 +54,7 @@ Use the names in `docs/DATA_MODEL.md` exactly. In particular:
 9. **Policy events are formal lifecycle events only**: adopted, amended, entered into force, expired, repealed. Implementation information goes through claims. Policy status is derived, never stored.
 10. **Interface.** Server-rendered Django templates, HTMX, and small targeted JavaScript (ADR-0010). No separate frontend application, no JavaScript build step, no Django REST Framework, and no API until a further owner decision. Only the `web` app handles HTTP: services and selectors never take or return request or response objects.
 11. **Interface language.** English only at launch. Internationalisation is enabled and every user-facing string is marked for translation. Do not add translations.
-12. **CI is GitHub Actions and is not deployment.** CI runs code checks only. Do not add deployment steps, production credentials, or image publishing to it; deployment is ADR-0008, which is Proposed.
+12. **CI is GitHub Actions and is not deployment.** CI runs code checks only. Do not add deployment steps, production credentials, or image publishing to it; deployment of the research platform is ADR-0008, which is Proposed. The public demonstration instance (ADR-0024) is rebuilt by its host from `main`, not by CI.
 13. **The job system is decided in ADR-0004:** no job library in the isolated workers, whose delivery the trusted side owns in PostgreSQL, and `django-tasks` with `django-tasks-db` for trusted work. It is installed only when Phase 2 builds it. Do not install Celery or any other job system.
 14. **Every new dependency needs a written justification** in the PR: what it replaces, why the standard library or Django cannot do it, maintenance status, and license.
 

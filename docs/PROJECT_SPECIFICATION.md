@@ -177,7 +177,7 @@ Each phase has its own gate check: its blockers in §10 must be closed before it
 
 ## 8. Decisions made and open
 
-Decisions are recorded as ADRs in [adr/](adr/README.md). Its index is the only list of ADR statuses, with the date each was accepted and what a Proposed one still needs. Three are Proposed and must not be built on: ADR-0003, vector search (embedding model decision and retrieval spike, B15); ADR-0006, the AI provider abstraction (provider, model, and budget decisions, B14); and ADR-0008, deployment (the hosting decision, B17). Open research and rights decisions are the blockers of §10.
+Decisions are recorded as ADRs in [adr/](adr/README.md). Its index is the only list of ADR statuses, with the date each was accepted and what a Proposed one still needs. Two are Proposed and must not be built on: ADR-0003, vector search (embedding model decision and retrieval spike, B15); and ADR-0008, deployment of the research platform (the hosting decision, B17). ADR-0006, the AI provider abstraction, was accepted on 2026-11-15 for its interface; the research platform's provider, model, and budget (B14) are still to be decided. The demonstrator's assistants (ADR-0025) and its public instance (ADR-0024) were accepted the same day. Open research and rights decisions are the blockers of §10.
 
 ## 9. Environment baseline
 
