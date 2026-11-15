@@ -1,11 +1,13 @@
 """The development-only command that creates the demonstration environment (ADR-0020 point 16)."""
 
+import dataclasses
 from io import StringIO
 
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import override_settings
+from pytest import MonkeyPatch
 
 from caipo.accounts.models import AuditEvent, User
 from caipo.core.data_class import is_synthetic_country
@@ -94,6 +96,49 @@ def test_running_it_again_changes_nothing() -> None:
 
     assert (Source.objects.count(), Policy.objects.count(), AuditEvent.objects.count()) == before
     assert "already present" in out.getvalue()
+
+
+@override_settings(DEBUG=True)
+def test_an_environment_seeded_before_the_texts_is_given_them_and_nothing_else(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    from caipo.demo.management.commands import seed_demo
+
+    without_texts = dataclasses.replace(load(), texts={})
+    monkeypatch.setattr(seed_demo, "load", lambda: without_texts)
+    call_command("seed_demo", "--password", "TEST-password-for-demo", stdout=StringIO())
+    before = (Source.objects.count(), Document.objects.count(), Policy.objects.count())
+    events = AuditEvent.objects.count()
+    assert not Segment.objects.exists()
+
+    monkeypatch.setattr(seed_demo, "load", load)
+    out = StringIO()
+    call_command("seed_demo", stdout=out)
+
+    texts = len(load().texts)
+    assert f"Texts attached: {texts}." in out.getvalue()
+    assert (Source.objects.count(), Document.objects.count(), Policy.objects.count()) == before
+    assert AuditEvent.objects.count() == events + texts
+    assert User.objects.get(email="demo.researcher@caipo.test").check_password(
+        "TEST-password-for-demo"
+    )
+
+
+@override_settings(DEBUG=True)
+def test_texts_are_not_attached_without_the_demonstration_researcher(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    from caipo.demo.management.commands import seed_demo
+
+    monkeypatch.setattr(seed_demo, "load", lambda: dataclasses.replace(load(), texts={}))
+    call_command("seed_demo", "--password", "TEST-password-for-demo", stdout=StringIO())
+    monkeypatch.setattr(seed_demo, "load", load)
+    monkeypatch.setattr(seed_demo, "RESEARCHER_EMAIL", "nobody@caipo.test")
+
+    with pytest.raises(CommandError, match="Researcher account is missing"):
+        call_command("seed_demo", stdout=StringIO())
+
+    assert not Segment.objects.exists()
 
 
 @override_settings(DEBUG=True)

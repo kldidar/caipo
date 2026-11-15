@@ -17,6 +17,7 @@ A walk-through of 5 to 10 minutes for a professor or a reviewer, and an honest a
    ```
 
    Verified on 2026-11-02 on an empty database: `check`, `migrate`, and `seed_demo` together took under 3 seconds, and `/health/ready/` answered `ok`. **Rehearsed on 2026-11-04** from an empty database: `check`, `migrate`, and `seed_demo` in 6 seconds; `create_first_administrator` at a terminal, with a code from an authenticator; then every step of the table below in a browser, including a registration through the message in `data/outbox/` and an article that the Administrator published. Each gave what the table says.
+   On a database seeded before 2026-11-15, running `seed_demo` again attaches the demonstration documents' synthetic texts (ADR-0025) and changes nothing else.
 3. Open two browser windows: one signed in as `demo.reader@caipo.test`, one as `demo.researcher@caipo.test`. Keep a third, signed out, on `http://127.0.0.1:8000/`.
 4. To show the review of articles, also sign in as an Administrator with two-step verification: the one `create_first_administrator` created ([DEVELOPMENT.md](DEVELOPMENT.md)). `seed_demo` creates no Administrator, because one cannot exist without a second factor.
 
