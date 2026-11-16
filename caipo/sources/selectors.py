@@ -36,6 +36,7 @@ __all__ = [
     "counts",
     "document_choices",
     "document_reference",
+    "demonstration_segments",
     "document_text",
     "documents_by_key",
     "source_choices",
@@ -299,6 +300,30 @@ class SegmentEntry:
     locator: str
     text: str
     text_sha256: str
+
+
+def demonstration_segments() -> tuple[SegmentEntry, ...]:
+    """Every Segment held, by document and position: the texts retrieval may index (ADR-0025).
+
+    Only demonstration documents hold Segments, by the trigger of migration
+    0002. For the services of higher apps, which have checked their own
+    permission first.
+    """
+    return tuple(
+        SegmentEntry(
+            public_id=public_id,
+            document=document,
+            position=position,
+            locator=locator,
+            text=text,
+            text_sha256=text_sha256,
+        )
+        for public_id, document, position, locator, text, text_sha256 in Segment.objects.order_by(
+            "document_id", "position"
+        ).values_list(
+            "public_id", "document__public_id", "position", "locator", "text", "text_sha256"
+        )
+    )
 
 
 def document_text(document: uuid.UUID) -> tuple[SegmentEntry, ...]:

@@ -25,6 +25,8 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.staticfiles",
+    # PostgreSQL full-text and trigram search for retrieval (ADR-0025 point 5).
+    "django.contrib.postgres",
     "caipo.accounts",
     "caipo.registry",
     "caipo.sources",
@@ -32,6 +34,7 @@ INSTALLED_APPS = [
     "caipo.indicators",
     "caipo.research",
     "caipo.articles",
+    "caipo.retrieval",
     "caipo.demo",
     "caipo.web",
 ]

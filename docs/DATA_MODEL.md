@@ -294,6 +294,8 @@ A SearchRun is a record of what was done. It is never represented as a document,
 
 **ChunkEmbedding.** A vector for one RetrievalChunk under one embedding model version. Embeddings belong to chunks, never to Segments.
 
+**The demonstrator's form ([ADR-0025](adr/0025-demonstrator-assistants.md) point 5).** One RetrievalChunk per Segment of a demonstration document, and one per section of a help page of the help corpus (`caipo/retrieval/help/`). A chunk names its Segment and document by their public identifiers and holds the exact text of its span, so that search reads no other app's table. The chunking configuration is `caipo/retrieval/chunking.toml`, with its version, the text search configuration, and the search-side transformations (NFKC, case folding, whitespace collapsing). Search is lexical only: full-text search and trigram word similarity, fused by reciprocal rank. There is no ChunkEmbedding. Rebuilding the index deletes every chunk and makes them again; it never touches a Segment.
+
 ### 3.9 `assistant`
 
 **AIInteraction** (A-O). One question. Created once at the start with fields that never change: user, question, detected language, pipeline version, prompt versions, model identifiers and settings, chunking configuration version.

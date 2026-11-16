@@ -1,15 +1,18 @@
 """The tested rules of the interface text style guide (docs/INTERFACE_TEXT.md, P-14).
 
-Every template and every string marked for translation in the application is
-read. A sentence that uses a word of cause or of non-existence must deny it:
-CAIPO never states that something caused an outcome, and never presents an
-empty result as proof that something does not exist.
+Every template, every string marked for translation in the application, and
+every page of the help corpus (ADR-0025 point 3) is read. A sentence that
+uses a word of cause or of non-existence must deny it: CAIPO never states
+that something caused an outcome, and never presents an empty result as
+proof that something does not exist.
 """
 
 import ast
 import re
 from collections.abc import Iterator
 from pathlib import Path
+
+from caipo.retrieval.corpus import help_pages
 
 APPLICATION = Path(__file__).resolve().parents[2]
 TEMPLATES = APPLICATION / "web" / "templates"
@@ -56,6 +59,9 @@ def _texts() -> Iterator[tuple[str, str]]:
             continue
         for text in _translated_strings(path):
             yield str(path.relative_to(APPLICATION)), text
+    for page in help_pages():
+        for section in page.sections:
+            yield f"help/{page.page}.md", f"{page.title}. {section.heading}. {section.text}"
 
 
 def _undenied(pattern: re.Pattern[str]) -> list[str]:
@@ -73,6 +79,7 @@ def test_the_scan_reads_templates_and_translated_strings() -> None:
 
     assert any(where.endswith(".html") for where, _ in texts)
     assert any(where.endswith(".py") for where, _ in texts)
+    assert any(where.startswith("help/") for where, _ in texts)
     assert any("Not a causal analysis" in text for _, text in texts)
 
 

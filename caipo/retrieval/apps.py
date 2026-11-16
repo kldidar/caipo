@@ -1,0 +1,8 @@
+from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
+
+
+class RetrievalConfig(AppConfig):
+    name = "caipo.retrieval"
+    label = "retrieval"
+    verbose_name = _("Retrieval")

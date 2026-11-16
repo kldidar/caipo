@@ -37,6 +37,7 @@ from caipo.policies import services as policies_services
 from caipo.registry.models import Country, Language
 from caipo.registry.services import Citation, NewName, create_institution
 from caipo.research import services as research_services
+from caipo.retrieval import services as retrieval_services
 from caipo.sources import services as sources_services
 from caipo.sources.models import Document, Source
 
@@ -60,24 +61,31 @@ class Command(BaseCommand):
         catalogue = load()
         if Source.objects.filter(name=catalogue.sources[0].name).exists():
             # A database seeded before the texts existed (ADR-0025) is given
-            # them; nothing else of an existing environment is touched.
+            # them, and the retrieval index, which is derived, is rebuilt;
+            # nothing else of an existing environment is touched.
             attached = self._missing_texts(catalogue)
-            if attached:
-                self.stdout.write(
-                    f"The demonstration environment is already present. Texts attached: {attached}."
-                )
-            else:
-                self.stdout.write("The demonstration environment is already present. Nothing done.")
+            self.stdout.write(
+                "The demonstration environment is already present."
+                f" Texts attached: {attached}. {self._index()}"
+            )
             return
         password = options.get("password") or secrets.token_urlsafe(12)
         with transaction.atomic():
             researcher = self._accounts(password)
             self._seed(authentication_context(researcher, verified_device_id=None), catalogue)
         self.stdout.write(self.style.SUCCESS("Demonstration environment created."))
+        self.stdout.write(f"  {self._index()}")
         self.stdout.write(f"  Researcher: {RESEARCHER_EMAIL}")
         self.stdout.write(f"  Reader:     {READER_EMAIL}")
         if not options.get("password"):
             self.stdout.write(f"  Password for both (shown once): {password}")
+
+    def _index(self) -> str:
+        summary = retrieval_services.rebuild_index()
+        return (
+            f"Retrieval index rebuilt: {summary.document_chunks} document chunks,"
+            f" {summary.help_chunks} help chunks."
+        )
 
     def _missing_texts(self, catalogue: Catalogue) -> int:
         actor = authentication_context(
