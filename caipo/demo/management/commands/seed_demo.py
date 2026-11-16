@@ -38,7 +38,7 @@ from caipo.registry.models import Country, Language
 from caipo.registry.services import Citation, NewName, create_institution
 from caipo.research import services as research_services
 from caipo.sources import services as sources_services
-from caipo.sources.models import Source
+from caipo.sources.models import Document, Source
 
 SEED_EMAIL = "demo.seed@caipo.test"
 RESEARCHER_EMAIL = "demo.researcher@caipo.test"
@@ -59,7 +59,15 @@ class Command(BaseCommand):
             raise CommandError("seed_demo runs only with DEBUG on, in a development database.")
         catalogue = load()
         if Source.objects.filter(name=catalogue.sources[0].name).exists():
-            self.stdout.write("The demonstration environment is already present. Nothing done.")
+            # A database seeded before the texts existed (ADR-0025) is given
+            # them; nothing else of an existing environment is touched.
+            attached = self._missing_texts(catalogue)
+            if attached:
+                self.stdout.write(
+                    f"The demonstration environment is already present. Texts attached: {attached}."
+                )
+            else:
+                self.stdout.write("The demonstration environment is already present. Nothing done.")
             return
         password = options.get("password") or secrets.token_urlsafe(12)
         with transaction.atomic():
@@ -70,6 +78,33 @@ class Command(BaseCommand):
         self.stdout.write(f"  Reader:     {READER_EMAIL}")
         if not options.get("password"):
             self.stdout.write(f"  Password for both (shown once): {password}")
+
+    def _missing_texts(self, catalogue: Catalogue) -> int:
+        actor = authentication_context(
+            User.objects.filter(email=RESEARCHER_EMAIL).first(), verified_device_id=None
+        )
+        if actor is None:
+            raise CommandError("The demonstration Researcher account is missing; nothing done.")
+        titles = {spec.key: spec.title for spec in catalogue.documents}
+        attached = 0
+        with transaction.atomic():
+            for key, parts in catalogue.texts.items():
+                document = (
+                    Document.objects.filter(
+                        title=titles[key], data_class="demonstration", segments__isnull=True
+                    )
+                    .values_list("public_id", flat=True)
+                    .first()
+                )
+                if document is None:
+                    continue
+                sources_services.attach_demonstration_text(
+                    actor=actor,
+                    document=document,
+                    parts=[sources_services.TextPart(locator, text) for locator, text in parts],
+                )
+                attached += 1
+        return attached
 
     def _accounts(self, password: str) -> User:
         seed = User.objects.filter(email=SEED_EMAIL).first() or User.objects.create_user(SEED_EMAIL)
@@ -154,6 +189,12 @@ class Command(BaseCommand):
             )
             for spec in catalogue.documents
         }
+        for key, parts in catalogue.texts.items():
+            sources_services.attach_demonstration_text(
+                actor=actor,
+                document=documents[key],
+                parts=[sources_services.TextPart(locator, text) for locator, text in parts],
+            )
         self._indicators(actor, catalogue, sources)
         self._research(actor, catalogue)
         for policy in catalogue.policies:

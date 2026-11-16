@@ -27,6 +27,11 @@ class DataClassError(ValueError):
     """Records of different data classes, or a record and a country, would be mixed (ADR-0020)."""
 
 
+def has_direction_control(text: str) -> bool:
+    """Whether the text holds a character that changes the direction of the text around it."""
+    return bool(_DIRECTION_CONTROLS.search(text))
+
+
 def clean_text(value: str, *, field: str, max_length: int, required: bool = True) -> str:
     """Return the text in Unicode NFC with surrounding whitespace removed.
 
@@ -41,7 +46,7 @@ def clean_text(value: str, *, field: str, max_length: int, required: bool = True
             _("The %(field)s is at most %(limit)d characters.")
             % {"field": field, "limit": max_length}
         )
-    if _DIRECTION_CONTROLS.search(text):
+    if has_direction_control(text):
         raise InvalidEntryError(
             _("The %(field)s holds a direction control character.") % {"field": field}
         )

@@ -13,11 +13,19 @@ from django.db.models import Count
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts.selectors import AuthenticationContext, Permission
-from caipo.sources.models import Document, DocumentType, PermittedUse, Source, SourceTier
+from caipo.sources.models import (
+    Document,
+    DocumentType,
+    PermittedUse,
+    Segment,
+    Source,
+    SourceTier,
+)
 
 __all__ = [
     "DocumentEntry",
     "DocumentReference",
+    "SegmentEntry",
     "SourceReference",
     "source_reference",
     "DocumentType",
@@ -28,6 +36,7 @@ __all__ = [
     "counts",
     "document_choices",
     "document_reference",
+    "document_text",
     "documents_by_key",
     "source_choices",
     "source_detail",
@@ -278,3 +287,34 @@ def source_reference(public_id: uuid.UUID) -> SourceReference | None:
         .first()
     )
     return SourceReference(*row) if row else None
+
+
+@dataclass(frozen=True)
+class SegmentEntry:
+    """One part of a demonstration document's synthetic text, as held."""
+
+    public_id: uuid.UUID
+    document: uuid.UUID
+    position: int
+    locator: str
+    text: str
+    text_sha256: str
+
+
+def document_text(document: uuid.UUID) -> tuple[SegmentEntry, ...]:
+    """Return a document's text in order; empty if it has none (ADR-0025 point 4).
+
+    Only a demonstration document has a text. For the services of higher
+    apps, which have checked their own permission first.
+    """
+    return tuple(
+        SegmentEntry(
+            public_id=segment.public_id,
+            document=document,
+            position=segment.position,
+            locator=segment.locator,
+            text=segment.text,
+            text_sha256=segment.text_sha256,
+        )
+        for segment in Segment.objects.filter(document__public_id=document).order_by("position")
+    )

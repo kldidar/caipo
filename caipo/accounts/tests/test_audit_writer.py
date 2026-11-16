@@ -382,7 +382,7 @@ def test_it_refuses_changes_on_anything_but_an_update(
     assert _nothing_was_written()
 
 
-@pytest.mark.parametrize("field", ["text", "code", "reason", "NAME_EN", "", None])
+@pytest.mark.parametrize("field", ["body", "code", "reason", "NAME_EN", "", None])
 def test_it_refuses_an_unknown_field(actor: AuthenticationContext, field: object) -> None:
     with pytest.raises(AuditRecordError, match="field"):
         _update(actor, RENAMED, AuditChange(cast(AuditField, field), "TEST a", "TEST b"))

@@ -2,9 +2,11 @@
 
 Metadata only. A Source is a publishing channel; a Document is one work from
 it, described by its title, form, identifier, date, and official address.
-No bytes, no text, no artifact, no extraction: those wait for the
-research-grade build of Phase 2 (DATA_MODEL.md §3.3). What a document says is
-never held for a reference document, whose rights are not decided (B7).
+No bytes, no artifact, no extraction: those wait for the research-grade
+build of Phase 2 (DATA_MODEL.md §3.3). The one text held is a demonstration
+document's synthetic text, as Segments, for the demonstrator's assistant
+(ADR-0025 point 4). What a document says is never held for a reference
+document, whose rights are not decided (B7).
 
 Every record carries its data class (`caipo.core.data_class`), held by a
 database check. Nothing is deleted: the foreign keys that point here protect
@@ -16,11 +18,15 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from caipo.core.append_only import AppendOnlyModel, AppendOnlyQuerySet
 from caipo.core.data_class import DataClass
 
 TITLE_MAX_LENGTH = 1000
 NAME_MAX_LENGTH = 300
 URL_MAX_LENGTH = 2000
+LOCATOR_MAX_LENGTH = 200
+# Longer than any article of a demonstration text needs to be, and bounded.
+SEGMENT_MAX_LENGTH = 20000
 
 
 class SourceTier(models.TextChoices):
@@ -189,3 +195,49 @@ class Document(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class Segment(AppendOnlyModel):
+    """One part of a demonstration document's synthetic text (ADR-0025 point 4).
+
+    The demonstrator form of DATA_MODEL.md's Segment: immutable extracted
+    text, here written for the demonstration rather than extracted. Held in
+    NFC and otherwise unaltered, with the SHA-256 of its UTF-8 bytes. A
+    database trigger refuses every UPDATE and DELETE, and refuses a segment
+    whose document is not demonstration data, whose text is not in NFC, or
+    whose hash does not match its text. Retrieval never changes it: search
+    text lives on RetrievalChunks.
+    """
+
+    public_id = models.UUIDField(_("public identifier"), default=uuid.uuid4, editable=False)
+    document = models.ForeignKey(
+        Document, on_delete=models.PROTECT, related_name="segments", verbose_name=_("document")
+    )
+    position = models.PositiveIntegerField(_("position"))
+    locator = models.CharField(_("locator"), max_length=LOCATOR_MAX_LENGTH, blank=True)
+    text = models.TextField(_("text"))
+    text_sha256 = models.CharField(_("SHA-256 of the text"), max_length=64)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    objects = AppendOnlyQuerySet["Segment"].as_manager()
+
+    class Meta:
+        verbose_name = _("segment")
+        verbose_name_plural = _("segments")
+        ordering = ["document_id", "position"]
+        constraints = [
+            models.UniqueConstraint(fields=["public_id"], name="sources_segment_public_id_unique"),
+            models.UniqueConstraint(
+                fields=["document", "position"], name="sources_segment_position_unique"
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(text=""), name="sources_segment_text_present"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(text_sha256__regex=r"^[0-9a-f]{64}$"),
+                name="sources_segment_sha256_form",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.document_id}:{self.position}"

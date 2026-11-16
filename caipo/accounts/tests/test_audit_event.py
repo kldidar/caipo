@@ -65,6 +65,8 @@ FIELDS = [
     # The sources of registry names and dates, by identifier (ADR-0023).
     "citation",
     "dates_citation",
+    # The synthetic text of a demonstration document, by its SHA-256 (ADR-0025).
+    "text",
 ]
 # Written out here, not read from the application: ADR-0018 point 31.
 ALLOWED_PAIRS = (
@@ -308,7 +310,7 @@ def test_the_database_rejects_an_unknown_target_type(user: User, target_type: st
     assert not AuditEvent.objects.exists()
 
 
-@pytest.mark.parametrize("field", ["text", "code", "name", "NAME_EN", "reason", ""])
+@pytest.mark.parametrize("field", ["body", "code", "name", "NAME_EN", "reason", ""])
 def test_the_database_rejects_an_unknown_field(event: AuditEvent, field: str) -> None:
     with pytest.raises(IntegrityError, match="accounts_auditeventchange_field_known"):
         _insert(INSERT_CHANGE, [event.pk, field, "TEST a", "TEST b"])
