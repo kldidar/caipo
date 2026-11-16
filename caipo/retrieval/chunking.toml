@@ -1,0 +1,27 @@
+# The chunking configuration of the demonstrator's retrieval (ADR-0025 point 5;
+# DATA_MODEL.md §3.8). Result-affecting: changing any value is a reviewed
+# change that gives it a new version, and the index is rebuilt.
+
+version = "demo-lexical-1"
+
+# PostgreSQL's text search configuration for the derived search text. The
+# demonstration texts and the help corpus are in English.
+text_search_config = "english"
+
+# One chunk per Segment, and one per section of a help page. A demonstration
+# Segment is one article or paragraph, short enough to be one unit.
+unit = "segment"
+
+# Search-side transformations of the derived search text, in this order. They
+# never touch a Segment (DATA_MODEL.md §5).
+transformations = ["nfkc", "casefold", "collapse_whitespace"]
+
+[search]
+# The longest question taken, in characters, after the transformations.
+max_query_length = 500
+# Candidates taken from each retriever before fusion.
+candidates_per_retriever = 20
+# Reciprocal rank fusion constant.
+rrf_k = 60
+# The least trigram word similarity for a trigram candidate.
+trigram_threshold = 0.3

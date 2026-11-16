@@ -61,19 +61,20 @@ What is implemented, what is simulated, and what is future work is set out in [d
 
 ## Architecture
 
-A Django modular monolith on PostgreSQL, with server-rendered templates and no JavaScript build step. Apps form layers, and an app imports only from layers below it; five import contracts check this in CI.
+A Django modular monolith on PostgreSQL, with server-rendered templates and no JavaScript build step. Apps form layers, and an app imports only from layers below it; six import contracts check this in CI.
 
 ```mermaid
 flowchart TB
   web["web — pages, forms, charts, exports (only HTTP)"]
+  retrieval["retrieval — search over demonstration texts and help"]
   research["research — analysis runs, search runs"]
   policies["policies — policies, formal events, provisions"]
   indicators["indicators — indicators, releases, observations"]
-  sources["sources — sources, documents (metadata)"]
+  sources["sources — sources, documents, demonstration texts"]
   registry["registry — countries, languages, institutions"]
   accounts["accounts — users, roles, MFA, audit record"]
   core["core — append-only base, data classes"]
-  web --> research --> policies & indicators
+  web --> retrieval --> research --> policies & indicators
   policies & indicators --> sources --> registry --> accounts --> core
 ```
 
