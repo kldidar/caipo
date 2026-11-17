@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "caipo.research",
     "caipo.articles",
     "caipo.retrieval",
+    "caipo.assistant",
     "caipo.demo",
     "caipo.web",
 ]
@@ -272,3 +273,10 @@ LOGGING = {
         "django.request": {"level": "INFO", "propagate": True, "filters": ["expected_refusal"]},
     },
 }
+
+# The demonstrator's assistants (ADR-0025). The provider's model and endpoint
+# are in caipo/assistant/assistant.toml; only its key comes from the
+# environment, in each environment's settings. "fake" is the deterministic
+# provider of the tests, which reach no network.
+ASSISTANT_PROVIDER = "groq"
+GROQ_API_KEY = ""

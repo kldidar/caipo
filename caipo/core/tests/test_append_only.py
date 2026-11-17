@@ -75,6 +75,9 @@ def test_the_three_event_models_and_the_two_audit_models_are_built_on_it() -> No
         "RegistryCitation",
         # The synthetic text of a demonstration document (ADR-0025 point 4).
         "Segment",
+        # The record of the demonstrator's assistants (ADR-0025 point 9).
+        "AIInteraction",
+        "InteractionStageRecord",
     }
     for model in apps.get_models():
         if issubclass(model, AppendOnlyModel):

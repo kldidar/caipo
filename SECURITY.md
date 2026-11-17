@@ -600,6 +600,24 @@ The last part of [ADR-0017](docs/adr/0017-account-recovery.md) (points 78 to 81,
 - A session that existed before its account enrolled stays signed in, at the weaker assurance, until it ends.
 - TOTP does not resist real-time phishing: a code typed into a hostile page can be relayed within its 30 seconds.
 
+### The assistants' foundation as implemented
+
+The first part of the demonstrator's assistants ([ADR-0025](docs/adr/0025-demonstrator-assistants.md), [ADR-0006](docs/adr/0006-ai-provider-abstraction.md)): the provider interface, the input guard, the quotas, and the record of interactions. The pipeline, its verification, and its pages are not built yet, and no page calls the provider.
+
+**Implemented**
+
+- **One outbound call, behind the interface.** `caipo.assistant.providers.GroqProvider` is the only code that calls a model provider. It calls only the endpoint in the versioned `caipo/assistant/assistant.toml`, which `config.load()` accepts only with the `https` scheme. The request holds a system prompt, a user message, the model, the temperature, the output limit, and a JSON response format. It holds no `tools`, `tool_choice`, or `functions`, and a test checks that.
+- **The key.** `GROQ_API_KEY` comes from the environment: required in production, optional in development, where the assistants say they are not configured, and empty in tests. It is sent only in the `Authorization` header. A failed call raises an error from a fixed list (not configured, rate limited, unavailable, timed out, bad response) whose message never holds the key and which chains no exception that could.
+- **No test reaches a network.** The test settings select the deterministic fake provider, and the Groq implementation is tested against a stand-in for the network.
+- **Input guard.** Only an account holding `ASSISTANT_ASK` may ask: Reader, Researcher, and Reviewer, not Administrator. The question is held in NFC, without surrounding whitespace. An empty question, one longer than the configured limit, and one holding a direction control are refused, and nothing is recorded.
+- **Quotas.** A daily quota per account and one for the instance, by UTC day, counted from the interactions in PostgreSQL under a transaction-level advisory lock. They are checked before anything is recorded or any model is called. The budget is zero: no payment method is attached to the provider account, so no call can be charged.
+- **The record.** AIInteraction and InteractionStageRecord are append-only: their triggers refuse every UPDATE and DELETE. The log line of a new interaction names it and its asker, never the question.
+
+**Residual risks**
+
+- The question is stored with its interaction, and its retention is not decided (B19).
+- The provider's free tier has its own terms for what it receives; they are quoted in the [spike report](docs/reports/spike-day35-free-providers.md).
+
 ### Web application threats
 
 - Django's defaults for CSRF, session security, clickjacking protection, and SQL parameterisation are kept on. A strict Content Security Policy is applied.

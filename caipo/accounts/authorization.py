@@ -113,6 +113,9 @@ class Permission(StrEnum):
     ARTICLES_SUBMIT = "articles.submit"
     # Publish, decline, or withdraw another account's article (ADR-0022).
     ARTICLES_REVIEW = "articles.review"
+    # Ask the demonstrator's research assistant or help assistant a question,
+    # within the quotas (ADR-0025 points 2, 3, and 7).
+    ASSISTANT_ASK = "assistant.ask"
 
 
 # Each role's permissions, written out in full (PROJECT_SPECIFICATION.md §3).
@@ -129,6 +132,7 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.MFA_MANAGE_OWN,
                 Permission.REGISTRY_READ,
                 Permission.ARTICLES_SUBMIT,
+                Permission.ASSISTANT_ASK,
             }
         ),
         Role.RESEARCHER: frozenset(
@@ -139,6 +143,7 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.REGISTRY_READ,
                 Permission.REGISTRY_INSTITUTIONS_MANAGE,
                 Permission.ARTICLES_SUBMIT,
+                Permission.ASSISTANT_ASK,
             }
         ),
         Role.REVIEWER: frozenset(
@@ -151,6 +156,7 @@ ROLE_PERMISSIONS: Mapping[Role, frozenset[Permission]] = MappingProxyType(
                 Permission.REGISTRY_INSTITUTIONS_MANAGE,
                 Permission.ARTICLES_SUBMIT,
                 Permission.ARTICLES_REVIEW,
+                Permission.ASSISTANT_ASK,
             }
         ),
         Role.ADMINISTRATOR: frozenset(

@@ -19,3 +19,7 @@ PUBLIC_BASE_URL = "http://testserver"
 
 # Messages are kept in memory, in `django.core.mail.outbox`, and sent nowhere.
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+# No test reaches a provider: the assistants use the deterministic fake.
+ASSISTANT_PROVIDER = "fake"
+GROQ_API_KEY = ""

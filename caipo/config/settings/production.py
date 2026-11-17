@@ -21,3 +21,5 @@ ALLOWED_HOSTS = env.host_list("DJANGO_ALLOWED_HOSTS")
 DATABASES = {"default": env.postgres_database()}
 
 PUBLIC_BASE_URL = env.https_origin("CAIPO_PUBLIC_URL")
+
+GROQ_API_KEY = env.required("GROQ_API_KEY")

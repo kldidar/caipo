@@ -461,6 +461,7 @@ def test_an_enrolment_not_confirmed_in_time_is_void(
         Permission.WORKSPACE_READ,
         Permission.REGISTRY_READ,
         Permission.ARTICLES_SUBMIT,
+        Permission.ASSISTANT_ASK,
     }
     assert _events() == ["mfa_enrollment_started"]
 
@@ -1038,6 +1039,7 @@ def test_wrong_passwords_at_sign_in_and_when_asked_again_count_together(
                 Permission.REGISTRY_READ,
                 Permission.REGISTRY_INSTITUTIONS_MANAGE,
                 Permission.ARTICLES_SUBMIT,
+                Permission.ASSISTANT_ASK,
                 Permission.ARTICLES_REVIEW,
             },
         ),

@@ -310,6 +310,8 @@ A SearchRun is a record of what was done. It is never represented as a document,
 
 Budget accounting is derived from the cost recorded in InteractionStageRecords in PostgreSQL.
 
+**The demonstrator's form ([ADR-0025](adr/0025-demonstrator-assistants.md)).** AIInteraction holds the account, the assistant (research or help), the question in NFC, its language (`english` or `russian`, decided by its letters, never by a model), the pipeline version, the prompt versions, the model identifier with its generation settings, and the chunking version. InteractionStageRecord holds one row per stage at most, with its result (`passed`, `abstained`, `refused`, `failed`, `timed_out`), a reason, a detail, token counts, and a duration. Both are append-only by trigger. Cost is not recorded, because the budget is zero; the daily quotas count interactions instead. RetrievalHit, AnswerStatement, and AnswerCitation follow with the pipeline.
+
 ### 3.10 `evaluation`
 
 **EvalRun** and **EvalResult.** A run of the evaluation suite against a dataset version, corpus identifier, and pipeline configuration, with per-case results. Gold datasets are versioned files in the repository that refer to artifacts by hash and to segments by locator and contain no copyrighted document text.

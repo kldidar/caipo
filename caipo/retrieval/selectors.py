@@ -19,7 +19,14 @@ from caipo.retrieval import config
 from caipo.retrieval.corpus import HelpPage, help_pages, search_text
 from caipo.retrieval.models import ChunkKind, RetrievalChunk
 
-__all__ = ["ChunkKind", "SearchHit", "QueryTooLongError", "help_corpus", "search"]
+__all__ = [
+    "ChunkKind",
+    "QueryTooLongError",
+    "SearchHit",
+    "chunking_version",
+    "help_corpus",
+    "search",
+]
 
 
 class QueryTooLongError(ValueError):
@@ -115,3 +122,8 @@ def search(question: str, *, kind: ChunkKind, limit: int) -> tuple[SearchHit, ..
 def help_corpus() -> tuple[HelpPage, ...]:
     """Every help page, as the repository holds it, for the pages that show help."""
     return help_pages()
+
+
+def chunking_version() -> str:
+    """The version of the chunking configuration that search uses now."""
+    return config.load().version

@@ -89,6 +89,8 @@ layers = [
     "config",
     "demo",
     "web",
+    # The demonstrator's assistants: the pipeline and its record (ADR-0025).
+    "assistant",
     # Retrieval chunks and search over demonstration texts and help (ADR-0025).
     "retrieval",
     # Siblings: contributed articles (ADR-0022) use nothing of the research
@@ -182,6 +184,18 @@ name = "Policies and indicators use sources only through its services and select
 type = "forbidden"
 source_modules = ["caipo.policies", "caipo.indicators"]
 forbidden_modules = ["caipo.sources.models"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The assistants read the evidence only through selectors (ADR-0025 point 1)"
+type = "forbidden"
+source_modules = ["caipo.assistant"]
+forbidden_modules = [
+    "caipo.sources.models",
+    "caipo.indicators.models",
+    "caipo.policies.models",
+    "caipo.retrieval.models",
+]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]

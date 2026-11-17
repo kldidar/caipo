@@ -26,3 +26,6 @@ EMAIL_FILE_PATH = BASE_DIR / "data" / "outbox"
 # return Secure cookies.
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
+
+# Optional in development: without it the assistants say they are not configured.
+GROQ_API_KEY = env.optional("GROQ_API_KEY")

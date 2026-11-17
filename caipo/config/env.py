@@ -25,6 +25,16 @@ def required(name: str) -> str:
     return value
 
 
+def optional(name: str) -> str:
+    """Return the value of an environment variable, or the empty string if it is unset.
+
+    Only for a secret whose absence switches off one feature, which then says
+    so, rather than the whole application: the key of the assistants'
+    provider in development (ADR-0025).
+    """
+    return os.environ.get(name, "")
+
+
 def secret_key(name: str) -> str:
     """Return a signing key from the environment, refusing a weak one.
 
