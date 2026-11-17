@@ -39,6 +39,7 @@ def deployment_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "POSTGRES_PASSWORD": TEST_DATABASE_PASSWORD,
         "POSTGRES_HOST": "db.test",
         "POSTGRES_PORT": "5432",
+        "GROQ_API_KEY": "TEST-groq-key-not-real",
     }.items():
         monkeypatch.setenv(name, value)
 
@@ -124,6 +125,8 @@ def test_production_reads_its_configuration_from_the_environment() -> None:
         "CAIPO_PUBLIC_URL",
         "POSTGRES_PASSWORD",
         "POSTGRES_HOST",
+        # The assistants' provider key (ADR-0025): required where they are deployed.
+        "GROQ_API_KEY",
     ],
 )
 @pytest.mark.parametrize("state", ["unset", "empty"])
@@ -288,7 +291,17 @@ def test_development_relaxes_only_what_local_http_requires() -> None:
         "PUBLIC_BASE_URL",
         "EMAIL_BACKEND",
         "EMAIL_FILE_PATH",
+        # The assistants' provider key, from the environment (ADR-0025).
+        "GROQ_API_KEY",
     }
+
+
+@pytest.mark.usefixtures("deployment_environment")
+def test_development_runs_without_the_provider_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without it the assistants say they are not configured; the application still starts."""
+    monkeypatch.delenv("GROQ_API_KEY")
+
+    assert _load("development")["GROQ_API_KEY"] == ""
 
 
 @pytest.mark.usefixtures("deployment_environment")
@@ -299,6 +312,7 @@ def test_production_changes_nothing_but_what_comes_from_the_environment() -> Non
         "DATABASES",
         "ALLOWED_HOSTS",
         "PUBLIC_BASE_URL",
+        "GROQ_API_KEY",
     }
 
 

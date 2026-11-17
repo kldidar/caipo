@@ -32,6 +32,7 @@ REGISTRY_READ = Permission.REGISTRY_READ
 REGISTRY_REFERENCE = Permission.REGISTRY_REFERENCE_MANAGE
 REGISTRY_INSTITUTIONS = Permission.REGISTRY_INSTITUTIONS_MANAGE
 SUBMIT_ARTICLES = Permission.ARTICLES_SUBMIT
+ASK_ASSISTANT = Permission.ASSISTANT_ASK
 REVIEW_ARTICLES = Permission.ARTICLES_REVIEW
 
 
@@ -94,10 +95,18 @@ def test_roles_belong_to_one_user_only(user_with_roles: UserFactory) -> None:
 @pytest.mark.parametrize(
     ("role", "expected"),
     [
-        (Role.READER, {READ, OWN_MFA, REGISTRY_READ, SUBMIT_ARTICLES}),
+        (Role.READER, {READ, OWN_MFA, REGISTRY_READ, SUBMIT_ARTICLES, ASK_ASSISTANT}),
         (
             Role.RESEARCHER,
-            {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS, SUBMIT_ARTICLES},
+            {
+                READ,
+                CONTRIBUTE,
+                OWN_MFA,
+                REGISTRY_READ,
+                REGISTRY_INSTITUTIONS,
+                SUBMIT_ARTICLES,
+                ASK_ASSISTANT,
+            },
         ),
         # On a password alone these two roles allow enrolling a second factor
         # and nothing else.
@@ -119,10 +128,18 @@ def test_what_each_role_can_do_on_a_password_alone(
 @pytest.mark.parametrize(
     ("role", "expected"),
     [
-        (Role.READER, {READ, OWN_MFA, REGISTRY_READ, SUBMIT_ARTICLES}),
+        (Role.READER, {READ, OWN_MFA, REGISTRY_READ, SUBMIT_ARTICLES, ASK_ASSISTANT}),
         (
             Role.RESEARCHER,
-            {READ, CONTRIBUTE, OWN_MFA, REGISTRY_READ, REGISTRY_INSTITUTIONS, SUBMIT_ARTICLES},
+            {
+                READ,
+                CONTRIBUTE,
+                OWN_MFA,
+                REGISTRY_READ,
+                REGISTRY_INSTITUTIONS,
+                SUBMIT_ARTICLES,
+                ASK_ASSISTANT,
+            },
         ),
         (
             Role.REVIEWER,
@@ -134,6 +151,7 @@ def test_what_each_role_can_do_on_a_password_alone(
                 REGISTRY_READ,
                 REGISTRY_INSTITUTIONS,
                 SUBMIT_ARTICLES,
+                ASK_ASSISTANT,
                 REVIEW_ARTICLES,
             },
         ),
@@ -175,6 +193,7 @@ def test_a_reviewer_who_is_also_a_researcher_works_as_a_researcher_on_a_password
         REGISTRY_READ,
         REGISTRY_INSTITUTIONS,
         SUBMIT_ARTICLES,
+        ASK_ASSISTANT,
     }
 
 
@@ -201,6 +220,7 @@ def test_revoking_one_role_leaves_the_others(user_with_roles: UserFactory) -> No
         OWN_MFA,
         REGISTRY_READ,
         SUBMIT_ARTICLES,
+        ASK_ASSISTANT,
     }
 
 

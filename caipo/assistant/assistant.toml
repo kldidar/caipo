@@ -1,0 +1,24 @@
+# The demonstrator's assistants (ADR-0025). Result-affecting: a change here is
+# a reviewed change, recorded on every interaction by `pipeline_version`, and
+# followed by an evaluation run (AI_ARCHITECTURE.md §9).
+
+pipeline_version = "demo-1"
+
+[provider]
+# Chosen by the spike of 2026-11-15 (docs/reports/spike-day35-free-providers.md).
+name = "groq"
+model = "openai/gpt-oss-120b"
+endpoint = "https://api.groq.com/openai/v1/chat/completions"
+temperature = 0
+max_output_tokens = 2048
+timeout_seconds = 30
+
+[quotas]
+# Questions a day, counted in PostgreSQL by UTC day, set below the free
+# tier's limits: an answer makes at most three calls (ADR-0025 point 7).
+per_account_daily = 20
+instance_daily = 200
+
+[question]
+# The longest question taken, in characters, after NFC.
+max_length = 500

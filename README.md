@@ -61,7 +61,7 @@ What is implemented, what is simulated, and what is future work is set out in [d
 
 ## Architecture
 
-A Django modular monolith on PostgreSQL, with server-rendered templates and no JavaScript build step. Apps form layers, and an app imports only from layers below it; six import contracts check this in CI.
+A Django modular monolith on PostgreSQL, with server-rendered templates and no JavaScript build step. Apps form layers, and an app imports only from layers below it; seven import contracts check this in CI.
 
 ```mermaid
 flowchart TB
