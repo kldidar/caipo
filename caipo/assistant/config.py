@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 PATH = Path(__file__).with_name("assistant.toml")
+PROMPTS = Path(__file__).with_name("prompts")
 PROVIDERS = ("groq",)
 
 
@@ -25,6 +26,13 @@ class AssistantConfiguration:
     per_account_daily: int
     instance_daily: int
     max_question_length: int
+    prompts: dict[str, str]
+    evaluated_languages: tuple[str, ...]
+
+    def prompt(self, name: str) -> tuple[str, str]:
+        """The version and the text of the prompt in use for a stage."""
+        version = self.prompts[name]
+        return version, (PROMPTS / f"{version}.txt").read_text(encoding="utf-8")
 
 
 def load(path: Path = PATH) -> AssistantConfiguration:
@@ -44,6 +52,10 @@ def load(path: Path = PATH) -> AssistantConfiguration:
         per_account_daily=int(data["quotas"]["per_account_daily"]),
         instance_daily=int(data["quotas"]["instance_daily"]),
         max_question_length=int(data["question"]["max_length"]),
+        prompts={str(name): str(version) for name, version in data["prompts"].items()},
+        evaluated_languages=tuple(
+            str(language) for language in data["verification"]["evaluated_languages"]
+        ),
     )
     if configuration.provider.name not in PROVIDERS:
         raise ValueError(f"Unknown provider: {configuration.provider.name}")
@@ -51,6 +63,12 @@ def load(path: Path = PATH) -> AssistantConfiguration:
         raise ValueError("The provider is reached over https only.")
     if not 0 < configuration.per_account_daily <= configuration.instance_daily:
         raise ValueError("Each quota is positive, and an account's is within the instance's.")
+    expected = {"query_analysis", "synthesis_research", "synthesis_help", "support_check"}
+    if set(configuration.prompts) != expected:
+        raise ValueError(f"The prompts in use are exactly: {sorted(expected)}")
+    for version in configuration.prompts.values():
+        if not (PROMPTS / f"{version}.txt").is_file():
+            raise ValueError(f"No prompt file: {version}")
     if configuration.max_question_length < 1 or not configuration.pipeline_version:
         raise ValueError("A question length and a pipeline version are required.")
     return configuration

@@ -612,6 +612,8 @@ The first part of the demonstrator's assistants ([ADR-0025](docs/adr/0025-demons
 - **Input guard.** Only an account holding `ASSISTANT_ASK` may ask: Reader, Researcher, and Reviewer, not Administrator. The question is held in NFC, without surrounding whitespace. An empty question, one longer than the configured limit, and one holding a direction control are refused, and nothing is recorded.
 - **Quotas.** A daily quota per account and one for the instance, by UTC day, counted from the interactions in PostgreSQL under a transaction-level advisory lock. They are checked before anything is recorded or any model is called. The budget is zero: no payment method is attached to the provider account, so no call can be charged.
 - **The record.** AIInteraction and InteractionStageRecord are append-only: their triggers refuse every UPDATE and DELETE. The log line of a new interaction names it and its asker, never the question.
+- **The deterministic checks** of AI_ARCHITECTURE.md §6.2, in `caipo/assistant/verification.py`, not yet called by any page. A statement is removed unless it cites only handles issued for its question with a label permitted for them, quotes only text that is in what it cites, writes only numbers that are in what it cites (or an observation's value rounded half-up or half-even), and holds no link, image, HTML, or word of cause from the versioned list. A test passes six kinds of invented reference through them, and every one is removed.
+- **Passages** are made by the server for a cited span, never by a model; their trigger refuses a quote that is not the Segment's text between the offsets. The records of an answer (hits, statements, citations) are append-only by trigger.
 
 **Residual risks**
 

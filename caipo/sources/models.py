@@ -241,3 +241,44 @@ class Segment(AppendOnlyModel):
 
     def __str__(self) -> str:
         return f"{self.document_id}:{self.position}"
+
+
+class Passage(AppendOnlyModel):
+    """An exact span of one Segment, used as evidence by an answer (DATA_MODEL.md §3.3).
+
+    The demonstrator form (ADR-0025 point 4): created by the server, never by
+    a model, for a span an assistant's answer cites. It holds the text of the
+    span as the Segment holds it, so that what is shown is what was checked.
+    A database trigger refuses every UPDATE and DELETE, and refuses a quote
+    that is not exactly the Segment's text between the two offsets, which
+    count code points in the NFC text.
+    """
+
+    public_id = models.UUIDField(_("public identifier"), default=uuid.uuid4, editable=False)
+    segment = models.ForeignKey(
+        Segment, on_delete=models.PROTECT, related_name="passages", verbose_name=_("segment")
+    )
+    start_offset = models.PositiveIntegerField(_("start offset"))
+    end_offset = models.PositiveIntegerField(_("end offset"))
+    quote = models.TextField(_("quote"))
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    objects = AppendOnlyQuerySet["Passage"].as_manager()
+
+    class Meta:
+        verbose_name = _("passage")
+        verbose_name_plural = _("passages")
+        constraints = [
+            models.UniqueConstraint(fields=["public_id"], name="sources_passage_public_id_unique"),
+            models.UniqueConstraint(
+                fields=["segment", "start_offset", "end_offset"],
+                name="sources_passage_span_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(start_offset__lt=models.F("end_offset")),
+                name="sources_passage_span_not_empty",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return str(self.public_id)
