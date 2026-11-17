@@ -44,6 +44,7 @@ from caipo.sources.models import (
     URL_MAX_LENGTH,
     Document,
     DocumentType,
+    Passage,
     PermittedUse,
     Segment,
     Source,
@@ -362,3 +363,35 @@ def attach_demonstration_text(
         },
     )
     return fingerprint
+
+
+def passage_for_span(*, segment: uuid.UUID, start_offset: int, end_offset: int) -> uuid.UUID:
+    """Return the Passage of an exact span of a Segment, recording it the first time.
+
+    Preconditions: the Segment exists, and 0 <= start_offset < end_offset <=
+    the length of its text in code points. Called by the assistant's
+    pipeline for a span an answer cites, after the pipeline checked that the
+    asker may ask (ADR-0025): a Passage is made by the server, never by a
+    model, and says only where evidence is. It takes no actor.
+
+    Side effects: at most one Passage, holding the Segment's own text of the
+    span; an existing Passage of the same span is returned instead.
+
+    Raises RecordNotFoundError if the Segment does not exist, and
+    InvalidEntryError if the span is not within its text. Nothing is
+    recorded in those cases.
+    """
+    with transaction.atomic():
+        found = Segment.objects.filter(public_id=segment).values_list("pk", "text").first()
+        if found is None:
+            raise RecordNotFoundError(_("The segment does not exist."))
+        segment_pk, text = found
+        if not 0 <= start_offset < end_offset <= len(text):
+            raise InvalidEntryError(_("The span is not within the segment's text."))
+        passage, _created = Passage.objects.get_or_create(
+            segment_id=segment_pk,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            defaults={"quote": text[start_offset:end_offset]},
+        )
+    return passage.public_id

@@ -22,3 +22,16 @@ instance_daily = 200
 [question]
 # The longest question taken, in characters, after NFC.
 max_length = 500
+
+[prompts]
+# The prompt files in use, by name in prompts/. A new version is a new file;
+# a file in use is never edited.
+query_analysis = "query-analysis-1"
+synthesis_research = "synthesis-research-1"
+synthesis_help = "synthesis-help-1"
+support_check = "support-check-1"
+
+[verification]
+# Languages whose verification quality has been measured (AI_ARCHITECTURE.md
+# §9); a statement in any other carries `language_not_evaluated`.
+evaluated_languages = []

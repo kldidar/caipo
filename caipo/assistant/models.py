@@ -134,3 +134,186 @@ class InteractionStageRecord(AppendOnlyModel):
 
     def __str__(self) -> str:
         return f"{self.interaction_id}:{self.stage}:{self.result}"
+
+
+class EvidenceKind(models.TextChoices):
+    """What a handle stands for: a recorded value, a demonstration text, or a section of help."""
+
+    OBSERVATION = "observation", _("Recorded observation")
+    SEGMENT = "segment", _("Demonstration text")
+    HELP = "help", _("Help section")
+
+
+class AssistantLabel(models.TextChoices):
+    """The four labels an assistant statement may carry (AI_ARCHITECTURE.md §7.3)."""
+
+    DOCUMENTED_STATEMENT = "documented_statement", _("Documented statement")
+    STATED_POLICY_OBJECTIVE = "stated_policy_objective", _("Stated policy objective")
+    REPORTED_IMPLEMENTATION = "reported_implementation", _("Reported implementation")
+    RECORDED_OBSERVATION = "recorded_observation", _("Recorded observation")
+
+
+class Verification(models.TextChoices):
+    VERIFIED = "verified", _("Verified")
+    REMOVED = "removed", _("Removed")
+
+
+class RemovalReason(models.TextChoices):
+    """Why a statement was removed: one per check of AI_ARCHITECTURE.md §6.2."""
+
+    NO_CITATION = "no_citation", _("It cites nothing")
+    UNKNOWN_HANDLE = "unknown_handle", _("It cites a handle not issued for this question")
+    LABEL = "label", _("Its label is not permitted for what it cites")
+    QUOTE = "quote", _("A quotation is not in the cited text")
+    NUMBER = "number", _("A number is not in the cited evidence")
+    MARKUP = "markup", _("It holds a link or markup")
+    CAUSAL_WORDING = "causal_wording", _("It uses wording on the prohibited list")
+    NOT_SUPPORTED = "not_supported", _("The support check did not find it supported")
+    MALFORMED = "malformed", _("It is not in the required form")
+
+
+class RetrievalHit(AppendOnlyModel):
+    """One candidate retrieved for an interaction, whether or not it reached the model."""
+
+    interaction = models.ForeignKey(
+        AIInteraction, on_delete=models.PROTECT, related_name="hits", verbose_name=_("interaction")
+    )
+    kind = models.CharField(_("kind"), max_length=16, choices=EvidenceKind)
+    handle = models.CharField(_("handle"), max_length=16, blank=True)
+    in_context = models.BooleanField(_("placed in the model's context"))
+    segment = models.UUIDField(_("segment"), null=True, blank=True)
+    start_offset = models.PositiveIntegerField(_("start offset"), null=True, blank=True)
+    end_offset = models.PositiveIntegerField(_("end offset"), null=True, blank=True)
+    observation = models.ForeignKey(
+        "indicators.Observation",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("observation"),
+    )
+    help_page = models.CharField(_("help page"), max_length=64, blank=True)
+    help_section = models.CharField(_("help section"), max_length=300, blank=True)
+    lexical_rank = models.PositiveIntegerField(_("full-text rank"), null=True, blank=True)
+    trigram_rank = models.PositiveIntegerField(_("trigram rank"), null=True, blank=True)
+    score = models.FloatField(_("fused score"), null=True, blank=True)
+
+    objects = AppendOnlyQuerySet["RetrievalHit"].as_manager()
+
+    class Meta:
+        verbose_name = _("retrieval hit")
+        verbose_name_plural = _("retrieval hits")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(kind__in=EvidenceKind.values),
+                name="assistant_hit_kind_known",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(in_context=False) | ~models.Q(handle=""),
+                name="assistant_hit_in_context_has_handle",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(kind=EvidenceKind.OBSERVATION, observation__isnull=False)
+                | models.Q(
+                    kind=EvidenceKind.SEGMENT,
+                    segment__isnull=False,
+                    start_offset__isnull=False,
+                    end_offset__isnull=False,
+                )
+                | (models.Q(kind=EvidenceKind.HELP) & ~models.Q(help_page="")),
+                name="assistant_hit_kind_fits_its_reference",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.interaction_id}:{self.handle or self.kind}"
+
+
+class AnswerStatement(AppendOnlyModel):
+    """One statement the model wrote, with the verdict of the checks on it."""
+
+    interaction = models.ForeignKey(
+        AIInteraction,
+        on_delete=models.PROTECT,
+        related_name="statements",
+        verbose_name=_("interaction"),
+    )
+    position = models.PositiveIntegerField(_("position"))
+    text = models.TextField(_("text"))
+    label = models.CharField(_("label"), max_length=32, blank=True)
+    verification = models.CharField(_("verification"), max_length=16, choices=Verification)
+    removal_reason = models.CharField(
+        _("reason for removal"), max_length=32, choices=RemovalReason, blank=True
+    )
+    flags = models.JSONField(_("uncertainty flags"), default=list)
+
+    objects = AppendOnlyQuerySet["AnswerStatement"].as_manager()
+
+    class Meta:
+        verbose_name = _("answer statement")
+        verbose_name_plural = _("answer statements")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["interaction", "position"], name="assistant_statement_position_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(verification=Verification.VERIFIED, removal_reason="")
+                | models.Q(
+                    verification=Verification.REMOVED, removal_reason__in=RemovalReason.values
+                ),
+                name="assistant_statement_removed_has_reason",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(verification=Verification.REMOVED)
+                | models.Q(label__in=AssistantLabel.values),
+                name="assistant_statement_verified_has_label",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.interaction_id}:{self.position}"
+
+
+class AnswerCitation(AppendOnlyModel):
+    """A verified statement's citation of a Passage, an Observation, or a help section."""
+
+    statement = models.ForeignKey(
+        AnswerStatement,
+        on_delete=models.PROTECT,
+        related_name="citations",
+        verbose_name=_("statement"),
+    )
+    handle = models.CharField(_("handle"), max_length=16)
+    kind = models.CharField(_("kind"), max_length=16, choices=EvidenceKind)
+    passage = models.UUIDField(_("passage"), null=True, blank=True)
+    observation = models.ForeignKey(
+        "indicators.Observation",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("observation"),
+    )
+    help_page = models.CharField(_("help page"), max_length=64, blank=True)
+    help_section = models.CharField(_("help section"), max_length=300, blank=True)
+
+    objects = AppendOnlyQuerySet["AnswerCitation"].as_manager()
+
+    class Meta:
+        verbose_name = _("answer citation")
+        verbose_name_plural = _("answer citations")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(kind=EvidenceKind.OBSERVATION, observation__isnull=False)
+                | models.Q(kind=EvidenceKind.SEGMENT, passage__isnull=False)
+                | (
+                    models.Q(kind=EvidenceKind.HELP)
+                    & ~models.Q(help_page="")
+                    & ~models.Q(help_section="")
+                ),
+                name="assistant_citation_kind_fits_its_reference",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.statement_id}:{self.handle}"

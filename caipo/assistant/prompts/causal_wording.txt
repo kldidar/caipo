@@ -1,0 +1,41 @@
+# Words of cause that an assistant statement may not contain (AI_ARCHITECTURE.md §6.2).
+# Provisional, until the owner's prohibited-wording list (B11) exists; then it
+# replaces this list. One term per line; a term ending in * is a prefix.
+# Matched without regard to case, on word boundaries.
+cause*
+caused
+causing
+causal*
+led to
+leads to
+lead to
+resulted in
+results in
+as a result
+due to
+because
+thanks to
+contributed to
+contributes to
+contributing to
+drove
+driven by
+driving
+impact*
+effect of
+effects of
+attributable
+influenc*
+привел*
+привёл*
+привод*
+вызвал*
+вызыва*
+благодаря
+из-за
+в результате
+повлия*
+влиян*
+влия*
+способствова*
+обусловлен*

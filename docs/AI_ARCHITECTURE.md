@@ -129,6 +129,8 @@ Abstention returns a fixed-form response saying what was searched and that suffi
 
 ### 6.2 Citation verification (after synthesis)
 
+**In the demonstrator** ([ADR-0025](adr/0025-demonstrator-assistants.md)) these checks are `caipo/assistant/verification.py`. The prohibited causal wording is the versioned list `caipo/assistant/prompts/causal_wording.txt`, in English and Russian, provisional until the owner's list (B11) replaces it; a statement using any of its words is removed, denied or not. A link or markup removes the statement rather than being stripped. One support-check call judges every statement of an answer (ADR-0025 point 7).
+
 Applied to the structured output of synthesis, statement by statement. A statement that fails a check is removed and the reason recorded.
 
 | Check | Type |
