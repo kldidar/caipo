@@ -1623,6 +1623,95 @@ details.disclosure > .disclosure__body {
   padding: 0 var(--s-4) var(--s-4);
 }
 
+/* ---------- Help panel (ADR-0025 point 3) ---------- */
+
+/* A help section reached by its anchor stays clear of the fixed masthead. */
+.panel[id] {
+  scroll-margin-top: 8rem;
+}
+
+details.help-panel {
+  position: fixed;
+  right: var(--s-4);
+  bottom: var(--s-4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: var(--s-2);
+  max-width: calc(100vw - 2 * var(--s-4));
+}
+
+details.help-panel > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+}
+
+details.help-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.help-panel > summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.help-panel__body {
+  width: min(24rem, calc(100vw - 2 * var(--s-4)));
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.help-panel__title {
+  margin-top: 0;
+  font-size: var(--text-lg);
+}
+
+.help-panel__body textarea {
+  width: 100%;
+}
+
+.help-panel__waiting {
+  display: none;
+  margin-left: var(--s-2);
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+form.htmx-request .help-panel__waiting {
+  display: inline;
+}
+
+.help-panel__answer:empty {
+  display: none;
+}
+
+.help-panel__statement + .help-panel__statement {
+  border-top: 1px solid var(--line);
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+}
+
+@media print {
+  details.help-panel {
+    display: none;
+  }
+}
+
 /* ---------- Utilities and small patterns ---------- */
 
 .flush-top {

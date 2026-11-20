@@ -1,4 +1,4 @@
-"""The demonstrator's assistants (ADR-0025): the research assistant's page.
+"""The demonstrator's assistants (ADR-0025): the research assistant's page, and the help panel.
 
 The view takes the question and shows what the pipeline returns: verified
 statements only, each with its evidence as the server holds it, or why there
@@ -24,6 +24,7 @@ from caipo.assistant import selectors, services
 from caipo.assistant.selectors import AssistantKind, AssistantLabel, EvidenceKind, UncertaintyFlag
 from caipo.assistant.services import QuotaExceededError
 from caipo.indicators.selectors import ObservationStatus
+from caipo.retrieval import selectors as retrieval_selectors
 from caipo.web.access import requires
 from caipo.web.workspace import FORM_ERROR, REFUSED, actor_of
 from caipo.web.workspace_forms import QuestionForm
@@ -165,3 +166,89 @@ def research_assistant(request: HttpRequest) -> HttpResponse:
         },
         status=status,
     )
+
+
+@dataclass(frozen=True)
+class HelpLink:
+    title: str
+    url: str
+
+
+@dataclass(frozen=True)
+class HelpStatement:
+    text: str
+    sections: tuple[HelpLink, ...]
+
+
+def _help_url(page: str, section: str) -> str:
+    return f"{reverse('help-page', args=[page])}#{section}"
+
+
+@requires(Permission.ASSISTANT_ASK)
+@never_cache
+@csrf_protect
+@require_http_methods(["GET", "HEAD", "POST"])
+def help_ask(request: HttpRequest) -> HttpResponse:
+    """Show the help assistant's form; on POST, answer from the help pages or say what they cover.
+
+    The help panel loads the form with HTMX when it is opened, so that no page
+    carries a form or a token it does not use, and gets each answer alone.
+    Without script, the panel's link opens the form as a page, and the answer
+    is shown on it.
+    """
+    actor = actor_of(request)
+    in_panel = request.headers.get("HX-Request") == "true"
+    provider = selectors.provider_notice()
+    if request.method != "POST":
+        template = "web/includes/help_form.html" if in_panel else "web/help_answer.html"
+        return render(request, template, {"provider": provider, "asked": False})
+    form = QuestionForm(request.POST)
+    statements: tuple[HelpStatement, ...] = ()
+    message: str | Promise = ""
+    outside = False
+    status = 200
+    if form.is_valid():
+        try:
+            answer = services.answer_question(
+                actor=actor, assistant=AssistantKind.HELP, question=form.cleaned_data["question"]
+            )
+        except QuotaExceededError as exceeded:
+            message, status = _QUOTA[exceeded.scope], 429
+        except REFUSED as refusal:
+            message, status = str(refusal), 400
+        else:
+            statements = tuple(
+                HelpStatement(
+                    text=statement.text,
+                    sections=tuple(
+                        HelpLink(source.title, _help_url(source.help_page, source.help_section))
+                        for source in statement.sources
+                    ),
+                )
+                for statement in answer.statements
+            )
+            # ADR-0025 point 3: a question the help does not answer gets a
+            # fixed reply that says what the help covers.
+            outside = answer.outcome == "abstained"
+            if answer.outcome == "timed_out":
+                message = _TIMED_OUT
+            elif answer.outcome == "failed":
+                message = _STOPPED.get(answer.reason, _FAILED)
+    else:
+        message, status = FORM_ERROR, 400
+    context = {
+        "provider": provider,
+        "asked": True,
+        "statements": statements,
+        "message": message,
+        "outside": outside,
+        "pages": [
+            HelpLink(page.title, reverse("help-page", args=[page.page]))
+            for page in retrieval_selectors.help_corpus()
+        ],
+    }
+    if in_panel:
+        # HTMX places only a successful response, so a refusal is sent as one;
+        # its words say what happened.
+        return render(request, "web/includes/help_answer.html", context)
+    return render(request, "web/help_answer.html", context, status=status)

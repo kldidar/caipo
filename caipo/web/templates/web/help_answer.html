@@ -1,0 +1,12 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Help assistant" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'help' %}">{% translate "Help" %}</a></nav>
+  <section class="panel">
+    <div class="panel__body stack">{% include "web/includes/help_form.html" %}</div>
+  </section>
+{% endblock %}

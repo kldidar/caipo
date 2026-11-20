@@ -1,0 +1,6 @@
+{% load i18n %}<details class="help-panel" hx-get="{% url 'help-ask' %}" hx-trigger="toggle once" hx-target="find .help-panel__body">
+  <summary class="help-panel__button">{% translate "Help" %}</summary>
+  <section class="help-panel__body" aria-label="{% translate 'Help assistant' %}">
+    <p><a href="{% url 'help-ask' %}">{% translate "Ask the help assistant about CAIPO" %}</a></p>
+  </section>
+</details>

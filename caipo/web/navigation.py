@@ -38,6 +38,9 @@ class Navigation:
     groups: tuple[NavGroup, ...]
     account_items: tuple[NavItem, ...]
     on_account_page: bool
+    # The help panel at the bottom right (ADR-0025 point 3), for an account
+    # that may ask the help assistant.
+    help_panel: bool
 
 
 # Each entry: the route's name, its label, and the routes under which it is
@@ -165,5 +168,6 @@ def navigation(request: HttpRequest) -> dict[str, Navigation | None]:
             groups=groups,
             account_items=_items(_ACCOUNT, held, current_route),
             on_account_page=current_route == "login",
+            help_panel=_may_open("help-ask", held),
         )
     }

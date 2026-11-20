@@ -264,7 +264,7 @@ Software baseline. Dependencies were first locked on 2026-10-01. What has and ha
 - PostgreSQL 18.6 in development, from the official image. That image has no vector extension; if ADR-0003 is accepted, the image changes.
 - Redis 8.10.2 in development.
 - The job system is decided in [ADR-0004](adr/0004-asynchronous-jobs.md) (2026-11-05): no library in the isolated workers, which consume their own Redis list under a restricted user; `django-tasks` with `django-tasks-db` for trusted work. Nothing is installed before Phase 2 builds it.
-- HTMX, vendored at a pinned version when the first interactive page is built (ADR-0010). Django REST Framework is deferred.
+- HTMX, vendored at a pinned version when the first interactive page is built (ADR-0010): `htmx.org` 2.0.11 since Day 42, for the help panel, in `caipo/web/static/web/htmx/` with its licence and checksum. Django REST Framework is deferred.
 - Document parsing libraries: chosen in Phase 2, as few as possible, each justified. Each is verified against the pinned Python when added.
 
 The core research functions (browse, code, claim, compare, export) depend on no external service at runtime.

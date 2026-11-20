@@ -1,0 +1,11 @@
+{% load i18n %}<h2 class="help-panel__title">{% translate "Ask about CAIPO" %}</h2>
+<form method="post" action="{% url 'help-ask' %}" hx-post="{% url 'help-ask' %}" hx-target="#help-answer" hx-swap="innerHTML" hx-disabled-elt="find button">
+  {% csrf_token %}
+  <label for="help-question">{% translate "Your question, in English or Russian" %}</label>
+  <textarea id="help-question" name="question" rows="3" required></textarea>
+  <p class="muted"><small>{% blocktranslate with provider=provider.label model=provider.model %}Sent to {{ provider }} ({{ model }}) under that provider's terms for its free tier, and stored here with the answer. Do not include personal information.{% endblocktranslate %}</small></p>
+  <button type="submit">{% translate "Ask the help assistant" %}</button>
+  <span class="help-panel__waiting" aria-hidden="true">{% translate "Answering…" %}</span>
+</form>
+<div id="help-answer" class="help-panel__answer" aria-live="polite">{% if asked %}{% include "web/includes/help_answer.html" %}{% endif %}</div>
+<p><small><a href="{% url 'help' %}">{% translate "All help pages" %}</a></small></p>
