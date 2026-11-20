@@ -26,6 +26,7 @@ __all__ = [
     "DocumentEntry",
     "DocumentReference",
     "SegmentEntry",
+    "SegmentSource",
     "SourceReference",
     "source_reference",
     "DocumentType",
@@ -37,6 +38,7 @@ __all__ = [
     "document_choices",
     "document_reference",
     "demonstration_segments",
+    "segment_source",
     "document_text",
     "documents_by_key",
     "source_choices",
@@ -342,4 +344,46 @@ def document_text(document: uuid.UUID) -> tuple[SegmentEntry, ...]:
             text_sha256=segment.text_sha256,
         )
         for segment in Segment.objects.filter(document__public_id=document).order_by("position")
+    )
+
+
+@dataclass(frozen=True)
+class SegmentSource:
+    """A Segment as held, with what the server shows as its source (ADR-0025 point 2)."""
+
+    segment: SegmentEntry
+    document_title: str
+    document_data_class: str
+    document_issued: date | None
+
+
+def segment_source(segment: uuid.UUID) -> SegmentSource | None:
+    """Return a Segment and its document's title and date, or None if there is no such Segment.
+
+    For the services of higher apps, which have checked their own permission
+    first: the assistant checks what it retrieved against the Segment held.
+    """
+    row = (
+        Segment.objects.filter(public_id=segment)
+        .values_list(
+            "public_id",
+            "document__public_id",
+            "position",
+            "locator",
+            "text",
+            "text_sha256",
+            "document__title",
+            "document__data_class",
+            "document__date_of_issue",
+        )
+        .first()
+    )
+    if row is None:
+        return None
+    public_id, document, position, locator, text, digest, title, data_class, issued = row
+    return SegmentSource(
+        SegmentEntry(public_id, document, position, locator, text, digest),
+        title,
+        data_class,
+        issued,
     )

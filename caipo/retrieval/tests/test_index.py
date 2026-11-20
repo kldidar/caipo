@@ -106,6 +106,7 @@ def test_a_question_is_bounded_in_length() -> None:
 
     with pytest.raises(selectors.QueryTooLongError):
         selectors.search("a" * (limit + 1), kind=ChunkKind.HELP, limit=5)
+    assert selectors.max_query_length() == limit
 
 
 def test_a_limit_below_one_is_refused() -> None:

@@ -20,6 +20,15 @@ class ProviderSettings:
 
 
 @dataclass(frozen=True)
+class EvidenceBudget:
+    help_sections: int
+    segments: int
+    indicators: int
+    recent_years: int
+    observations: int
+
+
+@dataclass(frozen=True)
 class AssistantConfiguration:
     pipeline_version: str
     provider: ProviderSettings
@@ -28,6 +37,8 @@ class AssistantConfiguration:
     max_question_length: int
     prompts: dict[str, str]
     evaluated_languages: tuple[str, ...]
+    evidence: EvidenceBudget
+    deadline_seconds: float
 
     def prompt(self, name: str) -> tuple[str, str]:
         """The version and the text of the prompt in use for a stage."""
@@ -56,6 +67,8 @@ def load(path: Path = PATH) -> AssistantConfiguration:
         evaluated_languages=tuple(
             str(language) for language in data["verification"]["evaluated_languages"]
         ),
+        evidence=EvidenceBudget(**{key: int(value) for key, value in data["evidence"].items()}),
+        deadline_seconds=float(data["timing"]["deadline_seconds"]),
     )
     if configuration.provider.name not in PROVIDERS:
         raise ValueError(f"Unknown provider: {configuration.provider.name}")
@@ -69,6 +82,8 @@ def load(path: Path = PATH) -> AssistantConfiguration:
     for version in configuration.prompts.values():
         if not (PROMPTS / f"{version}.txt").is_file():
             raise ValueError(f"No prompt file: {version}")
+    if min(vars(configuration.evidence).values()) < 1 or configuration.deadline_seconds <= 0:
+        raise ValueError("Every evidence budget and the deadline are positive.")
     if configuration.max_question_length < 1 or not configuration.pipeline_version:
         raise ValueError("A question length and a pipeline version are required.")
     return configuration

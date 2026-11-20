@@ -602,7 +602,7 @@ The last part of [ADR-0017](docs/adr/0017-account-recovery.md) (points 78 to 81,
 
 ### The assistants' foundation as implemented
 
-The first part of the demonstrator's assistants ([ADR-0025](docs/adr/0025-demonstrator-assistants.md), [ADR-0006](docs/adr/0006-ai-provider-abstraction.md)): the provider interface, the input guard, the quotas, and the record of interactions. The pipeline, its verification, and its pages are not built yet, and no page calls the provider.
+The first part of the demonstrator's assistants ([ADR-0025](docs/adr/0025-demonstrator-assistants.md), [ADR-0006](docs/adr/0006-ai-provider-abstraction.md)): the provider interface, the input guard, the quotas, and the record of interactions. Since Day 40 the pipeline is built (`caipo/assistant/pipeline.py`); no page calls it yet, and no answer is shown to anyone.
 
 **Implemented**
 
@@ -614,6 +614,7 @@ The first part of the demonstrator's assistants ([ADR-0025](docs/adr/0025-demons
 - **The record.** AIInteraction and InteractionStageRecord are append-only: their triggers refuse every UPDATE and DELETE. The log line of a new interaction names it and its asker, never the question.
 - **The deterministic checks** of AI_ARCHITECTURE.md §6.2, in `caipo/assistant/verification.py`, not yet called by any page. A statement is removed unless it cites only handles issued for its question with a label permitted for them, quotes only text that is in what it cites, writes only numbers that are in what it cites (or an observation's value rounded half-up or half-even), and holds no link, image, HTML, or word of cause from the versioned list. A test passes six kinds of invented reference through them, and every one is removed.
 - **Passages** are made by the server for a cited span, never by a model; their trigger refuses a quote that is not the Segment's text between the offsets. The records of an answer (hits, statements, citations) are append-only by trigger.
+- **The pipeline** (`caipo/assistant/pipeline.py`) runs only after the input guard and the quotas. Evidence and the question reach the model labelled as untrusted material, never as instructions. Retrieved text that is not exactly its span of a demonstration Segment whose hash matches is dropped before any call, and with no evidence left the assistant abstains without one. Reference observations are found by a structured query in which each word of the question is its own plain query, so no search operator can come from it. The support check can only remove a statement, and malformed verdicts count as not supported. At most four model calls are made, none past the configured deadline. Only statements that passed every check are returned, and what is shown as their source comes from the server's own records, never from the model's words; the model's own `gaps` are recorded and never shown.
 
 **Residual risks**
 
