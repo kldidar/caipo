@@ -291,6 +291,19 @@ def test_malformed_output_is_asked_for_once_more_then_fails(reader: Authenticati
 
 
 @pytest.mark.usefixtures("evidence")
+def test_no_answer_makes_more_than_three_model_calls(reader: AuthenticationContext) -> None:
+    # ADR-0025 point 7: the translation of a Russian question uses one of the
+    # three calls, so its malformed synthesis is not asked for again, because
+    # the support check would then be a fourth.
+    provider = _fake(["not json", _synthesis()])
+
+    answer = _ask(reader, "Сколько людей пользовались интернетом?", provider)
+
+    assert (answer.outcome, answer.reason) == ("failed", "malformed_output")
+    assert len(provider.calls) == 2
+
+
+@pytest.mark.usefixtures("evidence")
 def test_a_provider_failure_ends_the_answer_as_failed(reader: AuthenticationContext) -> None:
     def fail(system: str, user: str) -> str:
         raise ProviderUnavailableError("TEST")

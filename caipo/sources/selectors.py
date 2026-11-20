@@ -355,10 +355,11 @@ class SegmentSource:
     document_title: str
     document_data_class: str
     document_issued: date | None
+    source: uuid.UUID
 
 
 def segment_source(segment: uuid.UUID) -> SegmentSource | None:
-    """Return a Segment and its document's title and date, or None if there is no such Segment.
+    """Return a Segment, its document's title and date, and its source, or None if there is none.
 
     For the services of higher apps, which have checked their own permission
     first: the assistant checks what it retrieved against the Segment held.
@@ -375,15 +376,17 @@ def segment_source(segment: uuid.UUID) -> SegmentSource | None:
             "document__title",
             "document__data_class",
             "document__date_of_issue",
+            "document__source__public_id",
         )
         .first()
     )
     if row is None:
         return None
-    public_id, document, position, locator, text, digest, title, data_class, issued = row
+    public_id, document, position, locator, text, digest, title, data_class, issued, source = row
     return SegmentSource(
         SegmentEntry(public_id, document, position, locator, text, digest),
         title,
         data_class,
         issued,
+        source,
     )

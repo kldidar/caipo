@@ -50,6 +50,7 @@ _WORKSPACE: tuple[_Entry, ...] = (
     ("indicators", _("Indicators"), frozenset({"indicator*"})),
     ("analyses", _("Analysis"), frozenset({"analys*"})),
     ("searches", _("Searches"), frozenset({"search*"})),
+    ("research-assistant", _("Assistant"), frozenset({"research-assistant"})),
     ("articles", _("Articles"), frozenset({"articles", "article", "article-new", "articles-mine"})),
     ("sources", _("Sources"), frozenset({"source*"})),
     ("registry", _("Registry"), frozenset({"registry*"})),

@@ -261,6 +261,8 @@ def test_the_configuration_of_the_repository_is_valid() -> None:
         (("per_account_daily = 20", "per_account_daily = 500"), "quota"),
         (("segments = 5", "segments = 0"), "positive"),
         (("deadline_seconds = 60", "deadline_seconds = 0"), "positive"),
+        (("max_calls = 3", "max_calls = 4"), "two or three"),
+        (("max_calls = 3", "max_calls = 1"), "two or three"),
     ],
 )
 def test_a_configuration_outside_what_the_code_does_is_refused(

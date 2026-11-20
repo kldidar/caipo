@@ -11,7 +11,7 @@ import unicodedata
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django.db import connection, transaction
 from django.utils.translation import gettext as _
@@ -30,6 +30,9 @@ from caipo.assistant.models import (
 from caipo.assistant.quotas import asked_today
 from caipo.core.entry import InvalidEntryError, has_direction_control
 from caipo.retrieval import selectors as retrieval_selectors
+
+if TYPE_CHECKING:
+    from caipo.assistant import pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -199,3 +202,18 @@ def interaction_key(interaction: uuid.UUID) -> int:
     if key is None:
         raise InvalidEntryError(_("There is no such interaction."))
     return key
+
+
+def answer_question(
+    *, actor: AuthenticationContext, assistant: str, question: str
+) -> pipeline.Answer:
+    """Answer a question through the pipeline: verified statements, or a stated reason.
+
+    The write interface of the pipeline for the pages; see
+    `pipeline.answer_question` for its preconditions, side effects, and the
+    errors it raises (those of `begin_interaction`).
+    """
+    # The pipeline is built on this module's services, so it is imported here.
+    from caipo.assistant import pipeline
+
+    return pipeline.answer_question(actor=actor, assistant=assistant, question=question)
