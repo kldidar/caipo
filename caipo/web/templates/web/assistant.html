@@ -1,0 +1,60 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Research assistant" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Evidence-bound" %}</p>
+    <h1>{% translate "Research assistant" %}</h1>
+    <p class="lede">{% translate "Ask about the recorded observations and the demonstration texts held here. Each statement of an answer cites its evidence, and only statements that pass every check are shown. When the evidence does not answer the question, the assistant says so." %}</p>
+  </header>
+  <p class="notice notice--warning"><span><strong>{% translate "Not yet evaluated." %}</strong> {% translate "The accuracy of its checks has not yet been measured against a set of test questions. Treat its answers as a demonstration." %}</span></p>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  <section class="panel">
+    <div class="panel__body">
+      <form method="post" action="{% url 'research-assistant' %}" novalidate>
+        {% csrf_token %}
+        {% include "web/includes/fields.html" %}
+        <p class="muted"><small>{% blocktranslate with provider=provider.label model=provider.model %}Your question is sent to {{ provider }} ({{ model }}) under that provider's terms for its free tier, and stored here with the answer. Do not include personal information.{% endblocktranslate %}</small></p>
+        <p class="muted"><small>{% blocktranslate count left=quotas.account %}You may ask {{ left }} more question today.{% plural %}You may ask {{ left }} more questions today.{% endblocktranslate %}</small></p>
+        <button type="submit">{% translate "Ask the assistant" %}</button>
+      </form>
+    </div>
+  </section>
+  {% if answer %}
+    <section class="panel section" aria-labelledby="answer-title">
+      <div class="panel__header"><h2 id="answer-title">{% translate "Answer" %}</h2></div>
+      <div class="panel__body stack">
+        {% if answer.answered %}
+          <p class="notice notice--warning"><span><strong>{% translate "An AI-generated summary of the evidence below." %}</strong> {% translate "It may be incomplete, and it does not say that any policy caused any outcome." %}</span></p>
+          {% for statement in answer.statements %}
+            <article class="provision">
+              <p class="provision__meta"><span class="badge badge--brand badge--plain">{{ statement.label }}</span>{% for flag in statement.flags %} <span class="badge badge--provisional badge--plain">{{ flag }}</span>{% endfor %}</p>
+              <p class="provision__label">{{ statement.text }}</p>
+              <details class="disclosure">
+                <summary>{% blocktranslate count number=statement.evidence|length %}Its evidence: {{ number }} item{% plural %}Its evidence: {{ number }} items{% endblocktranslate %}</summary>
+                <div class="disclosure__body stack">
+                  {% for item in statement.evidence %}
+                    <div>
+                      <p class="provision__meta"><span class="badge badge--plain">{{ item.kind }}</span> {% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}{% if item.detail %} <span class="muted">· {{ item.detail }}</span>{% endif %}</p>
+                      {% if item.synthetic %}
+                        <blockquote class="provision__quote">{{ item.quote }}<footer>{% translate "Synthetic text of a demonstration document." %}</footer></blockquote>
+                      {% else %}
+                        <p>{% if item.quote %}{% translate "Value as recorded:" %} <strong>{{ item.quote }}</strong> <span class="muted">· {{ item.status }}</span>{% else %}{% translate "No value is recorded for this year: a gap in the source, shown as a gap." %}{% endif %}</p>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              </details>
+            </article>
+          {% endfor %}
+        {% else %}
+          <p role="status">{{ answer.message }}</p>
+          {% if answer.searched %}<p class="muted"><small>{% blocktranslate with query=answer.searched %}Searched for: {{ query }}{% endblocktranslate %}</small></p>{% endif %}
+        {% endif %}
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

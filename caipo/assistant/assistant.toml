@@ -7,6 +7,8 @@ pipeline_version = "demo-1"
 [provider]
 # Chosen by the spike of 2026-11-15 (docs/reports/spike-day35-free-providers.md).
 name = "groq"
+# How the provider is named to the people who ask (ADR-0025 point 8).
+label = "Groq"
 model = "openai/gpt-oss-120b"
 endpoint = "https://api.groq.com/openai/v1/chat/completions"
 temperature = 0
@@ -48,3 +50,7 @@ observations = 40
 # The whole answer, from the input guard to the response; past it, the
 # interaction is timed out and no further call is made.
 deadline_seconds = 60
+# The most model calls one answer may make (ADR-0025 point 7): query
+# analysis, synthesis, and one support check. A malformed synthesis is asked
+# for again only if a call is left for the support check after it.
+max_calls = 3

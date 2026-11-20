@@ -153,6 +153,20 @@ class AssistantLabel(models.TextChoices):
     RECORDED_OBSERVATION = "recorded_observation", _("Recorded observation")
 
 
+class UncertaintyFlag(models.TextChoices):
+    """The flags derived by the server for a verified statement (AI_ARCHITECTURE.md §8)."""
+
+    SINGLE_SOURCE = "single_source", _("All of its evidence comes from one source")
+    ESTIMATED_VALUE = "estimated_value", _("A value it cites is an estimate")
+    PROVISIONAL_VALUE = "provisional_value", _("A value it cites is provisional")
+    PROJECTED_VALUE = "projected_value", _("A value it cites is a projection")
+    CROSS_LANGUAGE = "cross_language", _("AI translation or paraphrase of evidence in English")
+    LANGUAGE_NOT_EVALUATED = (
+        "language_not_evaluated",
+        _("The accuracy of the checks has not yet been measured for this language"),
+    )
+
+
 class Verification(models.TextChoices):
     VERIFIED = "verified", _("Verified")
     REMOVED = "removed", _("Removed")

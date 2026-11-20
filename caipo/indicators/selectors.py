@@ -394,6 +394,7 @@ class ObservationEvidence:
     """One reference value, or recorded gap, as the assistant is shown it (ADR-0025 point 2)."""
 
     observation_id: int
+    indicator_public_id: uuid.UUID
     indicator: str
     unit: str
     code: str
@@ -480,6 +481,7 @@ def observation_evidence(
     for row in rows.order_by("release_id").values_list(
         "pk",
         "indicator_id",
+        "indicator__public_id",
         "indicator__name",
         "indicator__unit",
         "indicator__code",
@@ -492,10 +494,11 @@ def observation_evidence(
         "value",
         "status",
     ):
-        (pk, indicator_id, name, unit, code, source, release, country_id) = row[:8]
-        country, alpha2, year, value, status = row[8:]
+        (pk, indicator_id, indicator, name, unit, code, source, release, country_id) = row[:9]
+        country, alpha2, year, value, status = row[9:]
         latest[(indicator_id, country_id, year)] = ObservationEvidence(
             observation_id=pk,
+            indicator_public_id=indicator,
             indicator=name,
             unit=unit,
             code=code,

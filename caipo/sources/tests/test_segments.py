@@ -237,4 +237,5 @@ def test_a_segment_is_read_with_its_documents_title_and_date(
     assert source.document_title == "TEST Decree on Artificial Intelligence"
     assert source.document_data_class == "demonstration"
     assert source.document_issued is not None
+    assert selectors.source_detail(researcher, source.source) is not None
     assert selectors.segment_source(UNKNOWN) is None

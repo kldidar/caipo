@@ -8,6 +8,7 @@ import pytest
 
 from caipo.accounts.selectors import AuthenticationContext
 from caipo.indicators import selectors, services
+from caipo.indicators.models import Indicator
 from caipo.indicators.services import ObservationRow
 from caipo.registry.models import Country
 from caipo.sources.tests.helpers import World, make_source
@@ -90,7 +91,11 @@ def test_any_word_of_the_question_chooses_an_indicator() -> None:
 
     # Every synthetic name holds "TEST", as the question does; the indicator
     # that matches more of its words ranks first.
-    assert {item.code for item in _evidence(question, indicators=1)} == {"TEST-NET"}
+    found = _evidence(question, indicators=1)
+    assert {item.code for item in found} == {"TEST-NET"}
+    assert {item.indicator_public_id for item in found} == {
+        Indicator.objects.get(code="TEST-NET").public_id
+    }
 
 
 @pytest.mark.usefixtures("reference")

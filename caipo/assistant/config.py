@@ -12,6 +12,7 @@ PROVIDERS = ("groq",)
 @dataclass(frozen=True)
 class ProviderSettings:
     name: str
+    label: str
     model: str
     endpoint: str
     temperature: float
@@ -39,6 +40,7 @@ class AssistantConfiguration:
     evaluated_languages: tuple[str, ...]
     evidence: EvidenceBudget
     deadline_seconds: float
+    max_calls: int
 
     def prompt(self, name: str) -> tuple[str, str]:
         """The version and the text of the prompt in use for a stage."""
@@ -54,6 +56,7 @@ def load(path: Path = PATH) -> AssistantConfiguration:
         pipeline_version=str(data["pipeline_version"]),
         provider=ProviderSettings(
             name=str(provider["name"]),
+            label=str(provider["label"]),
             model=str(provider["model"]),
             endpoint=str(provider["endpoint"]),
             temperature=float(provider["temperature"]),
@@ -69,6 +72,7 @@ def load(path: Path = PATH) -> AssistantConfiguration:
         ),
         evidence=EvidenceBudget(**{key: int(value) for key, value in data["evidence"].items()}),
         deadline_seconds=float(data["timing"]["deadline_seconds"]),
+        max_calls=int(data["timing"]["max_calls"]),
     )
     if configuration.provider.name not in PROVIDERS:
         raise ValueError(f"Unknown provider: {configuration.provider.name}")
@@ -84,6 +88,9 @@ def load(path: Path = PATH) -> AssistantConfiguration:
             raise ValueError(f"No prompt file: {version}")
     if min(vars(configuration.evidence).values()) < 1 or configuration.deadline_seconds <= 0:
         raise ValueError("Every evidence budget and the deadline are positive.")
+    if not 2 <= configuration.max_calls <= 3:
+        # Synthesis and the support check need two; ADR-0025 point 7 allows three.
+        raise ValueError("An answer makes two or three model calls at most.")
     if configuration.max_question_length < 1 or not configuration.pipeline_version:
         raise ValueError("A question length and a pipeline version are required.")
     return configuration

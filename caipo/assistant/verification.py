@@ -16,7 +16,13 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
-from caipo.assistant.models import AssistantKind, AssistantLabel, EvidenceKind, RemovalReason
+from caipo.assistant.models import (
+    AssistantKind,
+    AssistantLabel,
+    EvidenceKind,
+    RemovalReason,
+    UncertaintyFlag,
+)
 
 CAUSAL_WORDING = Path(__file__).with_name("prompts") / "causal_wording.txt"
 
@@ -298,9 +304,9 @@ def check_statement(
 # --- Uncertainty flags (AI_ARCHITECTURE.md §8) ---------------------------------------
 
 _STATUS_FLAGS = {
-    "estimated": "estimated_value",
-    "provisional": "provisional_value",
-    "projected": "projected_value",
+    "estimated": UncertaintyFlag.ESTIMATED_VALUE,
+    "provisional": UncertaintyFlag.PROVISIONAL_VALUE,
+    "projected": UncertaintyFlag.PROJECTED_VALUE,
 }
 
 
@@ -318,14 +324,14 @@ def uncertainty_flags(
     English, so a statement in another language is an AI translation of it.
     """
     cited = [evidence[handle] for handle in dict.fromkeys(statement.citations)]
-    flags = []
+    flags: list[str] = []
     if len({item.source for item in cited}) == 1:
-        flags.append("single_source")
+        flags.append(UncertaintyFlag.SINGLE_SOURCE)
     for status, flag in _STATUS_FLAGS.items():
         if any(item.status == status for item in cited):
             flags.append(flag)
     if language != "english":
-        flags.append("cross_language")
+        flags.append(UncertaintyFlag.CROSS_LANGUAGE)
     if language not in set(evaluated_languages):
-        flags.append("language_not_evaluated")
+        flags.append(UncertaintyFlag.LANGUAGE_NOT_EVALUATED)
     return flags

@@ -1,4 +1,4 @@
-"""Read interface of the assistants: quotas left, and the outcome of an interaction.
+"""Read interface of the assistants: quotas left, the provider, and an interaction's outcome.
 
 An interaction's outcome is derived from its stage records, never stored
 (DATA_MODEL.md §4.5).
@@ -10,10 +10,29 @@ from dataclasses import dataclass
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts.selectors import AuthenticationContext, Permission
 from caipo.assistant import config
-from caipo.assistant.models import InteractionStageRecord, Stage, StageResult
+from caipo.assistant.models import (
+    AssistantKind,
+    AssistantLabel,
+    EvidenceKind,
+    InteractionStageRecord,
+    Stage,
+    StageResult,
+    UncertaintyFlag,
+)
 from caipo.assistant.quotas import asked_today
 
-__all__ = ["Outcome", "QuotasLeft", "interaction_outcome", "quotas_left"]
+__all__ = [
+    "AssistantKind",
+    "AssistantLabel",
+    "EvidenceKind",
+    "UncertaintyFlag",
+    "Outcome",
+    "ProviderNotice",
+    "QuotasLeft",
+    "interaction_outcome",
+    "provider_notice",
+    "quotas_left",
+]
 
 # The order of the stages, by which the first that did not pass is found.
 _ORDER = list(Stage.values)
@@ -32,6 +51,21 @@ class Outcome:
     REFUSED = "refused"
     FAILED = "failed"
     TIMED_OUT = "timed_out"
+
+
+@dataclass(frozen=True)
+class ProviderNotice:
+    label: str
+    model: str
+
+
+def provider_notice() -> ProviderNotice:
+    """The provider and model that questions are sent to, as each assistant names them.
+
+    ADR-0025 point 8: the asker is told, next to the input, where a question goes.
+    """
+    provider = config.load().provider
+    return ProviderNotice(label=provider.label, model=provider.model)
 
 
 @dataclass(frozen=True)

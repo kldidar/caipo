@@ -60,6 +60,7 @@ Calls to models, all through the provider interface (§10):
 - **Analysis.** An English question needs no model: the countries named are found among the reference countries, and the years by their digits. A Russian question is translated for search by one call, whose output is validated; on failure, the raw question is used with no filters.
 - **Evidence.** Help sections and demonstration Segments come from lexical search. Reference observations come from a structured query: indicators are chosen by any word of the question in their name or definition, with trigram similarity of the name as a second way, and each word is its own plain query, so no search operator can come from the question. The rows are the named countries, or all; the named years, or the most recent held; and the latest release, a recorded gap included.
 - **Evidence verification.** Retrieved text that differs from its span of the Segment held, or whose Segment's hash does not match, is dropped and logged. With no evidence left, the assistant abstains without a call.
+- **Calls.** At most three model calls per answer (ADR-0025 point 7). The retry of malformed output in §6.2 is made only if the support check still has its call after it, so a Russian question, whose translation takes one, gets no retry and its answer fails.
 - **Response.** A cited Segment gets a Passage of exactly the span retrieved, which, with one chunk per Segment, is its whole text. The model's own `gaps` are recorded but never shown, because they are not verified.
 
 **Input guard.** An authenticated account is required: anonymous visitors cannot call the assistant (ADR-0007). Then per-account rate limit and quota, budget check against PostgreSQL cost records, length limit. The question is untrusted text.
@@ -223,7 +224,9 @@ Low temperature where the provider allows it, a fixed maximum output length, and
 
 ## 8. Response
 
-Only verified output is displayed. Nothing produced by the model reaches the user before stage 7 completes, and there is no streaming of model text. While the pipeline runs, the interface may show which stage is in progress.
+Only verified output is displayed. Nothing produced by the model reaches the user before stage 7 completes, and there is no streaming of model text.
+
+**In the demonstrator** (ADR-0025; `/assistant/`, Day 41): each verified statement is shown with its label and its flags in plain words, and an evidence panel that the server builds from its own records. A recorded observation shows its indicator, country, year, source, release, value as stored, and status; a recorded gap is said to be a gap. A demonstration text shows its document, locator, and the Segment's own text, marked as synthetic. Links lead only to the indicator or source page. The model's `gaps` are not shown, because they are not verified. An abstention shows what was searched. The standing notice says the answer may be incomplete and does not say that any policy caused any outcome; a second notice says the assistant has not yet been evaluated. While the pipeline runs, the interface may show which stage is in progress.
 
 The response contains:
 

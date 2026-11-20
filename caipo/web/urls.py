@@ -4,6 +4,7 @@ from caipo.web import (
     accounts,
     activation,
     articles,
+    assistants,
     audit,
     authentication,
     health,
@@ -202,5 +203,6 @@ urlpatterns = [
     path("analysis/<uuid:public_id>/export.json", research.analysis_json, name="analysis-json"),
     path("searches/", research.searches, name="searches"),
     path("searches/<uuid:public_id>/", research.search, name="search"),
+    path("assistant/", assistants.research_assistant, name="research-assistant"),
     path("policies/export.csv", research.policies_csv, name="policies-csv"),
 ]

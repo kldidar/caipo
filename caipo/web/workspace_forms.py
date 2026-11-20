@@ -170,6 +170,16 @@ class SearchForm(forms.Form):
     summary = _area(_("Summary, bounded by what was examined"), required=True)
 
 
+class QuestionForm(forms.Form):
+    """A question to an assistant (ADR-0025). Its length and content are checked by the service."""
+
+    question = forms.CharField(
+        label=_("Your question, in English or Russian"),
+        strip=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+
+
 class ArticleForm(forms.Form):
     """A contributed article (ADR-0022). The limits are checked again by the service."""
 

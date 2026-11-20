@@ -86,6 +86,8 @@ class SourceShown:
     status: str = ""
     help_page: str = ""
     help_section: str = ""
+    # The record a reader can open: the source of a document, or an indicator.
+    record: uuid.UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -158,10 +160,11 @@ def answer_question(
     Side effects: one AIInteraction with a record of each stage that ran, its
     retrieval hits, every statement the model wrote with the verdict of the
     checks, a Passage for each Segment a verified statement cites, and a
-    citation for each source of a verified statement. At most four model
-    calls (analysis of a Russian question, synthesis and one repeat if its
-    output is malformed, and the support check), none after the configured
-    deadline. A log line follows, without the question.
+    citation for each source of a verified statement. At most the configured
+    number of model calls, three (ADR-0025 point 7): analysis of a Russian
+    question, synthesis, and the support check; a malformed synthesis is
+    asked for once more only if the support check keeps its call. None
+    after the configured deadline. A log line follows, without the question.
 
     Raises what `begin_interaction` raises, before any record or call. A
     provider's failure, malformed output, or the deadline is not raised: it
@@ -212,6 +215,7 @@ class _Run:
         self.deadline = time.monotonic() + configuration.deadline_seconds
         self.interaction = services.interaction_key(start.public_id)
         self.searched: dict[str, object] = {}
+        self.calls = 0
 
     # --- Recording and calling ----------------------------------------------------
 
@@ -253,6 +257,9 @@ class _Run:
     def _call(self, stage: str, system: str, user: str, spent: _Usage) -> str:
         if time.monotonic() > self.deadline:
             raise self._stop(stage, StageResult.TIMED_OUT, "deadline", usage=spent)
+        if self.calls >= self.configuration.max_calls:
+            raise self._stop(stage, StageResult.FAILED, "call_limit", usage=spent)
+        self.calls += 1
         try:
             generation = self.provider.generate(system=system, user=user)
         except ProviderTimeoutError as error:
@@ -394,13 +401,16 @@ class _Run:
         )
         raws: list[str] = []
         spent = _Usage()
-        for _attempt in range(2):
+        for attempt in range(2):
             raw = self._call(Stage.SYNTHESIS, system, user, spent)
             raws.append(raw)
             try:
                 synthesis = parse_synthesis(raw)
             except MalformedOutputError:
-                continue
+                # Once more only, and only if the support check keeps its call.
+                if attempt == 0 and self.calls + 2 <= self.configuration.max_calls:
+                    continue
+                break
             self._record(
                 Stage.SYNTHESIS,
                 StageResult.PASSED,
@@ -581,7 +591,11 @@ def _segment_item(handle: str, hit: SearchHit) -> _Item:
             numbers=_date_numbers(issued),
         ),
         shown=SourceShown(
-            kind=EvidenceKind.SEGMENT, title=title, detail=hit.heading, quote=hit.text
+            kind=EvidenceKind.SEGMENT,
+            title=title,
+            detail=hit.heading,
+            quote=hit.text,
+            record=source.source if source else None,
         ),
         segment=hit.segment,
         span=(hit.start_offset, hit.end_offset),
@@ -635,6 +649,7 @@ def _observation_item(handle: str, observation: ObservationEvidence) -> _Item:
             detail=f"{observation.source}, {observation.release}",
             quote=value,
             status=observation.status,
+            record=observation.indicator_public_id,
         ),
         observation_id=observation.observation_id,
     )
