@@ -188,3 +188,14 @@ def record_stage(
             output_tokens=output_tokens,
             duration_ms=duration_ms,
         )
+
+
+def interaction_key(interaction: uuid.UUID) -> int:
+    """The internal key of an interaction, for the records of its answer in this app.
+
+    Raises InvalidEntryError if there is no such interaction.
+    """
+    key = AIInteraction.objects.filter(public_id=interaction).values_list("pk", flat=True).first()
+    if key is None:
+        raise InvalidEntryError(_("There is no such interaction."))
+    return key

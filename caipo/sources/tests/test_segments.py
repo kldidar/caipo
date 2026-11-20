@@ -222,3 +222,19 @@ def test_the_database_refuses_a_hash_that_does_not_match_the_text(
     _insert(demo_document, "TEST", _sha256("TEST"))
 
     assert len(_stored(demo_document)) == 1
+
+
+def test_a_segment_is_read_with_its_documents_title_and_date(
+    researcher: AuthenticationContext, demo_document: uuid.UUID
+) -> None:
+    services.attach_demonstration_text(actor=researcher, document=demo_document, parts=PARTS)
+    first = selectors.document_text(demo_document)[0]
+
+    source = selectors.segment_source(first.public_id)
+
+    assert source is not None
+    assert source.segment == first
+    assert source.document_title == "TEST Decree on Artificial Intelligence"
+    assert source.document_data_class == "demonstration"
+    assert source.document_issued is not None
+    assert selectors.segment_source(UNKNOWN) is None

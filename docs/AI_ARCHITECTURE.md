@@ -55,6 +55,13 @@ Calls to models, all through the provider interface (§10):
 
 ## 3. Query analysis
 
+**In the demonstrator** ([ADR-0025](adr/0025-demonstrator-assistants.md); `caipo/assistant/pipeline.py`):
+
+- **Analysis.** An English question needs no model: the countries named are found among the reference countries, and the years by their digits. A Russian question is translated for search by one call, whose output is validated; on failure, the raw question is used with no filters.
+- **Evidence.** Help sections and demonstration Segments come from lexical search. Reference observations come from a structured query: indicators are chosen by any word of the question in their name or definition, with trigram similarity of the name as a second way, and each word is its own plain query, so no search operator can come from the question. The rows are the named countries, or all; the named years, or the most recent held; and the latest release, a recorded gap included.
+- **Evidence verification.** Retrieved text that differs from its span of the Segment held, or whose Segment's hash does not match, is dropped and logged. With no evidence left, the assistant abstains without a call.
+- **Response.** A cited Segment gets a Passage of exactly the span retrieved, which, with one chunk per Segment, is its whole text. The model's own `gaps` are recorded but never shown, because they are not verified.
+
 **Input guard.** An authenticated account is required: anonymous visitors cannot call the assistant (ADR-0007). Then per-account rate limit and quota, budget check against PostgreSQL cost records, length limit. The question is untrusted text.
 
 **Analysis produces a structured object:**

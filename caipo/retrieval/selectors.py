@@ -25,6 +25,7 @@ __all__ = [
     "SearchHit",
     "chunking_version",
     "help_corpus",
+    "max_query_length",
     "search",
 ]
 
@@ -127,3 +128,8 @@ def help_corpus() -> tuple[HelpPage, ...]:
 def chunking_version() -> str:
     """The version of the chunking configuration that search uses now."""
     return config.load().version
+
+
+def max_query_length() -> int:
+    """The longest question search takes, after the search-side transformations."""
+    return config.load().max_query_length

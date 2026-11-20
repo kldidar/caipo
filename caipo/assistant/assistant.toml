@@ -35,3 +35,16 @@ support_check = "support-check-1"
 # Languages whose verification quality has been measured (AI_ARCHITECTURE.md
 # §9); a statement in any other carries `language_not_evaluated`.
 evaluated_languages = []
+
+[evidence]
+# How much evidence one answer may put before the model (AI_ARCHITECTURE.md §5).
+help_sections = 5
+segments = 5
+indicators = 2
+recent_years = 8
+observations = 40
+
+[timing]
+# The whole answer, from the input guard to the response; past it, the
+# interaction is timed out and no further call is made.
+deadline_seconds = 60

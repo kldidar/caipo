@@ -259,6 +259,8 @@ def test_the_configuration_of_the_repository_is_valid() -> None:
         (('name = "groq"', 'name = "oracle"'), "Unknown provider"),
         (('endpoint = "https://', 'endpoint = "http://'), "https"),
         (("per_account_daily = 20", "per_account_daily = 500"), "quota"),
+        (("segments = 5", "segments = 0"), "positive"),
+        (("deadline_seconds = 60", "deadline_seconds = 0"), "positive"),
     ],
 )
 def test_a_configuration_outside_what_the_code_does_is_refused(
@@ -269,3 +271,11 @@ def test_a_configuration_outside_what_the_code_does_is_refused(
 
     with pytest.raises(ValueError, match=message):
         config.load(path)
+
+
+def test_an_interaction_is_found_by_its_public_identifier(reader: AuthenticationContext) -> None:
+    public_id = _ask(reader)
+
+    assert services.interaction_key(public_id) == AIInteraction.objects.get(public_id=public_id).pk
+    with pytest.raises(InvalidEntryError):
+        services.interaction_key(uuid.uuid4())

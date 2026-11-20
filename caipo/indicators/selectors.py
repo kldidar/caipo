@@ -8,16 +8,26 @@ are shown with every year in range, so a year without a value is visible as
 a gap, never filled.
 """
 
+import re
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from functools import reduce
+from operator import or_
 
+from django.contrib.postgres.search import (
+    SearchQuery,
+    SearchRank,
+    SearchVector,
+    TrigramWordSimilarity,
+)
 from django.db.models import Count
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts.selectors import AuthenticationContext, Permission
+from caipo.core.data_class import DataClass
 from caipo.indicators.models import (
     DatasetRelease,
     Indicator,
@@ -37,11 +47,14 @@ __all__ = [
     "ReleaseEntry",
     "Series",
     "AnalysisInput",
+    "ObservationEvidence",
     "analysis_inputs",
     "coverage",
     "indicator_choices",
     "indicator_detail",
     "layer_view",
+    "observation_evidence",
+    "reference_countries",
 ]
 
 
@@ -371,3 +384,131 @@ def indicator_choices(
         .order_by("layer", "name")
         .values_list("public_id", "name", "layer")
     )
+
+
+_WORD = re.compile(r"\w+")
+
+
+@dataclass(frozen=True)
+class ObservationEvidence:
+    """One reference value, or recorded gap, as the assistant is shown it (ADR-0025 point 2)."""
+
+    observation_id: int
+    indicator: str
+    unit: str
+    code: str
+    source: str
+    release: str
+    country: str
+    alpha2: str
+    year: int
+    value: Decimal | None
+    status: str
+
+
+def reference_countries() -> list[str]:
+    """The English names of the countries that reference indicators hold values or gaps for."""
+    return [name for _pk, _alpha2, name in _countries(DataClass.REFERENCE)]
+
+
+def observation_evidence(
+    query: str,
+    *,
+    countries: list[str],
+    years: tuple[int, int] | None,
+    indicators: int,
+    recent_years: int,
+    limit: int,
+) -> tuple[ObservationEvidence, ...]:
+    """Return the reference observations that may answer a question, by a structured query.
+
+    The question never becomes a query: it chooses indicators by full-text
+    search of their names and definitions, with trigram similarity of the
+    name as a second way, and nothing else (AI_ARCHITECTURE.md §4.2). Then:
+    the named countries, or all reference countries if none is named; the
+    years given, or the most recent `recent_years` held; the value of the
+    latest release of each, a recorded gap included. At most `indicators`
+    indicators and `limit` rows. Reference data only.
+
+    For the services of higher apps, which have checked their own permission
+    first.
+    """
+    vector = SearchVector("name", weight="A", config="english") + SearchVector(
+        "definition", weight="B", config="english"
+    )
+    # Any word of the question may match: a question names countries and years
+    # that no indicator's name holds. Each word is its own plain query, so no
+    # operator of the search syntax can come from the question.
+    words = [word for word in _WORD.findall(query) if not word.isdigit()]
+    if not words:
+        return ()
+    search = reduce(or_, (SearchQuery(word, config="english") for word in dict.fromkeys(words)))
+    reference = Indicator.objects.filter(data_class=DataClass.REFERENCE)
+    # A match, then its rank: ts_rank gives a non-matching row a small rank
+    # above zero, so a rank alone does not say that a row matched.
+    by_text = list(
+        reference.annotate(document=vector, rank=SearchRank(vector, search))
+        .filter(document=search)
+        .order_by("-rank", "id")
+        .values_list("pk", flat=True)[:indicators]
+    )
+    by_name = list(
+        reference.annotate(similarity=TrigramWordSimilarity(query, "name"))
+        .filter(similarity__gte=0.3)
+        .order_by("-similarity", "id")
+        .values_list("pk", flat=True)[:indicators]
+    )
+    chosen = list(dict.fromkeys(by_text + by_name))[:indicators]
+    if not chosen:
+        return ()
+    rows = Observation.objects.filter(indicator_id__in=chosen)
+    wanted = {name.casefold() for name in countries}
+    if wanted:
+        rows = rows.filter(
+            country_id__in=[
+                pk
+                for pk, _alpha2, name in _countries(DataClass.REFERENCE)
+                if name.casefold() in wanted
+            ]
+        )
+    if years is not None:
+        rows = rows.filter(year__gte=years[0], year__lte=years[1])
+    else:
+        held = sorted(set(rows.values_list("year", flat=True)))
+        rows = rows.filter(year__in=held[-recent_years:])
+    latest: dict[tuple[int, int, int], ObservationEvidence] = {}
+    for row in rows.order_by("release_id").values_list(
+        "pk",
+        "indicator_id",
+        "indicator__name",
+        "indicator__unit",
+        "indicator__code",
+        "indicator__source__name",
+        "release__label",
+        "country_id",
+        "country__name_en",
+        "country__alpha2",
+        "year",
+        "value",
+        "status",
+    ):
+        (pk, indicator_id, name, unit, code, source, release, country_id) = row[:8]
+        country, alpha2, year, value, status = row[8:]
+        latest[(indicator_id, country_id, year)] = ObservationEvidence(
+            observation_id=pk,
+            indicator=name,
+            unit=unit,
+            code=code,
+            source=source,
+            release=release,
+            country=country,
+            alpha2=alpha2,
+            year=year,
+            value=value,
+            status=status,
+        )
+    order = {pk: index for index, pk in enumerate(chosen)}
+    ordered = sorted(
+        latest.items(), key=lambda pair: (order[pair[0][0]], pair[1].country, pair[1].year)
+    )
+    return tuple(item for _key, item in ordered)[:limit]
