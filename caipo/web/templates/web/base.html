@@ -12,6 +12,10 @@
   <link rel="icon" href="{% static 'web/mark.svg' %}" type="image/svg+xml">
   {% block navigation_assets %}{% if navigation %}
     <script src="{% static 'web/navigation.js' %}" defer></script>
+    {% if navigation.help_panel %}
+      <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"includeIndicatorStyles":false,"selfRequestsOnly":true,"historyCacheSize":0}'>
+      <script src="{% static 'web/htmx/htmx.min.js' %}" defer></script>
+    {% endif %}
   {% endif %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -51,5 +55,6 @@
       <p>{% translate "Sources are recorded with their provenance. Missing data stays missing. Associations are never presented as causes." %}</p>
     </div>
   </footer>
+  {% block help_panel %}{% if navigation.help_panel %}{% include "web/includes/help_panel.html" %}{% endif %}{% endblock %}
 </body>
 </html>

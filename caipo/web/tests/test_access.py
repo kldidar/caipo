@@ -98,7 +98,9 @@ def test_only_the_health_and_sign_in_endpoints_are_public() -> None:
     # that awaits its code, by someone who is therefore not signed in
     # (ADR-0017). The home page tells an anonymous visitor what CAIPO is and
     # shows no record. Registering is done by someone who has no account yet
-    # (ADR-0021).
+    # (ADR-0021). The help pages are CAIPO's own text about itself, from the
+    # repository, and hold no record (ADR-0025 point 3); asking the help
+    # assistant is not public.
     assert public_routes == {
         "home",
         "health-live",
@@ -111,4 +113,6 @@ def test_only_the_health_and_sign_in_endpoints_are_public() -> None:
         "password-reset",
         "password-reset-confirm",
         "register",
+        "help",
+        "help-page",
     }

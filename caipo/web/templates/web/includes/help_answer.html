@@ -1,0 +1,14 @@
+{% load i18n %}{% if statements %}
+  <p class="help-panel__notice"><small>{% translate "An AI-generated summary of the help pages linked below. It may be incomplete." %}</small></p>
+  {% for statement in statements %}
+    <div class="help-panel__statement">
+      <p>{{ statement.text }}</p>
+      <p class="muted"><small>{% translate "From:" %} {% for section in statement.sections %}<a href="{{ section.url }}">{{ section.title }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</small></p>
+    </div>
+  {% endfor %}
+{% elif outside %}
+  <p role="status">{% translate "The help pages do not answer this question. They cover:" %}</p>
+  <ul>{% for page in pages %}<li><a href="{{ page.url }}">{{ page.title }}</a></li>{% endfor %}</ul>
+{% else %}
+  <p role="alert">{{ message }}</p>
+{% endif %}

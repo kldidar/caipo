@@ -78,8 +78,10 @@ def test_no_route_is_a_break_glass_route() -> None:
     # more reads the audit record (Day 25), and changes nothing. One more
     # adds the source of a registry name entered before sources were recorded
     # (ADR-0023, Day 26). One more is the research assistant's page
-    # (ADR-0025, Day 41), which asks a question of the assistant.
-    assert len(routes) == 77
+    # (ADR-0025, Day 41), which asks a question of the assistant. Three more
+    # are the help pages, which only read, and the help assistant's question
+    # (Day 42).
+    assert len(routes) == 80
     for route in routes:
         described = f"{route.name} {route.pattern} {route.callback.__module__}"
         assert "break" not in described.lower()

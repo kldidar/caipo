@@ -1,0 +1,23 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Help" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Help" %}</p>
+    <h1>{% translate "How CAIPO works" %}</h1>
+    <p class="lede">{% translate "These pages describe CAIPO and how to use it. The help assistant answers only from them." %}</p>
+  </header>
+  <div class="stack">
+    {% for page in pages %}
+      <section class="panel">
+        <div class="panel__header"><h2><a href="{% url 'help-page' page.page %}">{{ page.title }}</a></h2></div>
+        <div class="panel__body">
+          <ul>{% for section in page.sections %}<li><a href="{% url 'help-page' page.page %}#{{ section.anchor }}">{{ section.heading }}</a></li>{% endfor %}</ul>
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+{% endblock %}

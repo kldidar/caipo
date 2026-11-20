@@ -8,6 +8,7 @@ from caipo.web import (
     audit,
     authentication,
     health,
+    help_pages,
     home,
     indicators,
     password_reset,
@@ -204,5 +205,8 @@ urlpatterns = [
     path("searches/", research.searches, name="searches"),
     path("searches/<uuid:public_id>/", research.search, name="search"),
     path("assistant/", assistants.research_assistant, name="research-assistant"),
+    path("help/", help_pages.help_index, name="help"),
+    path("help/ask/", assistants.help_ask, name="help-ask"),
+    path("help/<slug:page>/", help_pages.help_page, name="help-page"),
     path("policies/export.csv", research.policies_csv, name="policies-csv"),
 ]
