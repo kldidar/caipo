@@ -13,10 +13,11 @@ from django.core.exceptions import PermissionDenied
 
 from caipo.accounts.selectors import AuthenticationContext, Role
 from caipo.accounts.tests.fixtures import ActingAs
-from caipo.assistant import config, selectors
+from caipo.assistant import config, selectors, services
 from caipo.assistant.models import AIInteraction, AnswerCitation, AnswerStatement, RetrievalHit
 from caipo.assistant.pipeline import Answer, answer_question
 from caipo.assistant.providers import FakeProvider, ProviderUnavailableError
+from caipo.indicators import selectors as indicators_selectors
 from caipo.indicators import services as indicators_services
 from caipo.indicators.services import ObservationRow
 from caipo.retrieval import selectors as retrieval_selectors
@@ -388,3 +389,65 @@ def test_an_account_that_may_not_ask_is_refused_before_anything(acting_as: Actin
         _ask(acting_as(Role.ADMINISTRATOR, second_factor=True), "TEST", provider)
 
     assert not AIInteraction.objects.exists() and provider.calls == []
+
+
+@pytest.mark.usefixtures("evidence")
+def test_the_record_of_an_interaction_holds_its_stages_evidence_and_statements(
+    reader: AuthenticationContext,
+) -> None:
+    provider = _fake(
+        _synthesis(
+            {
+                "text": "The World Bank records 70.4 for TEST Reference Country in 2019.",
+                "label": "recorded_observation",
+                "citations": ["E1"],
+            },
+            {"text": "TEST unsupported.", "label": "documented_statement", "citations": ["P9"]},
+        )
+    )
+
+    answer = _ask(reader, "Internet users in TEST Reference Country in 2019", provider)
+    record = selectors.interaction_record(answer.interaction)
+
+    assert record is not None
+    assert record.question == "Internet users in TEST Reference Country in 2019"
+    assert [stage.stage for stage in record.stages] == [
+        "input_guard",
+        "query_analysis",
+        "retrieval",
+        "evidence_verification",
+        "synthesis",
+        "citation_verification",
+        "response",
+    ]
+    assert "E1" in {hit.handle for hit in record.hits}
+    shown, removed = record.statements
+    assert (shown.verification, shown.cited) == ("verified", ("E1",))
+    assert (removed.removal_reason, removed.cited) == ("unknown_handle", ())
+
+
+def test_there_is_no_record_of_an_unknown_interaction() -> None:
+    assert selectors.interaction_record(uuid.uuid4()) is None
+
+
+@pytest.mark.usefixtures("evidence")
+def test_an_observation_is_known_by_its_indicator_country_and_year(
+    reader: AuthenticationContext,
+) -> None:
+    found = indicators_selectors.observation_evidence(
+        "TEST Internet", countries=[], years=(2019, 2020), indicators=1, recent_years=8, limit=5
+    )
+
+    keys = indicators_selectors.observation_keys([item.observation_id for item in found] + [0])
+    assert sorted(keys.values()) == [("TEST-NET", "OA", 2019), ("TEST-NET", "OA", 2020)]
+
+
+@pytest.mark.usefixtures("evidence")
+def test_the_service_passes_the_provider_it_is_given(reader: AuthenticationContext) -> None:
+    provider = _fake(_synthesis())
+
+    services.answer_question(
+        actor=reader, assistant="research", question="TEST Internet", provider=provider
+    )
+
+    assert len(provider.calls) == 1
