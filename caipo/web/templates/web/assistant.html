@@ -10,7 +10,7 @@
     <h1>{% translate "Research assistant" %}</h1>
     <p class="lede">{% translate "Ask about the recorded observations and the demonstration texts held here. Each statement of an answer cites its evidence, and only statements that pass every check are shown. When the evidence does not answer the question, the assistant says so." %}</p>
   </header>
-  <p class="notice notice--warning"><span><strong>{% translate "Not yet evaluated." %}</strong> {% translate "The accuracy of its checks has not yet been measured against a set of test questions. Treat its answers as a demonstration." %}</span></p>
+  <p class="notice notice--warning"><span><strong>{% translate "Evaluated on a small test set only." %}</strong> {% translate "Its checks were tested on a small set of questions in English and Russian, attacks included, but no person has yet checked its answers. Treat them as a demonstration." %}</span></p>
   {% if error %}<p role="alert">{{ error }}</p>{% endif %}
   <section class="panel">
     <div class="panel__body">

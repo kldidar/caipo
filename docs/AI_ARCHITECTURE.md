@@ -226,7 +226,7 @@ Low temperature where the provider allows it, a fixed maximum output length, and
 
 Only verified output is displayed. Nothing produced by the model reaches the user before stage 7 completes, and there is no streaming of model text.
 
-**In the demonstrator** (ADR-0025; `/assistant/`, Day 41): each verified statement is shown with its label and its flags in plain words, and an evidence panel that the server builds from its own records. A recorded observation shows its indicator, country, year, source, release, value as stored, and status; a recorded gap is said to be a gap. A demonstration text shows its document, locator, and the Segment's own text, marked as synthetic. Links lead only to the indicator or source page. The model's `gaps` are not shown, because they are not verified. An abstention shows what was searched. The standing notice says the answer may be incomplete and does not say that any policy caused any outcome; a second notice says the assistant has not yet been evaluated.
+**In the demonstrator** (ADR-0025; `/assistant/`, Day 41): each verified statement is shown with its label and its flags in plain words, and an evidence panel that the server builds from its own records. A recorded observation shows its indicator, country, year, source, release, value as stored, and status; a recorded gap is said to be a gap. A demonstration text shows its document, locator, and the Segment's own text, marked as synthetic. Links lead only to the indicator or source page. The model's `gaps` are not shown, because they are not verified. An abstention shows what was searched. The standing notice says the answer may be incomplete and does not say that any policy caused any outcome; a second notice says the assistant was evaluated on a small test set only, and that no person has yet checked its answers (Day 43).
 
 **The help assistant** (ADR-0025 point 3; the panel at the bottom right, Day 42) shows each verified statement with links to the help sections it cites, built by the server. When it abstains, it gives the fixed reply that lists what the help pages cover. While the pipeline runs, the interface may show which stage is in progress.
 
@@ -284,6 +284,13 @@ The **evaluation environment** is a separate database with the same schema, on a
 
 CI cannot hold the production corpus, because much of it may be copyrighted. CI therefore runs only against the synthetic fixture corpus with a deterministic fake provider and fake embeddings.
 
+**In the demonstrator** ([ADR-0025](adr/0025-demonstrator-assistants.md) point 10; Day 43) the three corpora are small and committed:
+- the demonstration texts of `caipo/demo/catalogue.json` and the help pages, as the fixture corpus;
+- the World Bank snapshot of `caipo/demo/data/worldbank`, for the reference observations;
+- four synthetic hostile documents of DEMO Northland, in `caipo/demo/data/evaluation/adversarial-1.json`, as the adversarial corpus.
+
+The evaluation environment is an empty development database, seeded by the command `evaluate_assistants`, which refuses to run anywhere else. It is the only code that loads the adversarial corpus.
+
 ### 9.2 Gold dataset
 
 Built and owned by the researcher (owner to be assigned, blocker B16). Versioned in the repository. Cases refer to artifacts by hash and to Segments by locator. Gold files contain questions, references, and researcher-written reference points; they contain no copyrighted document text.
@@ -299,6 +306,13 @@ Built and owned by the researcher (owner to be assigned, blocker B16). Versioned
 | Cross-language | Question in one language, evidence in another | Cross-language retrieval and verification |
 | Adversarial: answer model | Documents with injected instructions | Security robustness |
 | Adversarial: verifier | Passages instructing the support check to answer "supported" for an unsupported statement | Verifier robustness |
+
+**In the demonstrator** the gold set is `caipo/demo/data/evaluation/gold-1.json`, written by Claude Code for the owner's review.
+- **Each case is asked in English and in Russian.** All its evidence is in English, so the Russian cases are the cross-language pair (question in Russian, evidence in English).
+- **Expected evidence is named, never copied:** an observation by indicator, country, and year; a passage by its document and locator; a help section by its page and anchor. A test checks that each one is held.
+- **Verifier cases** give the support check scripted statements whose verdict is known. Everything else is the model's own work.
+- **The harness** (`caipo/demo/evaluation.py`) asks each case through the pipeline the pages use, as a new Reader, and scores it deterministically from the interaction's records. The metrics that need human labels are reported as not measured until the owner labels them (§9.3 point 4).
+- **Results** are in [the evaluation report](reports/evaluation-day43-assistants.md).
 
 ### 9.3 Language-specific requirements
 

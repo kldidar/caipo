@@ -33,6 +33,7 @@ from caipo.retrieval import selectors as retrieval_selectors
 
 if TYPE_CHECKING:
     from caipo.assistant import pipeline
+    from caipo.assistant.providers import Provider
 
 logger = logging.getLogger(__name__)
 
@@ -205,15 +206,23 @@ def interaction_key(interaction: uuid.UUID) -> int:
 
 
 def answer_question(
-    *, actor: AuthenticationContext, assistant: str, question: str
+    *,
+    actor: AuthenticationContext,
+    assistant: str,
+    question: str,
+    provider: Provider | None = None,
 ) -> pipeline.Answer:
     """Answer a question through the pipeline: verified statements, or a stated reason.
 
-    The write interface of the pipeline for the pages; see
-    `pipeline.answer_question` for its preconditions, side effects, and the
-    errors it raises (those of `begin_interaction`).
+    The write interface of the pipeline, for the pages and the evaluation;
+    see `pipeline.answer_question` for its preconditions, side effects, and
+    the errors it raises (those of `begin_interaction`). The pages give no
+    provider, so the environment's is used; the evaluation gives its own,
+    which passes the real provider's calls through (AI_ARCHITECTURE.md §9).
     """
     # The pipeline is built on this module's services, so it is imported here.
     from caipo.assistant import pipeline
 
-    return pipeline.answer_question(actor=actor, assistant=assistant, question=question)
+    return pipeline.answer_question(
+        actor=actor, assistant=assistant, question=question, provider=provider
+    )

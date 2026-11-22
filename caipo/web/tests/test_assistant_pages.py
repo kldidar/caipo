@@ -118,7 +118,8 @@ def test_the_page_names_the_provider_and_the_questions_left(
     assert f"sent to {configuration.provider.label} ({configuration.provider.model})" in page
     assert "Do not include personal information." in page
     assert f"You may ask {configuration.per_account_daily} more questions today." in page
-    assert "Not yet evaluated." in page
+    assert "Evaluated on a small test set only." in page
+    assert "no person has yet checked its answers" in page
 
 
 @pytest.mark.usefixtures("evidence")

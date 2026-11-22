@@ -6,15 +6,19 @@ An interaction's outcome is derived from its stage records, never stored
 
 import uuid
 from dataclasses import dataclass
+from typing import Any
 
 from caipo.accounts import selectors as accounts_selectors
 from caipo.accounts.selectors import AuthenticationContext, Permission
 from caipo.assistant import config
 from caipo.assistant.models import (
+    AIInteraction,
+    AnswerStatement,
     AssistantKind,
     AssistantLabel,
     EvidenceKind,
     InteractionStageRecord,
+    RetrievalHit,
     Stage,
     StageResult,
     UncertaintyFlag,
@@ -26,10 +30,15 @@ __all__ = [
     "AssistantLabel",
     "EvidenceKind",
     "UncertaintyFlag",
+    "HitEntry",
+    "InteractionRecord",
     "Outcome",
     "ProviderNotice",
     "QuotasLeft",
+    "StageEntry",
+    "StatementEntry",
     "interaction_outcome",
+    "interaction_record",
     "provider_notice",
     "quotas_left",
 ]
@@ -106,3 +115,109 @@ def interaction_outcome(interaction: uuid.UUID) -> str | None:
     if stages.get(Stage.RESPONSE) == StageResult.PASSED:
         return Outcome.ANSWERED
     return None
+
+
+@dataclass(frozen=True)
+class StageEntry:
+    stage: str
+    result: str
+    reason: str
+    detail: dict[str, Any]
+    input_tokens: int
+    output_tokens: int
+    duration_ms: int
+
+
+@dataclass(frozen=True)
+class HitEntry:
+    """One item of evidence placed before the model, under its handle."""
+
+    handle: str
+    kind: str
+    segment: uuid.UUID | None
+    observation_id: int | None
+    help_page: str
+    help_section: str
+
+
+@dataclass(frozen=True)
+class StatementEntry:
+    """One statement the model wrote, the verdict on it, and, if shown, the handles it cites."""
+
+    position: int
+    text: str
+    label: str
+    verification: str
+    removal_reason: str
+    cited: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class InteractionRecord:
+    question: str
+    language: str
+    assistant: str
+    model_identifier: str
+    prompt_versions: dict[str, str]
+    stages: tuple[StageEntry, ...]
+    hits: tuple[HitEntry, ...]
+    statements: tuple[StatementEntry, ...]
+
+
+def interaction_record(interaction: uuid.UUID) -> InteractionRecord | None:
+    """Everything recorded of one interaction, in the pipeline's order; None if there is none.
+
+    For the evaluation of the assistants (AI_ARCHITECTURE.md §9), which reads
+    what each stage did. Only shown statements have citations, so a removed
+    statement cites nothing here. It checks no permission: it is for the
+    evaluation command, which runs only on a database of its own.
+    """
+    found = AIInteraction.objects.filter(public_id=interaction).first()
+    if found is None:
+        return None
+    stages = sorted(
+        InteractionStageRecord.objects.filter(interaction=found),
+        key=lambda record: _ORDER.index(record.stage),
+    )
+    statements = AnswerStatement.objects.filter(interaction=found).order_by("position")
+    return InteractionRecord(
+        question=found.question,
+        language=found.language,
+        assistant=found.assistant,
+        model_identifier=found.model_identifier,
+        prompt_versions=dict(found.prompt_versions),
+        stages=tuple(
+            StageEntry(
+                stage=record.stage,
+                result=record.result,
+                reason=record.reason,
+                detail=dict(record.detail),
+                input_tokens=record.input_tokens,
+                output_tokens=record.output_tokens,
+                duration_ms=record.duration_ms,
+            )
+            for record in stages
+        ),
+        hits=tuple(
+            HitEntry(
+                handle=hit.handle,
+                kind=hit.kind,
+                segment=hit.segment,
+                observation_id=hit.observation_id,
+                help_page=hit.help_page,
+                help_section=hit.help_section,
+            )
+            for hit in RetrievalHit.objects.filter(interaction=found).order_by("pk")
+        ),
+        statements=tuple(
+            StatementEntry(
+                position=statement.position,
+                text=statement.text,
+                label=statement.label,
+                verification=statement.verification,
+                removal_reason=statement.removal_reason,
+                cited=tuple(statement.citations.order_by("pk").values_list("handle", flat=True)),
+            )
+            for statement in statements
+        ),
+    )

@@ -515,3 +515,17 @@ def observation_evidence(
         latest.items(), key=lambda pair: (order[pair[0][0]], pair[1].country, pair[1].year)
     )
     return tuple(item for _key, item in ordered)[:limit]
+
+
+def observation_keys(observations: list[int]) -> dict[int, tuple[str, str, int]]:
+    """The indicator code, country code, and year of each observation named, by its key.
+
+    For the evaluation of the assistants, which compares what an answer cited
+    with the observations a question expects. Unknown keys are left out.
+    """
+    return {
+        pk: (code, alpha2, year)
+        for pk, code, alpha2, year in Observation.objects.filter(pk__in=observations).values_list(
+            "pk", "indicator__code", "country__alpha2", "year"
+        )
+    }
