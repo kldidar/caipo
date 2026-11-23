@@ -280,3 +280,7 @@ LOGGING = {
 # provider of the tests, which reach no network.
 ASSISTANT_PROVIDER = "groq"
 GROQ_API_KEY = ""
+
+# Where the source code and documentation are published, for the pages that
+# link a guarantee to its tests or the site to its evaluation report.
+SOURCE_REPOSITORY_URL = "https://github.com/kldidar/caipo"
