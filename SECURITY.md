@@ -640,18 +640,20 @@ The one public copy of the demonstrator ([ADR-0024](docs/adr/0024-public-demonst
   - the database connection requires TLS.
 
   `manage.py check --deploy` leaves two warnings, kept on purpose and recorded in the runbook: HSTS on subdomains and HSTS preload.
-- **The client address.** For throttling and the record of a sign-in, it is the entry that Render's proxy appended to `X-Forwarded-For`, counted from the right (`TRUSTED_PROXY_COUNT = 1`). Entries to its left may have been written by the client, and are never read. Every other environment ignores the header. A test checks forged headers. The measurement against the deployed proxy comes before the link is given out (Day 47).
+- **The client address.** For throttling and the record of a sign-in, it is the entry that the outermost of the host's proxies appended to `X-Forwarded-For`, counted from the right. How many proxies append is set in Render (`CAIPO_TRUSTED_PROXY_COUNT`, a whole number from 1 to 5, 1 when unset; the instance does not start with any other value). Entries to the left of the one read may have been written by the client, and are never read. Every other environment ignores the header. A test checks forged headers, and the number is measured on the deployed instance with a forged header before the link is given out ([INSTANCE.md](docs/INSTANCE.md), the measurement). On Day 47, with 1, a forged entry was never read, but the last entry changed from request to request: it is a proxy's address, not the client's.
 - **Registration and password reset are closed**, because the instance sends no email. Both pages say so. A form sent anyway is refused with 403, and the services refuse it too (`REGISTRATION_OPEN`, `PASSWORD_RESET_OPEN`).
 - **The shared account.** The demonstration Reader's address and password are shown on the sign-in page. It is recognised by its address (`caipo.core.shared_account`), and the authorization policy is not changed: it still reads no setting.
   - The four services of a second factor and the submission of an article refuse it themselves.
   - The web layer works out what to open and offer without `MFA_MANAGE_OWN` and `ARTICLES_SUBMIT` for it (`web.instance.permissions_shown`), so their pages answer 403 and the navigation does not offer them.
+
+  - Its sign-in is throttled by source only, never by account: its password is published, so counting failures against the account guards nothing and would let anyone lock every visitor out of it for the throttle window.
 
   The demonstration Researcher's password is the owner's alone (`seed_demo --researcher-password`). No Administrator exists on the instance.
 - **What a visitor is told.** A notice on every page says that it is a demonstration, that the server keeps request logs, and that it may take a minute to wake. Next to each assistant, it says how long questions are kept.
 
 **Residual risks**
 
-- The proxy's behaviour is measured once, on Day 47. If Render changes how it writes `X-Forwarded-For`, throttling may count a forged address until it is measured again.
+- The proxy's behaviour is measured on the deployed instance (Day 47). If Render changes how it writes `X-Forwarded-For`, throttling may count a forged address, or a proxy's, until it is measured again and `CAIPO_TRUSTED_PROXY_COUNT` corrected.
 - The database role owns its tables (ADR-0024 point 6), and there is no Content Security Policy yet (ADR-0008). Both are accepted because the database holds only data that can be rebuilt.
 
 ### Web application threats

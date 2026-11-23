@@ -11,6 +11,7 @@ from caipo.accounts.models import User
 from caipo.accounts.selectors import Permission, Role
 from caipo.accounts.tests.fixtures import UserFactory
 from caipo.articles import services as articles_services
+from caipo.core.shared_account import is_shared_address
 from caipo.web import instance
 from caipo.web.authentication import source
 from caipo.web.tests.helpers import signed_in
@@ -206,3 +207,11 @@ def test_the_pages_of_those_changes_are_refused_and_not_offered(
         home = _text(shared.get("/"))
     assert 'href="/articles/new/"' not in home
     assert 'href="/account/second-factor/"' not in home
+
+
+def test_the_shared_address_is_known_whatever_its_case_and_only_where_there_is_one() -> None:
+    with override_settings(SHARED_ACCOUNT_EMAIL="test.shared@caipo.test"):
+        assert is_shared_address("TEST.Shared@CAIPO.test")
+        assert not is_shared_address("test.other@caipo.test")
+    with override_settings(SHARED_ACCOUNT_EMAIL=""):
+        assert not is_shared_address("")
