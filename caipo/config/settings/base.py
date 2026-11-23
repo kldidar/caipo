@@ -297,3 +297,7 @@ SHARED_ACCOUNT_PASSWORD = ""
 # How many proxies in front of the application append to X-Forwarded-For.
 # Zero: the header is ignored and the peer address is the client's.
 TRUSTED_PROXY_COUNT = 0
+
+# Where the source code and documentation are published, for the pages that
+# link a guarantee to its tests or the site to its evaluation report.
+SOURCE_REPOSITORY_URL = "https://github.com/kldidar/caipo"

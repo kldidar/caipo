@@ -13,7 +13,7 @@
       <div class="actions">
         <a class="button" href="{% url 'login' %}">{% translate "Sign in to the workspace" %}</a>
         {% if instance.registration_open %}<a class="button button--secondary" href="{% url 'register' %}">{% translate "Create an account" %}</a>{% endif %}
-        <a class="button button--secondary" href="#principles">{% translate "How CAIPO treats evidence" %}</a>
+        <a class="button button--secondary" href="{% url 'about' %}">{% translate "About CAIPO" %}</a>
       </div>
     </div>
   </section>
@@ -73,6 +73,7 @@
           <p class="card__body">{% translate "Analyses record their method, inputs, and code version, so that a result can be run again and checked." %}</p>
         </article>
       </div>
+      <p><a href="{% url 'guarantees' %}">{% translate "What CAIPO guarantees, and the tests that enforce it" %}</a></p>
     </section>
   </div>
 {% endblock %}

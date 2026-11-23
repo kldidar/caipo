@@ -1,12 +1,14 @@
 from django.urls import path
 
 from caipo.web import (
+    about,
     accounts,
     activation,
     articles,
     assistants,
     audit,
     authentication,
+    guarantees,
     health,
     help_pages,
     home,
@@ -205,6 +207,8 @@ urlpatterns = [
     path("searches/", research.searches, name="searches"),
     path("searches/<uuid:public_id>/", research.search, name="search"),
     path("assistant/", assistants.research_assistant, name="research-assistant"),
+    path("about/", about.about, name="about"),
+    path("guarantees/", guarantees.guarantees, name="guarantees"),
     path("help/", help_pages.help_index, name="help"),
     path("help/ask/", assistants.help_ask, name="help-ask"),
     path("help/<slug:page>/", help_pages.help_page, name="help-page"),
