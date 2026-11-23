@@ -1,0 +1,56 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "About CAIPO" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "About" %}</p>
+    <h1>{% translate "About CAIPO" %}</h1>
+    <p class="lede">{% translate "A research platform built for one study, and a working demonstration of how it treats evidence: every source traced, every gap kept visible, and no claim of cause." %}</p>
+  </header>
+
+  <section class="section" aria-labelledby="about-study">
+    <h2 id="about-study">{% translate "The study" %}</h2>
+    <p>{% translate "CAIPO, the Central Asia AI Policy Observatory, supports the study “AI Policy and Economic Transformation in Central Asia: A Comparative Analysis of Turkmenistan and Uzbekistan”. It records public policy sources with their provenance, keeps the core AI policy corpus apart from broader contextual policy, and compares the two countries on economic indicators in three separate layers. Further Central Asian countries can be added as data, without changing the software." %}</p>
+  </section>
+
+  <section class="section" aria-labelledby="about-data">
+    <h2 id="about-data">{% translate "What this site holds" %}</h2>
+    <div class="grid grid--2">
+      <article class="card">
+        <h3 class="card__title">{% translate "Reference data: real and public" %}</h3>
+        <p class="card__body">{% translate "World Bank values of eight indicators for Turkmenistan and Uzbekistan, from 2010 to 2024, kept exactly as published, with every gap left as a gap; and the metadata of real legal documents. No text of a real legal document is held, because the rights to show it have not been decided." %}</p>
+      </article>
+      <article class="card">
+        <h3 class="card__title">{% translate "Demonstration data: synthetic" %}</h3>
+        <p class="card__body">{% translate "Records of two invented countries, DEMO Northland and DEMO Southland, written to show every feature. They are labelled on every page and in every export, and say nothing about any real country." %}</p>
+      </article>
+    </div>
+    <p class="muted">{% translate "The research corpus itself is not yet built. The decisions it waits for, from the study period to the rights to official texts, are still open, and nothing on this site settles them." %}</p>
+  </section>
+
+  <section class="section" aria-labelledby="about-assistants">
+    <h2 id="about-assistants">{% translate "The assistants" %}</h2>
+    <p>{% translate "Two assistants answer questions in English or Russian. The research assistant answers from the World Bank values and the demonstration texts; the help assistant, from the help pages. Every statement cites its evidence. References, quotations, and numbers are checked against what is stored, and only statements that pass every check are shown. When the evidence does not answer a question, they say so." %}</p>
+    <p>{% translate "On 22 November 2026 both were tested on 33 questions in English and the same 33 in Russian, including attempts to make them follow instructions hidden in documents. No answer showed an invented reference, a link, a word of cause, or a value for a missing year, and no hidden instruction was followed. They also declined some questions that their evidence did answer, and no person has yet checked their answers." %}</p>
+    <p><a href="{{ evaluation_report }}">{% translate "Read the evaluation report" %}</a></p>
+  </section>
+
+  <section class="section" aria-labelledby="about-claims">
+    <h2 id="about-claims">{% translate "What CAIPO does not claim" %}</h2>
+    <p>{% translate "CAIPO never states or implies that a policy caused an economic outcome. Comparisons and analyses describe what was recorded. An empty list or a missing value says only that nothing has been recorded here; it is not evidence that something is absent." %}</p>
+  </section>
+
+  <section class="section" aria-labelledby="about-built">
+    <h2 id="about-built">{% translate "How CAIPO is built" %}</h2>
+    <p>{% translate "CAIPO is an independent project with one owner, who is also its researcher. The owner chose the study and its questions, sets the rules the project works by, accepts or rejects every architecture decision record, makes the research decisions, and merges each change by hand." %}</p>
+    <p>{% translate "The software and most of the documentation are written by an AI coding agent, Claude Code, under those rules. Every change is checked by more than 5,000 automated tests, strict type checks, and security scans before it can be merged." %}</p>
+    <ul>
+      <li><a href="{% url 'guarantees' %}">{% translate "What CAIPO guarantees, and the tests that enforce it" %}</a></li>
+      <li><a href="{% url 'help' %}">{% translate "Help: how CAIPO works" %}</a></li>
+      <li><a href="{{ repository }}">{% translate "Source code and documentation" %}</a></li>
+    </ul>
+  </section>
+{% endblock %}

@@ -80,8 +80,9 @@ def test_no_route_is_a_break_glass_route() -> None:
     # (ADR-0023, Day 26). One more is the research assistant's page
     # (ADR-0025, Day 41), which asks a question of the assistant. Three more
     # are the help pages, which only read, and the help assistant's question
-    # (Day 42).
-    assert len(routes) == 80
+    # (Day 42). Two more are the page about CAIPO and the page of
+    # guarantees (Days 44 and 45), which only read.
+    assert len(routes) == 82
     for route in routes:
         described = f"{route.name} {route.pattern} {route.callback.__module__}"
         assert "break" not in described.lower()
