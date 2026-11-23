@@ -123,6 +123,7 @@ def test_opening_the_panel_loads_the_form_that_names_the_provider(
     as_page = _text(reader.get(ASK))
 
     assert "<html" not in in_panel and "<html" in as_page
+    assert "<h1>Help assistant</h1>" in as_page, "a page has its own heading"
     for form in (in_panel, as_page):
         assert f'hx-post="{ASK}"' in form and "csrfmiddlewaretoken" in form
         assert f"Sent to {provider.label} ({provider.model})" in form

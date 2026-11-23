@@ -1,0 +1,41 @@
+{% extends "web/base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Guarantees" %}{% endblock %}
+{% block main_class %}page page--medium{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <p class="eyebrow">{% translate "Guarantees" %}</p>
+    <h1>{% translate "What CAIPO guarantees, and how" %}</h1>
+    <p class="lede">{% translate "Each guarantee below is enforced by the code or by the database, and names the automated tests that prove it. The tests run on every change, and a change that fails one cannot be merged." %}</p>
+  </header>
+
+  {% for group in groups %}
+    <section class="section" aria-labelledby="group-{{ forloop.counter }}">
+      <h2 id="group-{{ forloop.counter }}">{{ group.title }}</h2>
+      <ol class="guarantees">
+        {% for guarantee in group.guarantees %}
+          <li class="card guarantee">
+            <p class="guarantee__text">{{ guarantee.text }}</p>
+            <p class="guarantee__label">{% blocktranslate count number=guarantee.tests|length %}Proved by this test:{% plural %}Proved by these tests:{% endblocktranslate %}</p>
+            <ul class="guarantee__tests">
+              {% for test in guarantee.tests %}<li><a href="{{ test.url }}">{{ test.name }}</a></li>{% endfor %}
+            </ul>
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+  {% endfor %}
+
+  <section class="section" aria-labelledby="not-guaranteed">
+    <h2 id="not-guaranteed">{% translate "What is not guaranteed" %}</h2>
+    <ul>
+      <li>{% translate "The support check of the assistants is itself a language model. It can only remove a statement, never add one, but its judgement is not a guarantee." %}</li>
+      <li>{% translate "A statement can pass every check and still put its evidence less precisely than the source does. No person has yet checked the assistants' answers." %}</li>
+      <li>{% translate "The data on this site are a small labelled sample, not the research corpus." %}</li>
+      <li>{% translate "A test proves what it tests. It is not a proof that no other fault is present." %}</li>
+    </ul>
+    <p><a href="{{ repository }}">{% translate "Source code and documentation" %}</a></p>
+  </section>
+{% endblock %}

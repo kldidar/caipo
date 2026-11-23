@@ -6,6 +6,9 @@
 
 {% block content %}
   <nav class="breadcrumb" aria-label="{% translate 'Breadcrumb' %}"><a href="{% url 'help' %}">{% translate "Help" %}</a></nav>
+  <header class="page-header">
+    <h1>{% translate "Help assistant" %}</h1>
+  </header>
   <section class="panel">
     <div class="panel__body stack">{% include "web/includes/help_form.html" %}</div>
   </section>

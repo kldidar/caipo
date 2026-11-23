@@ -53,6 +53,11 @@
     <div class="site-footer__inner">
       <p><strong>{% translate "CAIPO" %}</strong> · {% translate "A research platform for the comparative study of AI policy and economic transformation in Central Asia." %}</p>
       <p>{% translate "Sources are recorded with their provenance. Missing data stays missing. Associations are never presented as causes." %}</p>
+      <nav class="site-footer__links" aria-label="{% translate 'About this site' %}">
+        <a href="{% url 'about' %}">{% translate "About CAIPO" %}</a>
+        <a href="{% url 'guarantees' %}">{% translate "Guarantees" %}</a>
+        <a href="{% url 'help' %}">{% translate "Help" %}</a>
+      </nav>
     </div>
   </footer>
   {% block help_panel %}{% if navigation.help_panel %}{% include "web/includes/help_panel.html" %}{% endif %}{% endblock %}
