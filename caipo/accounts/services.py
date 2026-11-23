@@ -38,7 +38,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
 from django.db import connection, transaction
-from django.db.models import F
+from django.db.models import F, QuerySet
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext as _
@@ -79,7 +79,7 @@ from caipo.accounts.models import (
 )
 from caipo.core import mail
 from caipo.core.correlation import get_correlation_id
-from caipo.core.shared_account import is_shared_account
+from caipo.core.shared_account import is_shared_account, is_shared_address
 
 logger = logging.getLogger(__name__)
 
@@ -399,7 +399,10 @@ def sign_in(*, email: str, password: str, source: str) -> SignInResult:
 
     Never raises for bad credentials. Returns THROTTLED, without checking the
     password, when too many recent attempts failed for this email address or
-    from this source; this is the same whether or not an account exists.
+    from this source; this is the same whether or not an account exists. The
+    instance's shared account is throttled by source only: its password is
+    published, so counting failures against it guards nothing, and would let
+    anyone lock every visitor out of it (ADR-0024 point 5).
     """
     identifier = User.objects.normalize_email(email)
     identifier_key = _key("identifier", identifier)
@@ -412,7 +415,9 @@ def sign_in(*, email: str, password: str, source: str) -> SignInResult:
         _lock_attempts(_SOURCE_LOCK, source_key)
         _lock_attempts(_IDENTIFIER_LOCK, identifier_key)
 
-        throttled_by = _throttled_by(identifier_key, source_key)
+        throttled_by = _throttled_by(
+            identifier_key, source_key, by_account=not is_shared_address(identifier)
+        )
         if throttled_by is not None:
             logger.warning(
                 "Sign-in throttled",
@@ -3181,20 +3186,10 @@ def _accept_code(user: User, code: str, state: TotpDeviceState) -> TotpDevice | 
     return device
 
 
-def _throttled_by(identifier_key: str, source_key: str) -> str | None:
-    """Return which limit refuses a new attempt now, "account" or "source", or None.
-
-    A wrong password counts the same whether it was given at sign-in or when a
-    signed-in account was asked for it again.
-    """
-    window_start = timezone.now() - settings.LOGIN_THROTTLE_WINDOW
-    failures = AuthenticationEvent.objects.filter(
-        event_type__in=[
-            AuthenticationEventType.LOGIN_FAILURE,
-            AuthenticationEventType.PASSWORD_CONFIRMATION_FAILED,
-        ]
-    )
-
+def _account_failures(
+    failures: QuerySet[AuthenticationEvent], identifier_key: str, window_start: datetime
+) -> int:
+    """Count the failures for an email address since the window opened or its last sign-in."""
     # A successful sign-in clears the count for that email address. It does
     # not clear the count for the source: one valid account must not buy a
     # source fresh attempts at every other account.
@@ -3211,10 +3206,28 @@ def _throttled_by(identifier_key: str, source_key: str) -> str | None:
     )
     if last_success is not None:
         counted_from = last_success
-    account_failures = failures.filter(
-        identifier_key=identifier_key, created_at__gt=counted_from
-    ).count()
-    if account_failures >= settings.LOGIN_THROTTLE_ACCOUNT_FAILURES:
+    return failures.filter(identifier_key=identifier_key, created_at__gt=counted_from).count()
+
+
+def _throttled_by(identifier_key: str, source_key: str, *, by_account: bool = True) -> str | None:
+    """Return which limit refuses a new attempt now, "account" or "source", or None.
+
+    A wrong password counts the same whether it was given at sign-in or when a
+    signed-in account was asked for it again. With `by_account` false, only
+    the source is counted.
+    """
+    window_start = timezone.now() - settings.LOGIN_THROTTLE_WINDOW
+    failures = AuthenticationEvent.objects.filter(
+        event_type__in=[
+            AuthenticationEventType.LOGIN_FAILURE,
+            AuthenticationEventType.PASSWORD_CONFIRMATION_FAILED,
+        ]
+    )
+
+    if by_account and (
+        _account_failures(failures, identifier_key, window_start)
+        >= settings.LOGIN_THROTTLE_ACCOUNT_FAILURES
+    ):
         return "account"
 
     source_failures = failures.filter(source_key=source_key, created_at__gte=window_start).count()

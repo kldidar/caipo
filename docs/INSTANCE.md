@@ -34,11 +34,11 @@ Choose two passwords:
 
 1. Create a project in the region **AWS Europe Central 1 (Frankfurt)**.
 2. Choose PostgreSQL **18**, the version CI tests on. If Neon offers only an older one, tell Claude Code: the suite is run on it before going on.
-3. From the connection details, note the host, database name, user, and password. Connections use TLS; the instance requires it.
+3. Press **Connect**, turn **Connection pooling** off, and note from the connection string `postgresql://USER:PASSWORD@HOST/DB?sslmode=require` the host (it has no `-pooler`), database name, user, and password. Connections use TLS; the instance requires it.
 
 ## 3. Render: the web service
 
-1. New → Web Service → the repository `kldidar/caipo`, branch `main`.
+1. New → Web Service → the repository `kldidar/caipo`, branch `main`. The service's name makes its address, `https://<name>.onrender.com` (with a suffix if the name is taken); the address is shown under the name once the service exists.
 2. Set the following:
    - Language: **Docker**
    - Region: **Frankfurt**
@@ -57,6 +57,7 @@ Choose two passwords:
 | `POSTGRES_PORT` | `5432` |
 | `GROQ_API_KEY` | your Groq key; no payment method on that account |
 | `CAIPO_SHARED_PASSWORD` | the shared Reader's password |
+| `CAIPO_TRUSTED_PROXY_COUNT` | optional; 1 when unset. Set only as the measurement in §5 finds |
 
 The first build takes a few minutes. Until step 4 is done, the site answers but its pages fail, because the database is empty.
 
@@ -70,6 +71,7 @@ read -s -p "Shared Reader password: " SHARED && echo
 read -s -p "Researcher password: " PRIVATE && echo
 export PGSSLMODE=require POSTGRES_HOST=<neon host> POSTGRES_DB=<db> POSTGRES_USER=<user> \
        POSTGRES_PASSWORD="$NEON" POSTGRES_PORT=5432
+uv run --env-file .env python manage.py shell -c "from django.db import connection; connection.ensure_connection(); print('OK', connection.settings_dict['HOST'])"
 uv run --env-file .env python manage.py migrate
 uv run --env-file .env python manage.py seed_demo --password "$SHARED" --researcher-password "$PRIVATE"
 unset NEON SHARED PRIVATE POSTGRES_PASSWORD
@@ -77,6 +79,7 @@ unset NEON SHARED PRIVATE POSTGRES_PASSWORD
 
 Notes:
 - `read -s` keeps the passwords out of your shell history and off the screen.
+- The first command must print `OK` and the Neon host. If it names another host, stop: the next two would reach it.
 - Variables set in the shell take precedence over `.env`, so these commands reach Neon, not your development database.
 - `seed_demo` runs with your development settings, as ADR-0024 point 4 requires. It loads the demonstration records, the World Bank values, the demonstration texts, and the retrieval index.
 
@@ -90,8 +93,22 @@ Notes:
    - read a few pages;
    - ask the research assistant one question;
    - check that "Two-step verification" and "Write an article" are not offered.
-3. **The forged-header measurement** (ADR-0024 point 7), with Claude Code on Day 47. It confirms that the address used for throttling is the one Render's proxy adds (`TRUSTED_PROXY_COUNT = 1`), not one a visitor writes. The link is given out only after it.
+3. **The forged-header measurement** (ADR-0024 point 7), with Claude Code. It confirms that the address used for throttling is the visitor's as Render's proxies saw it, not one a visitor writes and not a proxy's. The link is given out only after it passes (below).
 4. Recommended: label the 34 statements of the [evaluation report](reports/evaluation-day43-assistants.md) (tracker §10).
+
+### The forged-header measurement
+
+The sign-in throttle refuses a source after 20 failed sign-ins in 15 minutes, whatever addresses they name. So it shows which address the instance counts:
+
+1. From one machine, send 22 failed sign-ins, each for a different address that is not an account (`test.measure.N@caipo.test`) and each with a different forged `X-Forwarded-For` from 203.0.113.0/24, a range reserved for documentation.
+2. **It passes** if the 21st and 22nd are refused as too many: the forged entries were not read, and the address counted stayed the same.
+3. It fails if no attempt is refused, or refusals come and go: the count was spread over several addresses, either the forged ones or several proxies'. Then the number of proxies is wrong.
+
+A failed run leaves the throttle on for 15 minutes for whatever addresses it counted; wait that long before measuring again or signing in.
+
+| Date | `CAIPO_TRUSTED_PROXY_COUNT` | Result |
+|---|---|---|
+| 2026-11-23 | 1 (unset) | **Fails.** 22 forged attempts: none refused. 22 more without a forged header: refusals from the 10th, then coming and going. A forged entry was never read (the first run counted toward the second), but the last entry is one of several proxies' addresses, not the visitor's. Render's pages are served through Cloudflare (`server: cloudflare`). Next: 2 |
 
 ## 6. Taking it down
 

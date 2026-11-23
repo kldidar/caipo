@@ -11,8 +11,13 @@ refuse it themselves, and the web layer neither offers nor opens their pages.
 from django.conf import settings
 
 
+def is_shared_address(email: str) -> bool:
+    """Whether the email address is that of the instance's shared account. Never raises."""
+    shared = str(settings.SHARED_ACCOUNT_EMAIL)
+    return bool(shared) and email.casefold() == shared.casefold()
+
+
 def is_shared_account(user: object) -> bool:
     """Whether the user is the instance's shared account, by its email address. Never raises."""
-    shared = str(settings.SHARED_ACCOUNT_EMAIL)
     email = getattr(user, "email", "")
-    return bool(shared) and isinstance(email, str) and email.casefold() == shared.casefold()
+    return isinstance(email, str) and is_shared_address(email)

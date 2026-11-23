@@ -404,3 +404,41 @@ def test_attempts_sent_together_cannot_exceed_the_allowance(settings: LazySettin
         [str(REFUSED)] * limit + [str(THROTTLED)] * 7
     )
     assert AuthenticationEvent.objects.count() == limit
+
+
+SHARED = "test.shared@caipo.test"
+
+
+@pytest.fixture
+def shared(settings: LazySettings) -> User:
+    settings.SHARED_ACCOUNT_EMAIL = SHARED
+    return User.objects.create_user(SHARED, PASSWORD)
+
+
+def test_failures_from_many_sources_never_lock_the_shared_account(
+    shared: User, settings: LazySettings
+) -> None:
+    # Its password is published: anyone could otherwise lock every visitor out.
+    for number in range(settings.LOGIN_THROTTLE_ACCOUNT_FAILURES + 3):
+        assert _attempt(email=SHARED, source=f"198.51.100.{number}") == REFUSED
+
+    assert _attempt(email=SHARED, password=PASSWORD, source="198.51.100.200") == SIGNED_IN
+
+
+def test_the_shared_account_is_still_throttled_by_source(
+    shared: User, settings: LazySettings
+) -> None:
+    limit = settings.LOGIN_THROTTLE_SOURCE_FAILURES
+
+    assert [_attempt(email=SHARED) for _ in range(limit)] == [REFUSED] * limit
+    assert _attempt(email=SHARED, password=PASSWORD) == THROTTLED
+    assert _attempt(email=SHARED, password=PASSWORD, source=OTHER_SOURCE) == SIGNED_IN
+
+
+def test_every_other_account_is_still_throttled_where_there_is_a_shared_one(
+    shared: User, user: User, settings: LazySettings
+) -> None:
+    for number in range(settings.LOGIN_THROTTLE_ACCOUNT_FAILURES):
+        assert _attempt(source=f"198.51.100.{number}") == REFUSED
+
+    assert _attempt(password=PASSWORD, source="198.51.100.200") == THROTTLED

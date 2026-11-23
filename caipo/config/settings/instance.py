@@ -57,8 +57,10 @@ PASSWORD_RESET_OPEN = False
 SHARED_ACCOUNT_EMAIL = "demo.reader@caipo.test"
 SHARED_ACCOUNT_PASSWORD = env.required("CAIPO_SHARED_PASSWORD")
 
-# Render's proxy appends the address it received the request from to
-# X-Forwarded-For, after whatever the client sent. Only that last entry is
-# trusted (ADR-0024 point 7); the forged-header measurement before the link
-# is given out confirms it (Day 47).
-TRUSTED_PROXY_COUNT = 1
+# Each proxy in front of the instance appends the address it received the
+# request from to X-Forwarded-For, after whatever the client sent; the client
+# address is the entry the outermost trusted proxy added, counted from the
+# right (ADR-0024 point 7). How many proxies there are is the host's, not the
+# code's, and is measured with a forged header (docs/INSTANCE.md). On Day 47,
+# with one, the last entry changed from request to request: not the client's.
+TRUSTED_PROXY_COUNT = env.proxy_count("CAIPO_TRUSTED_PROXY_COUNT", default=1)
