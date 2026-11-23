@@ -149,6 +149,24 @@ def test_a_random_password_is_shown_once_when_none_is_given() -> None:
     assert "Password for both (shown once)" in out.getvalue()
 
 
+@override_settings(DEBUG=True)
+def test_the_researcher_may_be_given_a_password_of_its_own() -> None:
+    call_command(
+        "seed_demo",
+        "--password",
+        "TEST-published-password",
+        "--researcher-password",
+        "TEST-private-password",
+        stdout=StringIO(),
+    )
+
+    reader = User.objects.get(email="demo.reader@caipo.test")
+    researcher = User.objects.get(email="demo.researcher@caipo.test")
+    assert reader.check_password("TEST-published-password")
+    assert researcher.check_password("TEST-private-password")
+    assert not researcher.check_password("TEST-published-password")
+
+
 def test_only_demonstration_documents_are_given_a_text() -> None:
     catalogue = load()
     demonstration = {

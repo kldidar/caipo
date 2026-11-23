@@ -6,6 +6,10 @@
 {% block card %}
   <p class="eyebrow">{% translate "Research workspace" %}</p>
   <h1>{% translate "Create an account" %}</h1>
+  {% if closed %}
+    <p role="status">{% translate "Registration is closed on this demonstration. Sign in with the demonstration account shown on the sign-in page." %}</p>
+    <p class="auth__links"><a href="{% url 'login' %}">{% translate "Sign in" %}</a></p>
+  {% else %}
   {% if registered %}
     <p role="status">{% translate "If that address can be registered, a message with a link has been sent to it. Open the link to confirm the address and choose your password. It works once and for 48 hours. If the address already has an account, sign in, or reset your password." %}</p>
     {% if outbox %}
@@ -28,4 +32,5 @@
   </form>
   <p class="muted"><small>{% translate "CAIPO keeps your email address and a record of when the account was registered and used. Nothing else is asked for." %}</small></p>
   <p class="auth__links"><a href="{% url 'login' %}">{% translate "Already have an account? Sign in" %}</a></p>
+  {% endif %}
 {% endblock %}

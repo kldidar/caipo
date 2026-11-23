@@ -5,8 +5,8 @@ from typing import Any
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
 
-from caipo.accounts import selectors
 from caipo.core.correlation import CORRELATION_ATTRIBUTE, correlation_scope
+from caipo.web import instance
 from caipo.web.access import PUBLIC, declared_access
 from caipo.web.sessions import authentication_context
 
@@ -64,7 +64,7 @@ class AccessDeclarationMiddleware:
             raise PermissionDenied
         if access == PUBLIC:
             return
-        if not selectors.can(authentication_context(request), access):
+        if not instance.may(authentication_context(request), access):
             logger.warning(
                 "Refused a view to an account without the declared permission",
                 extra={

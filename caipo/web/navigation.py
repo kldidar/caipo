@@ -13,9 +13,8 @@ from django.urls import resolve, reverse
 from django.utils.functional import Promise
 from django.utils.translation import gettext_lazy as _
 
-from caipo.accounts import selectors
 from caipo.accounts.selectors import Permission
-from caipo.web import sessions
+from caipo.web import instance, sessions
 from caipo.web.access import PUBLIC, declared_access
 
 
@@ -150,7 +149,7 @@ def navigation(request: HttpRequest) -> dict[str, Navigation | None]:
     actor = sessions.authentication_context(request)
     if actor is None:
         return {"navigation": None}
-    held = selectors.permissions_of(actor)
+    held = instance.permissions_shown(actor)
     match = request.resolver_match
     current_route = (match.url_name or "") if match is not None else ""
     email = str(getattr(request.user, "email", ""))

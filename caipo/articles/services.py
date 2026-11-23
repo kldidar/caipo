@@ -12,6 +12,7 @@ import logging
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
 from django.db import connection, transaction
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -28,6 +29,7 @@ from caipo.articles.models import (
     status_of,
 )
 from caipo.core.entry import InvalidEntryError, RecordNotFoundError, clean_text
+from caipo.core.shared_account import is_shared_account
 
 logger = logging.getLogger(__name__)
 
@@ -83,11 +85,14 @@ def submit_article(
     transaction; a log line after it commits. The article awaits review and
     is shown to nobody but its author and reviewers until it is published.
 
-    Raises PermissionDenied before anything else is examined, and
-    InvalidEntryError for anything else refused. Nothing is stored in either
-    case.
+    Raises PermissionDenied before anything else is examined, also for the
+    shared account of the public instance, whose password is published
+    (ADR-0024 point 5), and InvalidEntryError for anything else refused.
+    Nothing is stored in either case.
     """
     accounts_selectors.require_permission(actor, Permission.ARTICLES_SUBMIT)
+    if is_shared_account(actor.user):
+        raise PermissionDenied("The shared demonstration account cannot submit an article.")
     if licence not in ArticleLicence.values:
         raise InvalidEntryError(
             _("An article is sent only under the licence it is published with, CC BY 4.0.")

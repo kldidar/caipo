@@ -38,8 +38,14 @@ def register(request: HttpRequest) -> HttpResponse:
     Public: whoever registers is not signed in. Every registration with a
     well-formed email address gets the same answer, whether or not the
     address has an account and whether or not the registration was
-    throttled. Nothing that was submitted is put back into the page.
+    throttled. Nothing that was submitted is put back into the page. Where
+    registration is closed (the public instance, ADR-0024 point 5), the page
+    says so, and a registration sent anyway is refused with 403 and reaches
+    no service.
     """
+    if not settings.REGISTRATION_OPEN:
+        status = 403 if request.method == "POST" else 200
+        return render(request, "web/register.html", {"closed": True}, status=status)
     error = None
     registered = False
 

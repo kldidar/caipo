@@ -10,6 +10,7 @@ anonymous to every other view. The session becomes a signed-in one only when
 the code is accepted.
 """
 
+from django.conf import settings
 from django.contrib.auth import login, logout
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
@@ -24,7 +25,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from caipo.accounts import selectors, services
 from caipo.accounts.selectors import Permission
 from caipo.accounts.services import MfaOutcome, SignInOutcome
-from caipo.web import sessions
+from caipo.web import instance, sessions
 from caipo.web.access import public
 from caipo.web.forms import SecondFactorCodeForm, SignInForm
 
@@ -41,13 +42,25 @@ CODE_THROTTLED_MESSAGE = _("Too many codes were refused. Wait a while and try ag
 
 
 def source(request: HttpRequest) -> str:
-    """Return the address the request came from, as this process saw it.
+    """Return the address the request came from, for throttling and the record of a sign-in.
 
-    Deliberately not read from X-Forwarded-For or any other header: a client
-    can write those. Behind a reverse proxy this is the proxy's address until
-    the deployment decision says which header to trust (ADR-0008).
+    By default the peer address, as this process saw it: X-Forwarded-For is
+    ignored, because a client can write it. Where the settings name the
+    number of trusted proxies in front of the application (the public
+    instance, ADR-0024 point 7), the address is the entry the nearest of them
+    appended, counted from the right of X-Forwarded-For. Entries to its left
+    may have come from the client and are never read. If the header holds
+    fewer entries than that, the peer address is used.
     """
-    return str(request.META.get("REMOTE_ADDR", ""))
+    peer = str(request.META.get("REMOTE_ADDR", ""))
+    proxies = int(settings.TRUSTED_PROXY_COUNT)
+    if proxies < 1:
+        return peer
+    header = str(request.META.get("HTTP_X_FORWARDED_FOR", ""))
+    entries = [entry.strip() for entry in header.split(",") if entry.strip()]
+    if len(entries) < proxies:
+        return peer
+    return entries[-proxies]
 
 
 def _safe_destination(request: HttpRequest, candidate: str) -> str:
@@ -112,7 +125,7 @@ def sign_in(request: HttpRequest) -> HttpResponse:
         form = SignInForm()
 
     actor = sessions.authentication_context(request)
-    can_manage_second_factor = selectors.can(actor, Permission.MFA_MANAGE_OWN)
+    can_manage_second_factor = instance.may(actor, Permission.MFA_MANAGE_OWN)
     context = {
         "form": form,
         "error": error,
@@ -133,6 +146,12 @@ def sign_in(request: HttpRequest) -> HttpResponse:
         "can_enter_registry": selectors.can(actor, Permission.REGISTRY_INSTITUTIONS_MANAGE),
         "activated": "activated" in request.GET,
         "password_reset": "reset" in request.GET,
+        # The public instance publishes its shared account (ADR-0024 point 5).
+        "shared_account": (
+            {"email": settings.SHARED_ACCOUNT_EMAIL, "password": settings.SHARED_ACCOUNT_PASSWORD}
+            if settings.SHARED_ACCOUNT_EMAIL and settings.SHARED_ACCOUNT_PASSWORD
+            else None
+        ),
     }
     return render(request, "web/sign_in.html", context, status=status)
 

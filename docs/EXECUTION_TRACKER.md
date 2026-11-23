@@ -273,6 +273,7 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 41 | The research assistant's page, with the evidence panel for each statement; the cap of three model calls an answer (ADR-0025 point 7) | D4, E4 | 2026-11-20 | **DONE**: merged as `647f174`; CI run 44764803726 passed all four checks; `5407 passed` | #70 |
 | 42 | The help panel at the bottom right of every workspace page, sent with HTMX (vendored, `htmx.org` 2.0.11); the help pages, public; the help assistant's answers with links to help sections, and its fixed reply | D4, E4 | 2026-11-20 | **DONE**: merged as `2bbf6cd`; CI run 44799217029 passed all four checks; `5423 passed` | #71 |
 | 43 | The evaluation of both assistants (ADR-0025 point 10): a gold set of 33 cases in English and in Russian, an adversarial corpus of four hostile documents, the command `evaluate_assistants`, and the report per language | D4, G | 2026-11-22 | AWAITING OWNER MERGE | The pull request that changes this file |
+| 46 | The public demonstration instance (ADR-0024), built and checked locally: the container image (gunicorn, whitenoise; non-root; no migration at start), the instance settings, the client address from Render's proxy, registration and password reset closed, the shared account's refusals, the notice to visitors and the retention of questions (B19), `seed_demo --researcher-password`, and the owner's runbook [INSTANCE.md](INSTANCE.md) | I1 | 2026-11-23 | AWAITING OWNER MERGE | The pull request that adds this row; run beside Days 44 and 45 at the owner's request for larger steps |
 
 ### Planned Days
 
@@ -296,7 +297,7 @@ A Day is one unit of work by Claude Code, with one coherent deliverable and writ
 | 43 | 4 | Evaluation: gold sets in English and Russian for both assistants, refusals, abstentions, prompt-injection and verifier attacks; the report per language, in the repository | D4, G | Started 2026-11-22 (§5, Days started) |
 | 44 | 5 | Design pass on every page; a public page that tells what CAIPO is | E1, E4 | Day 43 |
 | 45 | 5 | A page of guarantees: each with the test or database rule that enforces it | H | Day 44 |
-| 46 | 6 | The instance (ADR-0024): container image, instance settings, the shared account's refusals, the notice to visitors | I1 | ADR-0024 accepted |
+| 46 | 6 | The instance (ADR-0024): container image, instance settings, the shared account's refusals, the notice to visitors | I1 | Started 2026-11-23 (§5, Days started) |
 | 47 | 6 | Deployment on Render and Neon with the owner; the forged-header measurement before anyone is given the link | I1 | Day 46; the owner's two accounts |
 | 48 | 7 | Feature freeze: fixes found by the owner's own use; the facts in the owner's project description checked | J1 | Day 47 |
 

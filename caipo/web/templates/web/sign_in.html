@@ -58,6 +58,15 @@
         {% elif password_reset %}
           <p role="status">{% translate "Your password has been changed. Sign in with your email address and the new password." %}</p>
         {% endif %}
+        {% if shared_account %}
+          <div class="notice shared-account">
+            <span><strong>{% translate "Try it with the demonstration account." %}</strong> {% translate "It is shared, so it can read every page of the workspace and ask the assistants, but cannot change anything about itself." %}</span>
+            <dl>
+              <dt>{% translate "Email address" %}</dt><dd><code>{{ shared_account.email }}</code></dd>
+              <dt>{% translate "Password" %}</dt><dd><code>{{ shared_account.password }}</code></dd>
+            </dl>
+          </div>
+        {% endif %}
         <form method="post" action="{% url 'login' %}" novalidate>
           {% csrf_token %}
           {% if next %}<input type="hidden" name="{{ next_field }}" value="{{ next }}">{% endif %}
@@ -70,8 +79,8 @@
           {% endfor %}
           <button type="submit">{% translate "Sign in" %}</button>
         </form>
-        <p class="auth__links"><a href="{% url 'password-reset' %}">{% translate "Forgotten your password?" %}</a></p>
-        <p class="auth__links"><a href="{% url 'register' %}">{% translate "No account? Create one" %}</a></p>
+        {% if instance.password_reset_open %}<p class="auth__links"><a href="{% url 'password-reset' %}">{% translate "Forgotten your password?" %}</a></p>{% endif %}
+        {% if instance.registration_open %}<p class="auth__links"><a href="{% url 'register' %}">{% translate "No account? Create one" %}</a></p>{% endif %}
         <p class="muted"><small>{% translate "A new account can read the workspace. An Administrator gives the roles that add and review records." %}</small></p>
       </div>
     </div>

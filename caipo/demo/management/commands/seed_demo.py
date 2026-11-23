@@ -54,6 +54,13 @@ class Command(BaseCommand):
             "--password",
             help="Password for both demonstration accounts. A random one is printed if omitted.",
         )
+        parser.add_argument(
+            "--researcher-password",
+            help=(
+                "A password for the Researcher alone, where the Reader's is published"
+                " (the public instance, ADR-0024 point 5)."
+            ),
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
         if not settings.DEBUG:
@@ -71,7 +78,7 @@ class Command(BaseCommand):
             return
         password = options.get("password") or secrets.token_urlsafe(12)
         with transaction.atomic():
-            researcher = self._accounts(password)
+            researcher = self._accounts(password, options.get("researcher_password") or password)
             self._seed(authentication_context(researcher, verified_device_id=None), catalogue)
         self.stdout.write(self.style.SUCCESS("Demonstration environment created."))
         self.stdout.write(f"  {self._index()}")
@@ -114,12 +121,12 @@ class Command(BaseCommand):
                 attached += 1
         return attached
 
-    def _accounts(self, password: str) -> User:
+    def _accounts(self, password: str, researcher_password: str) -> User:
         seed = User.objects.filter(email=SEED_EMAIL).first() or User.objects.create_user(SEED_EMAIL)
         accounts = {}
         for email, role in ((RESEARCHER_EMAIL, Role.RESEARCHER), (READER_EMAIL, Role.READER)):
             user = User.objects.filter(email=email).first() or User.objects.create_user(email)
-            user.set_password(password)
+            user.set_password(researcher_password if role == Role.RESEARCHER else password)
             user.save(update_fields=["password"])
             if not RoleEvent.objects.filter(user=user, role=role).exists():
                 RoleEvent.objects.create(
