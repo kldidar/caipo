@@ -16,11 +16,17 @@ dependencies = [
     "cryptography>=50.0,<51",
     # Long-term-support series (ADR-0001, docs/ARCHITECTURE.md §6).
     "django>=5.2,<5.3",
+    # The WSGI server of the public demonstration instance (ADR-0024): Django's
+    # own server is for development only.
+    "gunicorn>=26.2,<27",
     # Binary wheels keep local setup free of a C toolchain. Revisit for production images.
     "psycopg[binary]>=3.3,<4",
     # Capped below 6.5 because kombu, which Celery (ADR-0004, Proposed) depends on,
     # requires redis<6.5. Raising this cap would make Celery uninstallable.
     "redis>=6.4,<6.5",
+    # Serves the static files from the web process on the instance (ADR-0024
+    # point 6), which has no separate web server in front of it.
+    "whitenoise>=6.9,<7",
 ]
 
 [dependency-groups]

@@ -20,6 +20,7 @@ from caipo.accounts.selectors import Permission
 from caipo.articles import selectors, services
 from caipo.articles.models import ArticleLicence
 from caipo.articles.selectors import ArticleDecisionType
+from caipo.web import instance
 from caipo.web.access import requires
 from caipo.web.workspace import FORM_ERROR, REFUSED, actor_of
 from caipo.web.workspace_forms import ArticleDecisionForm, ArticleForm
@@ -37,7 +38,7 @@ def articles(request: HttpRequest) -> HttpResponse:
         "web/articles.html",
         {
             "entries": selectors.published_articles(actor),
-            "can_write": accounts_selectors.can(actor, Permission.ARTICLES_SUBMIT),
+            "can_write": instance.may(actor, Permission.ARTICLES_SUBMIT),
             "can_review": can_review,
             "waiting": len(selectors.articles_awaiting_review(actor)) if can_review else 0,
         },

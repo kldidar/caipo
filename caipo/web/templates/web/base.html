@@ -46,6 +46,7 @@
       {% endif %}{% endblock %}
     </div>
   </header>
+  {% if instance.demonstration %}{% include "web/includes/instance_notice.html" %}{% endif %}
   <main id="main" tabindex="-1" class="{% block main_class %}page{% endblock %}">
     {% block content %}{% endblock %}
   </main>

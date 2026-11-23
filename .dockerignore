@@ -1,0 +1,16 @@
+# Only what the instance runs goes into the image: never a secret, a local
+# database, the tests, or the documents.
+.env
+.env.*
+.git
+.github
+.claude
+.venv
+**/__pycache__
+**/tests
+data
+docs
+graphify-out
+staticfiles
+media
+*.md

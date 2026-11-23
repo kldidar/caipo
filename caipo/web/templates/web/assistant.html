@@ -18,6 +18,7 @@
         {% csrf_token %}
         {% include "web/includes/fields.html" %}
         <p class="muted"><small>{% blocktranslate with provider=provider.label model=provider.model %}Your question is sent to {{ provider }} ({{ model }}) under that provider's terms for its free tier, and stored here with the answer. Do not include personal information.{% endblocktranslate %}</small></p>
+        {% if instance.demonstration %}<p class="muted"><small>{% translate "On this demonstration, questions and answers are kept until the site is taken down, by 30 June 2027 at the latest." %}</small></p>{% endif %}
         <p class="muted"><small>{% blocktranslate count left=quotas.account %}You may ask {{ left }} more question today.{% plural %}You may ask {{ left }} more questions today.{% endblocktranslate %}</small></p>
         <button type="submit">{% translate "Ask the assistant" %}</button>
       </form>

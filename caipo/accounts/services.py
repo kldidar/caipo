@@ -79,6 +79,7 @@ from caipo.accounts.models import (
 )
 from caipo.core import mail
 from caipo.core.correlation import get_correlation_id
+from caipo.core.shared_account import is_shared_account
 
 logger = logging.getLogger(__name__)
 
@@ -739,6 +740,15 @@ def reject_mfa_recovery(
     return RecoveryDecisionResult(RecoveryDecisionOutcome.REJECTED)
 
 
+def _refuse_shared_account(actor: AuthenticationContext) -> None:
+    """Stop the shared account of the public instance from changing its second factor.
+
+    Anything that is not a context is left to the permission check that follows.
+    """
+    if is_shared_account(getattr(actor, "user", None)):
+        raise PermissionDenied("The shared demonstration account cannot change its second factor.")
+
+
 @sensitive_variables("password", "secret")
 def start_mfa_enrollment(*, actor: AuthenticationContext, password: str, source: str) -> MfaResult:
     """Issue a new TOTP secret to the acting account, as a pending enrolment.
@@ -758,13 +768,15 @@ def start_mfa_enrollment(*, actor: AuthenticationContext, password: str, source:
     any other account the device awaits its first code at once, and lapses
     after MFA_ENROLLMENT_LIFETIME.
 
-    Raises PermissionDenied if the actor may not manage their second factor.
+    Raises PermissionDenied if the actor may not manage their second factor,
+    or is the shared account of the public instance (ADR-0024 point 5).
     Returns REFUSED for a wrong password, which records
     `password_confirmation_failed`; THROTTLED when password attempts for the
     account or from the source are throttled; and UNAVAILABLE if the account
     already has an active second factor: that one is replaced only with
     `replace_mfa_device`.
     """
+    _refuse_shared_account(actor)
     with transaction.atomic():
         refusal = _confirm_password(actor, password, source)
         if refusal is not None:
@@ -804,12 +816,14 @@ def confirm_mfa_enrollment(*, actor: AuthenticationContext, code: str, source: s
     account, and its sessions are what any confirmed enrolment leaves. A
     device enrolled without approval completes nothing.
 
-    Raises PermissionDenied if the actor may not manage their second factor.
+    Raises PermissionDenied if the actor may not manage their second factor,
+    or is the shared account of the public instance (ADR-0024 point 5).
     Returns UNAVAILABLE if nothing awaits a code or it has lapsed; REFUSED for a
     wrong code, which records `mfa_verification_failed` and leaves the
     enrolment pending; and THROTTLED, without examining the code, when too
     many codes were refused for the account.
     """
+    _refuse_shared_account(actor)
     with transaction.atomic():
         selectors.require_permission(actor, Permission.MFA_MANAGE_OWN)
         user = actor.user
@@ -868,11 +882,13 @@ def disable_mfa(
     second factor confer nothing again until the account enrols anew, which
     for such an account needs an Administrator's approval.
 
-    Raises PermissionDenied if the actor may not manage their second factor.
+    Raises PermissionDenied if the actor may not manage their second factor,
+    or is the shared account of the public instance (ADR-0024 point 5).
     Returns REFUSED for a wrong password or a wrong code, each recorded as for
     the other operations; THROTTLED when either kind of attempt is throttled;
     and UNAVAILABLE if the account has no active second factor.
     """
+    _refuse_shared_account(actor)
     with transaction.atomic():
         refusal = _remove_active_device(actor, password, code, source)
         if refusal is not None:
@@ -910,10 +926,12 @@ def replace_mfa_device(
     new enrolment is active, and approved where that is required, roles that
     require a second factor confer nothing.
 
-    Raises PermissionDenied if the actor may not manage their second factor.
+    Raises PermissionDenied if the actor may not manage their second factor,
+    or is the shared account of the public instance (ADR-0024 point 5).
     Returns REFUSED, THROTTLED, and UNAVAILABLE as `disable_mfa` does, and
     then nothing is changed.
     """
+    _refuse_shared_account(actor)
     with transaction.atomic():
         refusal = _remove_active_device(actor, password, code, source)
         if refusal is not None:
@@ -1480,11 +1498,16 @@ def register_account(*, email: str, source: str, activation_url: Callable[[str],
     whatever their addresses. A throttled registration is logged, stores
     nothing, and sends nothing.
 
-    Raises ValidationError if the email address is not valid; then nothing
-    was stored. Never raises because of whether the address has an account.
-    A message that could not be sent is logged as an error, without the
-    address, the token, or the link, and the account awaits another message.
+    Raises PermissionDenied, before anything is looked at, where
+    registration is closed (REGISTRATION_OPEN; the public instance sends no
+    message, ADR-0024 point 5). Raises ValidationError if the email address
+    is not valid; then nothing was stored. Never raises because of whether
+    the address has an account. A message that could not be sent is logged
+    as an error, without the address, the token, or the link, and the
+    account awaits another message.
     """
+    if not settings.REGISTRATION_OPEN:
+        raise PermissionDenied("Registration is closed.")
     source_key = _key("source", source)
     address = User.objects.normalize_email(email)
     validate_email(address)
@@ -1653,8 +1676,12 @@ def request_password_reset(*, email: str, source: str, reset_url: Callable[[str]
     Never raises for any email address. A message that could not be sent is
     logged as an error, without the address, the token, or the link; the
     token stays stored and nobody holds it, until the next request replaces
-    it or it lapses.
+    it or it lapses. Raises PermissionDenied, before anything is looked at,
+    where password reset is closed (PASSWORD_RESET_OPEN; the public instance
+    sends no message, ADR-0024 point 5).
     """
+    if not settings.PASSWORD_RESET_OPEN:
+        raise PermissionDenied("Password reset is closed.")
     identifier = User.objects.normalize_email(email)
     identifier_key = _key("identifier", identifier)
     source_key = _key("source", source)

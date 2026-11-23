@@ -4,6 +4,7 @@
   <label for="help-question">{% translate "Your question, in English or Russian" %}</label>
   <textarea id="help-question" name="question" rows="3" required></textarea>
   <p class="muted"><small>{% blocktranslate with provider=provider.label model=provider.model %}Sent to {{ provider }} ({{ model }}) under that provider's terms for its free tier, and stored here with the answer. Do not include personal information.{% endblocktranslate %}</small></p>
+  {% if instance.demonstration %}<p class="muted"><small>{% translate "On this demonstration, questions and answers are kept until the site is taken down, by 30 June 2027 at the latest." %}</small></p>{% endif %}
   <button type="submit">{% translate "Ask the help assistant" %}</button>
   <span class="help-panel__waiting" aria-hidden="true">{% translate "Answering…" %}</span>
 </form>

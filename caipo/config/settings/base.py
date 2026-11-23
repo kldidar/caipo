@@ -64,6 +64,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "caipo.web.navigation.navigation",
+                "caipo.web.instance.instance",
             ],
         },
     },
@@ -280,6 +281,22 @@ LOGGING = {
 # provider of the tests, which reach no network.
 ASSISTANT_PROVIDER = "groq"
 GROQ_API_KEY = ""
+
+# The public demonstration instance (ADR-0024) switches these in its own
+# settings module; every other environment keeps them as they are here.
+# Whether pages carry the notice that this is a demonstration instance.
+DEMONSTRATION_INSTANCE = False
+# Registration (ADR-0021) and password reset both send a message; the
+# instance sends none, so it closes both.
+REGISTRATION_OPEN = True
+PASSWORD_RESET_OPEN = True
+# The demonstration account whose address and password are published, and
+# which may therefore change nothing about itself. Empty: there is none.
+SHARED_ACCOUNT_EMAIL = ""
+SHARED_ACCOUNT_PASSWORD = ""
+# How many proxies in front of the application append to X-Forwarded-For.
+# Zero: the header is ignored and the peer address is the client's.
+TRUSTED_PROXY_COUNT = 0
 
 # Where the source code and documentation are published, for the pages that
 # link a guarantee to its tests or the site to its evaluation report.

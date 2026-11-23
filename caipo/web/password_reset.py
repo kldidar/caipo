@@ -61,8 +61,13 @@ def request_reset(request: HttpRequest) -> HttpResponse:
     well-formed email address gets the same answer, whether or not the
     address has an account and whether or not the request was throttled.
     Nothing that was submitted is put back into the page: people type
-    passwords into email fields.
+    passwords into email fields. Where password reset is closed (the public
+    instance, ADR-0024 point 5), the page says so, and a request sent anyway
+    is refused with 403 and reaches no service.
     """
+    if not settings.PASSWORD_RESET_OPEN:
+        status = 403 if request.method == "POST" else 200
+        return render(request, "web/password_reset_request.html", {"closed": True}, status=status)
     error = None
     requested = False
 
