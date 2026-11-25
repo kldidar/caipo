@@ -109,6 +109,7 @@ A failed run leaves the throttle on for 15 minutes for whatever addresses it cou
 |---|---|---|
 | 2026-11-23 | `X-Forwarded-For`, 1st from the right | **Fails.** 22 forged attempts: none refused. 22 more without a forged header: refusals from the 10th, then coming and going. A forged entry was never read (the first run counted toward the second), but the last entry is one of several proxies' addresses, not the visitor's. Render's pages are served through Cloudflare (`server: cloudflare`). Next: 2 |
 | 2026-11-23 | `X-Forwarded-For`, 2nd from the right | **Fails.** 22 attempts with a different forged entry each: none refused. 24 without a forged header: none refused. 22 with one constant forged entry: refused at the 10th, 16th, 20th, and 22nd only. No fixed layout of the header fits; replaced by `CF-Connecting-IP` ([ADR-0026](adr/0026-client-address-from-the-edge.md)) |
+| 2026-11-25 | `CF-Connecting-IP` | **Passes.** 22 attempts, each with a different forged `X-Forwarded-For`: the first 20 refused as wrong, the 21st and 22nd as too many. One request with a forged `CF-Connecting-IP`: refused by Cloudflare (403) |
 
 ## 6. Taking it down
 

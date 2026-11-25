@@ -15,7 +15,7 @@ Phase 1. The architecture gate in `docs/PROJECT_SPECIFICATION.md` §10 is READY 
 - **The demonstrator's assistants of ADR-0025** (2026-11-15): an evidence-bound research assistant and a help assistant, on the pipeline of `docs/AI_ARCHITECTURE.md` with every check it requires. They answer only from reference Observations, demonstration texts, and the help corpus, with lexical retrieval only, on a free tier with a zero budget, and are shown outside the project only after the evaluation that ADR requires.
 - **The public demonstration instance of ADR-0024** (2026-11-15): one instance of the demonstrator alone, on free hosting, with demonstration and reference data only, registration closed, and the checks that ADR lists before its link is given out.
 
-ADR-0003 and 0008 are Proposed and must not be built on. Every other ADR from 0001 to 0025 is Accepted. The index is `docs/adr/README.md`. Only the project owner accepts an ADR.
+ADR-0003 and 0008 are Proposed and must not be built on. Every other ADR from 0001 to 0026 is Accepted. The index is `docs/adr/README.md`. Only the project owner accepts an ADR.
 
 **What is built, what is not, and what comes next are recorded only in `docs/EXECUTION_TRACKER.md`**, and the security controls as built in `SECURITY.md`. Do not assume that anything they do not list as built exists. In particular, these are not built: the operational audit trail of the break-glass command, which waits for ADR-0008; and email delivery in production, which also waits for ADR-0008.
 
