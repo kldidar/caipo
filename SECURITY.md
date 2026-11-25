@@ -640,7 +640,7 @@ The one public copy of the demonstrator ([ADR-0024](docs/adr/0024-public-demonst
   - the database connection requires TLS.
 
   `manage.py check --deploy` leaves two warnings, kept on purpose and recorded in the runbook: HSTS on subdomains and HSTS preload.
-- **The client address.** For throttling and the record of a sign-in, it is the entry that the outermost of the host's proxies appended to `X-Forwarded-For`, counted from the right. How many proxies append is set in Render (`CAIPO_TRUSTED_PROXY_COUNT`, a whole number from 1 to 5, 1 when unset; the instance does not start with any other value). Entries to the left of the one read may have been written by the client, and are never read. Every other environment ignores the header. A test checks forged headers, and the number is measured on the deployed instance with a forged header before the link is given out ([INSTANCE.md](docs/INSTANCE.md), the measurement). On Day 47, with 1, a forged entry was never read, but the last entry changed from request to request: it is a proxy's address, not the client's.
+- **The client address.** For throttling and the record of a sign-in, it is the value of `CF-Connecting-IP`, which Cloudflare, in front of Render, writes over any value the client sent ([ADR-0026](docs/adr/0026-client-address-from-the-edge.md); `CLIENT_ADDRESS_HEADER` in the instance's settings). If the header is missing or holds anything but one IP address, the peer address is used: it may be a proxy's, but never the client's to choose. `X-Forwarded-For` is never read, here or in any other environment, which reads no header at all. Cloudflare refuses a request that carries a `CF-Connecting-IP` of its own (403, error 1000, observed 2026-11-25). Tests send forged headers, and the deployed instance is measured with forged headers before the link is given out ([INSTANCE.md](docs/INSTANCE.md), the measurement). On Day 47, counting entries of `X-Forwarded-For` from the right gave a proxy's address with one entry and no stable address with two, which is why it was replaced.
 - **Registration and password reset are closed**, because the instance sends no email. Both pages say so. A form sent anyway is refused with 403, and the services refuse it too (`REGISTRATION_OPEN`, `PASSWORD_RESET_OPEN`).
 - **The shared account.** The demonstration Reader's address and password are shown on the sign-in page. It is recognised by its address (`caipo.core.shared_account`), and the authorization policy is not changed: it still reads no setting.
   - The four services of a second factor and the submission of an article refuse it themselves.
@@ -653,7 +653,7 @@ The one public copy of the demonstrator ([ADR-0024](docs/adr/0024-public-demonst
 
 **Residual risks**
 
-- The proxy's behaviour is measured on the deployed instance (Day 47). If Render changes how it writes `X-Forwarded-For`, throttling may count a forged address, or a proxy's, until it is measured again and `CAIPO_TRUSTED_PROXY_COUNT` corrected.
+- The client address relies on every request reaching the instance through Cloudflare. If Render served the host without it, a client could write `CF-Connecting-IP` and choose its source for throttling. The measurement with a forged header would show that; it is made before the link is given out and again if responses stop carrying `server: cloudflare`.
 - The database role owns its tables (ADR-0024 point 6), and there is no Content Security Policy yet (ADR-0008). Both are accepted because the database holds only data that can be rebuilt.
 
 ### Web application threats

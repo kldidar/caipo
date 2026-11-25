@@ -316,6 +316,24 @@ def test_a_provider_failure_ends_the_answer_as_failed(reader: AuthenticationCont
 
 
 @pytest.mark.usefixtures("evidence")
+def test_a_provider_failure_is_logged_with_what_failed_for_the_operator(
+    reader: AuthenticationContext, caplog: pytest.LogCaptureFixture
+) -> None:
+    def fail(system: str, user: str) -> str:
+        raise ProviderUnavailableError("HTTP 401")
+
+    with caplog.at_level("WARNING", logger="caipo.assistant.pipeline"):
+        answer = _ask(reader, "Internet users in TEST Reference Country", FakeProvider(fail))
+
+    (record,) = [
+        r for r in caplog.records if getattr(r, "event", "") == "assistant.provider_failed"
+    ]
+    assert record.__dict__["reason"] == "unavailable"
+    assert record.__dict__["detail"] == "HTTP 401"
+    assert record.__dict__["public_id"] == str(answer.interaction)
+
+
+@pytest.mark.usefixtures("evidence")
 def test_past_the_deadline_no_model_is_called(
     reader: AuthenticationContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -57,7 +57,6 @@ Choose two passwords:
 | `POSTGRES_PORT` | `5432` |
 | `GROQ_API_KEY` | your Groq key; no payment method on that account |
 | `CAIPO_SHARED_PASSWORD` | the shared Reader's password |
-| `CAIPO_TRUSTED_PROXY_COUNT` | optional; 1 when unset. Set only as the measurement in §5 finds |
 
 The first build takes a few minutes. Until step 4 is done, the site answers but its pages fail, because the database is empty.
 
@@ -93,22 +92,23 @@ Notes:
    - read a few pages;
    - ask the research assistant one question;
    - check that "Two-step verification" and "Write an article" are not offered.
-3. **The forged-header measurement** (ADR-0024 point 7), with Claude Code. It confirms that the address used for throttling is the visitor's as Render's proxies saw it, not one a visitor writes and not a proxy's. The link is given out only after it passes (below).
+3. **The forged-header measurement** ([ADR-0026](adr/0026-client-address-from-the-edge.md)), with Claude Code. It confirms that the address used for throttling is the visitor's as Cloudflare saw it, not one a visitor writes and not a proxy's. The link is given out only after it passes (below).
 4. Recommended: label the 34 statements of the [evaluation report](reports/evaluation-day43-assistants.md) (tracker §10).
 
 ### The forged-header measurement
 
 The sign-in throttle refuses a source after 20 failed sign-ins in 15 minutes, whatever addresses they name. So it shows which address the instance counts:
 
-1. From one machine, send 22 failed sign-ins, each for a different address that is not an account (`test.measure.N@caipo.test`) and each with a different forged `X-Forwarded-For` from 203.0.113.0/24, a range reserved for documentation.
-2. **It passes** if the 21st and 22nd are refused as too many: the forged entries were not read, and the address counted stayed the same.
-3. It fails if no attempt is refused, or refusals come and go: the count was spread over several addresses, either the forged ones or several proxies'. Then the number of proxies is wrong.
+1. From one machine, send 22 failed sign-ins, each for a different address that is not an account (`test.measure.N@caipo.test`) and each with a different forged `X-Forwarded-For` from 203.0.113.0/24, a range reserved for documentation. Then send one request with a forged `CF-Connecting-IP`.
+2. **It passes** if the 21st and 22nd are refused as too many, so the forged entries were not read and the address counted stayed the same; and if the request with a forged `CF-Connecting-IP` is refused by Cloudflare (403) before it reaches the instance.
+3. It fails if no attempt is refused, or refusals come and go: the count was spread over several addresses, either the forged ones or several proxies'. Then the instance is not reading the address Cloudflare wrote, and the link is not given out.
 
 A failed run leaves the throttle on for 15 minutes for whatever addresses it counted; wait that long before measuring again or signing in.
 
-| Date | `CAIPO_TRUSTED_PROXY_COUNT` | Result |
+| Date | Address read | Result |
 |---|---|---|
-| 2026-11-23 | 1 (unset) | **Fails.** 22 forged attempts: none refused. 22 more without a forged header: refusals from the 10th, then coming and going. A forged entry was never read (the first run counted toward the second), but the last entry is one of several proxies' addresses, not the visitor's. Render's pages are served through Cloudflare (`server: cloudflare`). Next: 2 |
+| 2026-11-23 | `X-Forwarded-For`, 1st from the right | **Fails.** 22 forged attempts: none refused. 22 more without a forged header: refusals from the 10th, then coming and going. A forged entry was never read (the first run counted toward the second), but the last entry is one of several proxies' addresses, not the visitor's. Render's pages are served through Cloudflare (`server: cloudflare`). Next: 2 |
+| 2026-11-23 | `X-Forwarded-For`, 2nd from the right | **Fails.** 22 attempts with a different forged entry each: none refused. 24 without a forged header: none refused. 22 with one constant forged entry: refused at the 10th, 16th, 20th, and 22nd only. No fixed layout of the header fits; replaced by `CF-Connecting-IP` ([ADR-0026](adr/0026-client-address-from-the-edge.md)) |
 
 ## 6. Taking it down
 

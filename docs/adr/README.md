@@ -4,7 +4,7 @@ An ADR records one architecturally significant decision: what was decided, why, 
 
 ## Index
 
-Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, ADR-0021 and ADR-0022 on 2026-11-03, and ADR-0004 and ADR-0011, after the spike of B4 and B21, on 2026-11-05, ADR-0023 on 2026-11-11, and ADR-0006, ADR-0024, and ADR-0025 on 2026-11-15. Two remain Proposed; the last column says what stands between each of those and acceptance.
+Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-0016 on 2026-10-03, ADR-0017 on 2026-10-04, ADR-0018 on 2026-10-09, ADR-0019 on 2026-10-11, ADR-0020 on 2026-10-30, ADR-0021 and ADR-0022 on 2026-11-03, and ADR-0004 and ADR-0011, after the spike of B4 and B21, on 2026-11-05, ADR-0023 on 2026-11-11, ADR-0006, ADR-0024, and ADR-0025 on 2026-11-15, and ADR-0026 on 2026-11-25. Two remain Proposed; the last column says what stands between each of those and acceptance.
 
 | ADR | Title | Status | Needs before acceptance |
 |---|---|---|---|
@@ -31,8 +31,9 @@ Nine ADRs were accepted by the project owner on 2026-10-02, ADR-0015 and ADR-001
 | [0021](0021-registration-for-the-reader-role.md) | Registration on the site, for the Reader role | Accepted | — (decided by the project owner on 2026-11-03; supersedes ADR-0007 rule 3 and ADR-0015 point 8; email delivery in production waits for ADR-0008) |
 | [0022](0022-contributed-articles.md) | Contributed articles, published after review | Accepted | — (decided by the project owner on 2026-11-03, with CC BY 4.0 as the licence of a contributed text; a second exception to the Phase 1 gate beside ADR-0020; changes no gate status and closes no blocker) |
 | [0023](0023-registry-citations.md) | Where a registry name or date comes from | Accepted | — (accepted by the project owner on 2026-11-11 before its implementation, which followed the same day; Blueprint P-11, diagnostic finding I3) |
-| [0024](0024-public-demonstration-instance.md) | A public demonstration instance on free hosting | Accepted | — (accepted on 2026-11-15; its checks before the link is given out are done when the instance is built) |
+| [0024](0024-public-demonstration-instance.md) | A public demonstration instance on free hosting | Accepted | — (accepted on 2026-11-15; its checks before the link is given out are done when the instance is built; point 7, the client address, is superseded by [ADR-0026](0026-client-address-from-the-edge.md)) |
 | [0025](0025-demonstrator-assistants.md) | An evidence-bound assistant and a help assistant in the demonstrator | Accepted | — (accepted on 2026-11-15, with ADR-0006) |
+| [0026](0026-client-address-from-the-edge.md) | The public instance takes the client address from the edge's header | Accepted | — (accepted on 2026-11-25, after the measurement of Day 47; the measurement is made again before the link is given out) |
 
 ## Statuses
 

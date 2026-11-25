@@ -10,6 +10,8 @@ anonymous to every other view. The session becomes a signed-in one only when
 the code is accepted.
 """
 
+import ipaddress
+
 from django.conf import settings
 from django.contrib.auth import login, logout
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
@@ -44,23 +46,21 @@ CODE_THROTTLED_MESSAGE = _("Too many codes were refused. Wait a while and try ag
 def source(request: HttpRequest) -> str:
     """Return the address the request came from, for throttling and the record of a sign-in.
 
-    By default the peer address, as this process saw it: X-Forwarded-For is
-    ignored, because a client can write it. Where the settings name the
-    number of trusted proxies in front of the application (the public
-    instance, ADR-0024 point 7), the address is the entry the nearest of them
-    appended, counted from the right of X-Forwarded-For. Entries to its left
-    may have come from the client and are never read. If the header holds
-    fewer entries than that, the peer address is used.
+    By default the peer address, as this process saw it: no header is read,
+    because a client can write any of them. Where the settings name a header
+    that only the host's own edge writes (the public instance, ADR-0026),
+    the address is that header's value. If the header is
+    missing, or holds anything but one IP address, the peer address is used:
+    coarser, since it may be a proxy's, but never the client's to choose.
     """
     peer = str(request.META.get("REMOTE_ADDR", ""))
-    proxies = int(settings.TRUSTED_PROXY_COUNT)
-    if proxies < 1:
+    header = str(settings.CLIENT_ADDRESS_HEADER)
+    if not header:
         return peer
-    header = str(request.META.get("HTTP_X_FORWARDED_FOR", ""))
-    entries = [entry.strip() for entry in header.split(",") if entry.strip()]
-    if len(entries) < proxies:
+    try:
+        return str(ipaddress.ip_address(str(request.META.get(header, "")).strip()))
+    except ValueError:
         return peer
-    return entries[-proxies]
 
 
 def _safe_destination(request: HttpRequest, candidate: str) -> str:

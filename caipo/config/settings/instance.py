@@ -57,10 +57,9 @@ PASSWORD_RESET_OPEN = False
 SHARED_ACCOUNT_EMAIL = "demo.reader@caipo.test"
 SHARED_ACCOUNT_PASSWORD = env.required("CAIPO_SHARED_PASSWORD")
 
-# Each proxy in front of the instance appends the address it received the
-# request from to X-Forwarded-For, after whatever the client sent; the client
-# address is the entry the outermost trusted proxy added, counted from the
-# right (ADR-0024 point 7). How many proxies there are is the host's, not the
-# code's, and is measured with a forged header (docs/INSTANCE.md). On Day 47,
-# with one, the last entry changed from request to request: not the client's.
-TRUSTED_PROXY_COUNT = env.proxy_count("CAIPO_TRUSTED_PROXY_COUNT", default=1)
+# Render serves onrender.com through Cloudflare, which writes CF-Connecting-IP
+# itself and refuses a request that already carries one (ADR-0026). X-Forwarded-For is not
+# read: Render keeps what the client wrote there, and on Day 47 no count of
+# entries from the right gave the client's address. Measured with forged
+# headers before the link is given out (docs/INSTANCE.md).
+CLIENT_ADDRESS_HEADER = "HTTP_CF_CONNECTING_IP"
