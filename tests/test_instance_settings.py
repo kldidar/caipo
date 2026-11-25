@@ -79,7 +79,7 @@ def test_the_instance_closes_what_sends_a_message_and_publishes_its_shared_accou
     assert instance["PASSWORD_RESET_OPEN"] is False
     assert instance["SHARED_ACCOUNT_EMAIL"] == "demo.reader@caipo.test"
     assert instance["SHARED_ACCOUNT_PASSWORD"] == TEST_SHARED_PASSWORD
-    assert instance["TRUSTED_PROXY_COUNT"] == 1
+    assert instance["CLIENT_ADDRESS_HEADER"] == "HTTP_CF_CONNECTING_IP"
 
 
 @pytest.mark.usefixtures("instance_environment")
@@ -96,25 +96,4 @@ def test_every_other_environment_has_no_instance_switch_turned() -> None:
     assert base.DEMONSTRATION_INSTANCE is False
     assert base.REGISTRATION_OPEN is True and base.PASSWORD_RESET_OPEN is True
     assert base.SHARED_ACCOUNT_EMAIL == "" and base.SHARED_ACCOUNT_PASSWORD == ""
-    assert base.TRUSTED_PROXY_COUNT == 0
-
-
-@pytest.mark.usefixtures("instance_environment")
-@pytest.mark.parametrize("value", ["1", "2", "5"])
-def test_the_number_of_proxies_is_the_hosts_to_set(
-    monkeypatch: pytest.MonkeyPatch, value: str
-) -> None:
-    monkeypatch.setenv("CAIPO_TRUSTED_PROXY_COUNT", value)
-
-    assert _instance()["TRUSTED_PROXY_COUNT"] == int(value)
-
-
-@pytest.mark.usefixtures("instance_environment")
-@pytest.mark.parametrize("value", ["0", "6", "-1", "two", "1.5", " 2", "\u0662"])
-def test_the_instance_does_not_start_with_a_number_of_proxies_it_cannot_trust(
-    monkeypatch: pytest.MonkeyPatch, value: str
-) -> None:
-    monkeypatch.setenv("CAIPO_TRUSTED_PROXY_COUNT", value)
-
-    with pytest.raises(ImproperlyConfigured, match="CAIPO_TRUSTED_PROXY_COUNT"):
-        _instance()
+    assert base.CLIENT_ADDRESS_HEADER == ""

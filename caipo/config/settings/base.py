@@ -294,9 +294,10 @@ PASSWORD_RESET_OPEN = True
 # which may therefore change nothing about itself. Empty: there is none.
 SHARED_ACCOUNT_EMAIL = ""
 SHARED_ACCOUNT_PASSWORD = ""
-# How many proxies in front of the application append to X-Forwarded-For.
-# Zero: the header is ignored and the peer address is the client's.
-TRUSTED_PROXY_COUNT = 0
+# The request header, as Django names it in META, that holds the client's
+# address where the host's edge writes it. Empty: no header is read and the
+# peer address is the client's.
+CLIENT_ADDRESS_HEADER = ""
 
 # Where the source code and documentation are published, for the pages that
 # link a guarantee to its tests or the site to its evaluation report.

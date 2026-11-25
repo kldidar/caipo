@@ -43,27 +43,50 @@ def _shared_reader(user_with_roles: UserFactory) -> User:
 # --- The client address --------------------------------------------------------------
 
 
+EDGE = "HTTP_CF_CONNECTING_IP"
+
+
+def _from(**headers: str) -> str:
+    request = RequestFactory().get("/", REMOTE_ADDR="192.0.2.1")
+    request.META.update(headers)
+    return source(request)
+
+
+def test_no_header_is_read_where_the_settings_name_none() -> None:
+    assert _from(HTTP_CF_CONNECTING_IP="203.0.113.9", HTTP_X_FORWARDED_FOR="198.51.100.7") == (
+        "192.0.2.1"
+    )
+
+
 @pytest.mark.parametrize(
-    ("proxies", "forwarded", "expected"),
+    ("written", "expected"),
     [
-        (0, "203.0.113.9", "192.0.2.1"),
-        (1, "203.0.113.9", "203.0.113.9"),
-        # A client that writes the header itself is never believed: the
-        # proxy's own entry is the last one.
-        (1, "198.51.100.7, 203.0.113.9", "203.0.113.9"),
-        (1, " 198.51.100.7 ,203.0.113.9 ", "203.0.113.9"),
-        (2, "198.51.100.7, 203.0.113.9, 192.0.2.50", "203.0.113.9"),
-        (1, "", "192.0.2.1"),
-        (2, "203.0.113.9", "192.0.2.1"),
+        ("203.0.113.9", "203.0.113.9"),
+        (" 203.0.113.9 ", "203.0.113.9"),
+        ("2001:db8::9", "2001:db8::9"),
+        ("2001:DB8:0:0:0:0:0:9", "2001:db8::9"),
     ],
 )
-def test_the_client_address_is_the_entry_the_trusted_proxy_added(
-    proxies: int, forwarded: str, expected: str
-) -> None:
-    request = RequestFactory().get("/", REMOTE_ADDR="192.0.2.1", HTTP_X_FORWARDED_FOR=forwarded)
+def test_the_client_address_is_the_one_the_edge_wrote(written: str, expected: str) -> None:
+    with override_settings(CLIENT_ADDRESS_HEADER=EDGE):
+        assert _from(HTTP_CF_CONNECTING_IP=written) == expected
 
-    with override_settings(TRUSTED_PROXY_COUNT=proxies):
-        assert source(request) == expected
+
+def test_x_forwarded_for_is_never_read_on_the_instance() -> None:
+    with override_settings(CLIENT_ADDRESS_HEADER=EDGE):
+        assert _from(HTTP_X_FORWARDED_FOR="198.51.100.7") == "192.0.2.1"
+        assert _from(HTTP_CF_CONNECTING_IP="203.0.113.9", HTTP_X_FORWARDED_FOR="198.51.100.7") == (
+            "203.0.113.9"
+        )
+
+
+@pytest.mark.parametrize(
+    "written",
+    ["", "unknown", "203.0.113.9, 198.51.100.7", "203.0.113.999", "203.0.113.9:443", "x" * 500],
+)
+def test_without_one_address_from_the_edge_the_peer_address_is_used(written: str) -> None:
+    with override_settings(CLIENT_ADDRESS_HEADER=EDGE):
+        assert _from(HTTP_CF_CONNECTING_IP=written) == "192.0.2.1"
 
 
 # --- What every page says ------------------------------------------------------------

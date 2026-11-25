@@ -265,6 +265,19 @@ class _Run:
         except ProviderTimeoutError as error:
             raise self._stop(stage, StageResult.TIMED_OUT, error.reason, usage=spent) from None
         except ProviderError as error:
+            # The reason recorded is one of a fixed list; the message says which
+            # HTTP status or network error it was, which only an operator needs.
+            # Every provider message is fixed text, never the provider's answer.
+            logger.warning(
+                "The model provider failed",
+                extra={
+                    "event": "assistant.provider_failed",
+                    "public_id": str(self.start.public_id),
+                    "stage": stage,
+                    "reason": error.reason,
+                    "detail": str(error),
+                },
+            )
             raise self._stop(stage, StageResult.FAILED, error.reason, usage=spent) from None
         spent.add(_Usage(generation.input_tokens, generation.output_tokens, generation.duration_ms))
         return generation.text

@@ -567,6 +567,34 @@ def test_a_forwarded_header_cannot_move_an_attempt_to_another_source(
     assert response.status_code == 429
 
 
+def test_on_the_instance_only_the_edges_header_moves_an_attempt_to_another_source(
+    user: User, settings: LazySettings
+) -> None:
+    # Behind the host's proxies the peer address changes from request to
+    # request; only the edge writes the visitor's address.
+    settings.CLIENT_ADDRESS_HEADER = "HTTP_CF_CONNECTING_IP"
+    limit = settings.LOGIN_THROTTLE_SOURCE_FAILURES
+
+    for number in range(limit):
+        Client(REMOTE_ADDR=f"192.0.2.{number}").post(
+            LOGIN,
+            {"email": f"test.guess{number}@caipo.test", "password": WRONG},
+            headers={"CF-Connecting-IP": "203.0.113.10", "X-Forwarded-For": f"198.51.100.{number}"},
+        )
+
+    elsewhere = Client(REMOTE_ADDR="192.0.2.250")
+    throttled = elsewhere.post(
+        LOGIN,
+        {"email": EMAIL, "password": PASSWORD},
+        headers={"CF-Connecting-IP": "203.0.113.10", "X-Forwarded-For": "198.51.100.250"},
+    )
+    another_visitor = elsewhere.post(
+        LOGIN, {"email": EMAIL, "password": PASSWORD}, headers={"CF-Connecting-IP": "203.0.113.11"}
+    )
+    assert throttled.status_code == 429
+    assert another_visitor.status_code == 302
+
+
 # --- What is recorded and logged ------------------------------------------------
 
 

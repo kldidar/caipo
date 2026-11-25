@@ -49,7 +49,7 @@ Three findings of the frozen diagnostic report were deferred to a deployment dec
 
    Static files are served by the web process with long cache lifetimes. A Content Security Policy and per-component database roles stay with ADR-0008. On this instance the application's database role owns its tables. That is accepted because the database holds only data that can be rebuilt.
 
-7. **Client address (finding I2).** Behind Render's proxy, `REMOTE_ADDR` is the proxy for every visitor. Throttling uses the client address that Render's proxy records in `X-Forwarded-For`. Render is reported to append to a header the client sent rather than replace it, so the first entry can be forged. Throttling therefore takes the entry Render's own proxy adds, counted from the right, never one the client sent. This is set only in the instance's settings, and is tested with a forged header.
+7. **Client address (finding I2).** Behind Render's proxy, `REMOTE_ADDR` is the proxy for every visitor. Throttling uses the client address that Render's proxy records in `X-Forwarded-For`. Render is reported to append to a header the client sent rather than replace it, so the first entry can be forged. Throttling therefore takes the entry Render's own proxy adds, counted from the right, never one the client sent. This is set only in the instance's settings, and is tested with a forged header. *(Superseded by [ADR-0026](0026-client-address-from-the-edge.md) on 2026-11-25: the instance takes the address from Cloudflare's `CF-Connecting-IP`.)*
 
 8. **What a visitor is told.**
    - A notice on every page says that the instance is a demonstration: its records are synthetic or reference data, and it is not the research platform.

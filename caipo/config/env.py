@@ -1,8 +1,7 @@
 """Reading deployment configuration from environment variables.
 
-Only secrets, addresses, and how the host's network reaches the application
-come from the environment. Result-affecting settings live in
-repository-versioned files (CLAUDE.md, coding standards).
+Only secrets and addresses come from the environment. Result-affecting settings
+live in repository-versioned files (CLAUDE.md, coding standards).
 """
 
 import base64
@@ -115,28 +114,6 @@ def host_list(name: str) -> list[str]:
     if "*" in hosts:
         raise ImproperlyConfigured(f"The environment variable {name} must not contain '*'.")
     return hosts
-
-
-# More proxies than this in front of one application is not a topology any
-# host here has; a larger value is far likelier a typing mistake.
-MOST_PROXIES = 5
-
-
-def proxy_count(name: str, *, default: int) -> int:
-    """Return how many proxies in front of the application append to X-Forwarded-For.
-
-    `default` is used when the variable is unset. Raises ImproperlyConfigured,
-    naming the variable, if it is set to anything but a whole number from 1 to
-    MOST_PROXIES.
-    """
-    value = os.environ.get(name, "")
-    if not value:
-        return default
-    if not (value.isascii() and value.isdigit() and 1 <= int(value) <= MOST_PROXIES):
-        raise ImproperlyConfigured(
-            f"The environment variable {name} must be a whole number from 1 to {MOST_PROXIES}."
-        )
-    return int(value)
 
 
 def postgres_database() -> dict[str, Any]:

@@ -3,6 +3,8 @@
 import email.message
 import io
 import json
+import socket
+import ssl
 import urllib.error
 import urllib.request
 from typing import Any
@@ -138,3 +140,25 @@ def test_a_failed_call_raises_a_provider_error_that_never_holds_the_key(
 
     assert KEY not in str(raised.value)
     assert raised.value.__cause__ is None
+
+
+@pytest.mark.parametrize(
+    ("failure", "message"),
+    [
+        (
+            urllib.error.URLError(ssl.SSLCertVerificationError("TEST")),
+            "URLError: SSLCertVerificationError",
+        ),
+        (urllib.error.URLError(socket.gaierror("TEST")), "URLError: gaierror"),
+        (urllib.error.URLError("TEST"), "URLError"),
+        (ConnectionResetError("TEST"), "ConnectionResetError"),
+        (_http(403), "HTTP 403"),
+    ],
+)
+def test_a_failed_call_says_only_what_kind_of_failure_it_was(
+    monkeypatch: pytest.MonkeyPatch, failure: Exception, message: str
+) -> None:
+    with pytest.raises(ProviderUnavailableError) as raised:
+        _groq(monkeypatch, Network(error=failure)).generate(system="TEST", user="TEST")
+
+    assert str(raised.value) == message

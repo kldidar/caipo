@@ -13,6 +13,8 @@ CAIPO records public policy sources with their provenance, keeps the **core AI p
 - The platform foundation (Phase 1) is complete: accounts, roles and permissions, sign-in with TOTP two-step verification, account provisioning, registration on the site for the Reader role ([ADR-0021](docs/adr/0021-registration-for-the-reader-role.md)), and recovery, the registry of countries, languages, and institutions, the general audit record, health endpoints, and structured logging.
 - Anyone can register a Reader account ([ADR-0021](docs/adr/0021-registration-for-the-reader-role.md)) and contribute **articles**, which a reviewer publishes or declines; an article is labelled as its author's view under CC BY 4.0 and is never evidence ([ADR-0022](docs/adr/0022-contributed-articles.md)).
 - On top of it, the **demonstrator track** ([ADR-0020](docs/adr/0020-demonstrator-track.md)) adds working sources, policies, indicators, analysis runs, search runs, and exports, built ahead of the research gates in a reduced, clearly labelled form.
+- Two **evidence-bound assistants** ([ADR-0025](docs/adr/0025-demonstrator-assistants.md)) answer questions in English or Russian: every statement cites its evidence, references, quotations, and numbers are checked against what is stored, and only statements that pass are shown. They were tested on 33 cases per language; no person has yet checked their answers ([evaluation report](docs/reports/evaluation-day43-assistants.md)).
+- What CAIPO guarantees, each with the automated tests that enforce it, is listed on the site's page of guarantees (`/guarantees/`). A public demonstration instance ([ADR-0024](docs/adr/0024-public-demonstration-instance.md)) is deployed; its link is given out after the checks in [docs/INSTANCE.md](docs/INSTANCE.md).
 - The architecture gate stays **NOT READY for Phase 2 and later** ([specification §10](docs/PROJECT_SPECIFICATION.md#10-architecture-gate)). The research decisions it waits for — the domain boundary, the study period, the indicator selection, the rights policy, the ethics review — are open, and nothing in the demonstrator closes them.
 - Progress, Day by Day, is recorded in [docs/EXECUTION_TRACKER.md](docs/EXECUTION_TRACKER.md), the only progress record.
 
@@ -22,9 +24,9 @@ CAIPO is an independent project with one owner, who is also its researcher and o
 
 The software and most of the documentation are written by an AI coding agent, Claude Code (Anthropic). The agent works under the binding rules in [CLAUDE.md](CLAUDE.md), in units of work recorded one by one in [docs/EXECUTION_TRACKER.md](docs/EXECUTION_TRACKER.md). It may not accept a decision record, close a research question, or merge a change; those stay with the owner. Since 2026-10-03 every change has been a pull request, checked by the required CI jobs.
 
-At a glance, on 2026-11-13:
+At a glance, on 2026-11-25:
 
-- 23 [architecture decision records](docs/adr/README.md), of which three are still proposals and are not built on.
+- 26 [architecture decision records](docs/adr/README.md), of which two are still proposals and are not built on.
 - More than 5,000 automated tests, run with lint, strict type checking, import-layer contracts, a dependency audit, and a secret scan on every pull request.
 - Append-only provenance enforced by database triggers, not only by application code.
 - Every page reachable by link checked with axe-core at three widths in both themes, against the WCAG 2.2 AA target.
