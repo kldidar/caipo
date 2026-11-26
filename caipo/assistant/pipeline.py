@@ -328,11 +328,16 @@ class _Run:
 
     def _retrieve(self, analysis: Analysis) -> dict[str, _Item]:
         budget = self.configuration.evidence
+        # A question not in English is searched by its translation.
+        any_word = self.configuration.translated_any_word and self.start.language != "english"
         items: dict[str, _Item] = {}
         hits: list[RetrievalHit] = []
         if self.assistant == AssistantKind.HELP:
             found = retrieval_selectors.search(
-                analysis.search_query, kind=ChunkKind.HELP, limit=budget.help_sections
+                analysis.search_query,
+                kind=ChunkKind.HELP,
+                limit=budget.help_sections,
+                any_word=any_word,
             )
             for number, hit in enumerate(found, start=1):
                 handle = f"H{number}"
@@ -340,7 +345,10 @@ class _Run:
                 hits.append(_hit(self.interaction, handle, EvidenceKind.HELP, hit))
         else:
             found = retrieval_selectors.search(
-                analysis.search_query, kind=ChunkKind.DOCUMENT, limit=budget.segments
+                analysis.search_query,
+                kind=ChunkKind.DOCUMENT,
+                limit=budget.segments,
+                any_word=any_word,
             )
             for number, hit in enumerate(found, start=1):
                 handle = f"P{number}"

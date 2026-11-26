@@ -41,11 +41,18 @@ class AssistantConfiguration:
     evidence: EvidenceBudget
     deadline_seconds: float
     max_calls: int
+    translated_any_word: bool
 
     def prompt(self, name: str) -> tuple[str, str]:
         """The version and the text of the prompt in use for a stage."""
         version = self.prompts[name]
         return version, (PROMPTS / f"{version}.txt").read_text(encoding="utf-8")
+
+
+def _flag(value: object) -> bool:
+    if not isinstance(value, bool):
+        raise ValueError("A switch of the configuration is true or false.")
+    return value
 
 
 def load(path: Path = PATH) -> AssistantConfiguration:
@@ -73,6 +80,7 @@ def load(path: Path = PATH) -> AssistantConfiguration:
         evidence=EvidenceBudget(**{key: int(value) for key, value in data["evidence"].items()}),
         deadline_seconds=float(data["timing"]["deadline_seconds"]),
         max_calls=int(data["timing"]["max_calls"]),
+        translated_any_word=_flag(data["retrieval"]["translated_any_word"]),
     )
     if configuration.provider.name not in PROVIDERS:
         raise ValueError(f"Unknown provider: {configuration.provider.name}")
