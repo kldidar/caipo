@@ -183,14 +183,17 @@ def test_preparing_refuses_what_creating_would_refuse(user_with_roles: UserFacto
 
 
 def test_the_code_that_created_the_administrator_cannot_be_used_again() -> None:
-    _create()
+    # The very code that created the account, kept: a code computed again
+    # could fall in the next 30-second step and be a new, valid code.
+    enrollment = services.prepare_first_administrator(email=EMAIL, password=PASSWORD)
+    code = code_at(secret=enrollment.secret)
+    services.create_first_administrator(
+        email=EMAIL, password=PASSWORD, operator=OPERATOR, enrollment=enrollment, code=code
+    )
     challenge = services.sign_in(email=EMAIL, password=PASSWORD, source=SOURCE).challenge
     assert challenge is not None
-    secret = _stored_secret()
 
-    result = services.verify_second_factor(
-        challenge=challenge, code=code_at(secret=secret), source=SOURCE
-    )
+    result = services.verify_second_factor(challenge=challenge, code=code, source=SOURCE)
 
     assert result.outcome == MfaOutcome.REFUSED
 
