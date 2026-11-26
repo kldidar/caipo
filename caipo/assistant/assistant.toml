@@ -29,8 +29,8 @@ max_length = 500
 # The prompt files in use, by name in prompts/. A new version is a new file;
 # a file in use is never edited.
 query_analysis = "query-analysis-1"
-synthesis_research = "synthesis-research-1"
-synthesis_help = "synthesis-help-1"
+synthesis_research = "synthesis-research-2"
+synthesis_help = "synthesis-help-2"
 support_check = "support-check-2"
 
 [verification]
