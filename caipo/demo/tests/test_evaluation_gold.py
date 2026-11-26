@@ -155,3 +155,34 @@ def test_a_too_long_question_is_past_the_limit_after_the_guard_strips_it() -> No
     asked = evaluation.asked_question(case, 500)
 
     assert len(asked.strip()) > 500
+
+
+# --- The check of a recorded gap ---------------------------------------------------------
+
+GAP = evaluation.Case(
+    id="TEST-en",
+    pair="TEST",
+    assistant="research",
+    language="english",
+    kind="missing",
+    question="How many TEST subscriptions per 100 people did TEST Country have in 2023?",
+    observations=(("TEST.CODE", "XA", 2023),),
+)
+CITED = [evaluation.observation_key("TEST.CODE", "XA", 2023)]
+
+
+@pytest.mark.parametrize(
+    ("text", "values"),
+    [
+        ("The World Bank records no value of TEST subscriptions per 100 people for 2023.", 0),
+        ("No value is recorded for TEST Country in 2023.", 0),
+        ("TEST Country had 12.5 TEST subscriptions per 100 people in 2023.", 1),
+        ("TEST Country had 100 TEST subscriptions in 2023.", 1),
+    ],
+)
+def test_a_number_written_as_part_of_the_question_is_not_a_value_for_the_gap(
+    text: str, values: int
+) -> None:
+    shown = [{"text": text, "cited": CITED}]
+
+    assert evaluation.values_shown_for_a_gap(GAP, shown) == values
