@@ -274,7 +274,7 @@ def test_a_russian_question_is_translated_for_search_only(reader: Authentication
     assert answer.language == "russian"
     assert ("query_analysis", "passed", "translated") in _stages(answer.interaction)
     assert answer.searched["query"] == "share of people using the Internet"
-    assert "Write every statement and gap in Russian." in provider.calls[1][0]
+    assert "Write every statement and gap in Russian, including dates" in provider.calls[1][0]
     assert "cross_language" in answer.statements[0].flags
 
 
