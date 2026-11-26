@@ -171,7 +171,7 @@ Known limits: a correct statement is removed if the source writes a number in wo
 
 #### Support check
 
-A separate model call that sees only the statement and its cited evidence, with no access to the question or to the rest of the answer, and returns one of a fixed set of values: supported, partially supported, not supported. Anything other than supported removes the statement.
+A separate model call that sees only the statement and its cited evidence, with no access to the question or to the rest of the answer, and returns one of a fixed set of values: supported, partially supported, not supported. Anything other than supported removes the statement. It judges support only. A statement need not name its source, since the server renders the source beside it (§7.3), but a statement that presents a source's assertion as established is not supported. In the demonstrator this is the prompt `support-check-2` since Day 50 ([its evaluation](reports/evaluation-day50-support-check-2.md)); `support-check-1` also required the statement to name its source, and removed true statements for it.
 
 The support-check model reads hostile text and can be manipulated by it, for example by a passage that says to answer "supported". It is therefore a filter that reduces error, not a guarantee. The deterministic checks carry the guarantees. Its output is constrained to the fixed values, its error rate against human labels is measured per language, and verifier-targeted attacks are part of the adversarial evaluation (§9).
 
