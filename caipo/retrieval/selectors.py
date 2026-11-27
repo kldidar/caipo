@@ -10,10 +10,14 @@ For the services of higher apps, which have checked their own permission
 first.
 """
 
+import operator
+import re
 import uuid
 from dataclasses import dataclass
+from functools import reduce
 
 from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramWordSimilarity
+from django.db.models import QuerySet
 
 from caipo.retrieval import config
 from caipo.retrieval.corpus import HelpPage, help_pages, search_text
@@ -54,10 +58,16 @@ class SearchHit:
     chunking_version: str
 
 
-def search(question: str, *, kind: ChunkKind, limit: int) -> tuple[SearchHit, ...]:
+def search(
+    question: str, *, kind: ChunkKind, limit: int, any_word: bool = False
+) -> tuple[SearchHit, ...]:
     """Return up to `limit` chunks of one kind for a question, best first.
 
-    An empty question, after the search-side transformations, finds nothing.
+    The full-text retriever finds a chunk that holds every word of the
+    question; with `any_word`, one that holds any of them, ranked by how well
+    it matches, for a question translated into the texts' language whose
+    words may not be the texts' own. An empty question, after the
+    search-side transformations, finds nothing.
     Raises QueryTooLongError if the transformed question is longer than the
     configured maximum, and ValueError if `limit` is not positive.
     """
@@ -73,15 +83,7 @@ def search(question: str, *, kind: ChunkKind, limit: int) -> tuple[SearchHit, ..
         return ()
     chunks = RetrievalChunk.objects.filter(kind=kind, chunking_version=configuration.version)
     candidates = configuration.candidates_per_retriever
-    query = SearchQuery(
-        query_text, search_type="websearch", config=configuration.text_search_config
-    )
-    lexical = list(
-        chunks.filter(search_vector=query)
-        .annotate(rank=SearchRank("search_vector", query))
-        .order_by("-rank", "id")
-        .values_list("id", flat=True)[:candidates]
-    )
+    lexical = _lexical(chunks, query_text, any_word=any_word, limit=candidates)
     trigram = list(
         chunks.annotate(similarity=TrigramWordSimilarity(query_text, "search_text"))
         .filter(similarity__gte=configuration.trigram_threshold)
@@ -117,6 +119,30 @@ def search(question: str, *, kind: ChunkKind, limit: int) -> tuple[SearchHit, ..
             chunking_version=found[chunk_id].chunking_version,
         )
         for chunk_id in best
+    )
+
+
+def _lexical(
+    chunks: QuerySet[RetrievalChunk], query_text: str, *, any_word: bool, limit: int
+) -> list[int]:
+    language = config.load().text_search_config
+    if any_word:
+        # Each word is its own query, so no word of the question is read as an
+        # operator; a word that is only a stop word matches nothing.
+        words = [
+            SearchQuery(word, search_type="plain", config=language)
+            for word in re.findall(r"\w+", query_text)
+        ]
+        if not words:
+            return []
+        query = reduce(operator.or_, words)
+    else:
+        query = SearchQuery(query_text, search_type="websearch", config=language)
+    return list(
+        chunks.filter(search_vector=query)
+        .annotate(rank=SearchRank("search_vector", query))
+        .order_by("-rank", "id")
+        .values_list("id", flat=True)[:limit]
     )
 
 

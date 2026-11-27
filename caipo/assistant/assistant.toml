@@ -2,7 +2,7 @@
 # a reviewed change, recorded on every interaction by `pipeline_version`, and
 # followed by an evaluation run (AI_ARCHITECTURE.md §9).
 
-pipeline_version = "demo-1"
+pipeline_version = "demo-2"
 
 [provider]
 # Chosen by the spike of 2026-11-15 (docs/reports/spike-day35-free-providers.md).
@@ -28,7 +28,7 @@ max_length = 500
 [prompts]
 # The prompt files in use, by name in prompts/. A new version is a new file;
 # a file in use is never edited.
-query_analysis = "query-analysis-1"
+query_analysis = "query-analysis-2"
 synthesis_research = "synthesis-research-2"
 synthesis_help = "synthesis-help-2"
 support_check = "support-check-2"
@@ -54,3 +54,10 @@ deadline_seconds = 60
 # analysis, synthesis, and one support check. A malformed synthesis is asked
 # for again only if a call is left for the support check after it.
 max_calls = 3
+
+[retrieval]
+# A question in another language is searched by its English translation, whose
+# words may not be the texts' own ("goals" for "aims"). Such a search finds a
+# text holding any of its words, ranked by how well it matches; a question in
+# English finds only a text holding every word (Day 52).
+translated_any_word = true

@@ -279,6 +279,43 @@ def test_a_russian_question_is_translated_for_search_only(reader: Authentication
 
 
 @pytest.mark.usefixtures("evidence")
+def test_a_translated_question_finds_a_text_holding_only_some_of_its_words(
+    reader: AuthenticationContext,
+) -> None:
+    def respond(system: str, user: str) -> str:
+        if system.startswith("You prepare a search"):
+            # "veterans" is in no text: a search for every word would find none.
+            query = "competitive grant programme for veterans"
+            return json.dumps({"search_query": query, "countries": [], "years": []})
+        return _synthesis()
+
+    provider = FakeProvider(respond)
+
+    _ask(reader, "Есть ли грантовая программа для ветеранов?", provider)
+
+    assert GRANTS in provider.calls[1][1]
+
+
+@pytest.mark.usefixtures("evidence")
+@pytest.mark.parametrize(("question", "any_word"), [("Internet users", False), ("Интернет?", True)])
+def test_only_a_question_not_in_english_is_searched_for_any_word(
+    reader: AuthenticationContext, monkeypatch: pytest.MonkeyPatch, question: str, any_word: bool
+) -> None:
+    searched: list[bool] = []
+    search = retrieval_selectors.search
+
+    def spy(*args: Any, **kwargs: Any) -> tuple[SearchHit, ...]:
+        searched.append(kwargs["any_word"])
+        return search(*args, **kwargs)
+
+    monkeypatch.setattr(retrieval_selectors, "search", spy)
+
+    _ask(reader, question, _fake(_synthesis()))
+
+    assert searched == [any_word]
+
+
+@pytest.mark.usefixtures("evidence")
 def test_malformed_output_is_asked_for_once_more_then_fails(reader: AuthenticationContext) -> None:
     once = _fake(["not json", _synthesis()])
     twice = _fake(["not json", "still not json"])
@@ -362,10 +399,11 @@ def test_retrieved_text_that_differs_from_its_segment_is_dropped(
 ) -> None:
     search = retrieval_selectors.search
 
-    def tampered(question: str, *, kind: ChunkKind, limit: int) -> tuple[SearchHit, ...]:
-        return tuple(
-            dataclasses.replace(hit, **change) for hit in search(question, kind=kind, limit=limit)
-        )
+    def tampered(
+        question: str, *, kind: ChunkKind, limit: int, any_word: bool
+    ) -> tuple[SearchHit, ...]:
+        found = search(question, kind=kind, limit=limit, any_word=any_word)
+        return tuple(dataclasses.replace(hit, **change) for hit in found)
 
     monkeypatch.setattr(retrieval_selectors, "search", tampered)
     provider = _fake(_synthesis())

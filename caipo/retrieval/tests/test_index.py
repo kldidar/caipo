@@ -69,6 +69,43 @@ def test_a_question_finds_the_segment_that_answers_it(document: uuid.UUID) -> No
     assert hits[0].lexical_rank == 1
 
 
+def test_a_question_holding_a_word_no_text_holds_is_found_only_by_any_word(
+    document: uuid.UUID,
+) -> None:
+    services.rebuild_index()
+    question = "competitive grant programme for veterans"
+
+    every = selectors.search(question, kind=ChunkKind.DOCUMENT, limit=5)
+    anyone = selectors.search(question, kind=ChunkKind.DOCUMENT, limit=5, any_word=True)
+
+    assert all(hit.lexical_rank is None for hit in every)
+    assert anyone[0].heading == "Art. 7"
+    assert anyone[0].lexical_rank == 1
+
+
+def test_with_any_word_the_text_holding_more_of_the_words_ranks_first(
+    document: uuid.UUID,
+) -> None:
+    services.rebuild_index()
+
+    hits = selectors.search(
+        "council grant programme start-ups", kind=ChunkKind.DOCUMENT, limit=5, any_word=True
+    )
+
+    by_rank = {hit.lexical_rank: hit.heading for hit in hits if hit.lexical_rank is not None}
+    assert by_rank == {1: "Art. 7", 2: "Art. 2"}
+
+
+def test_with_any_word_a_question_of_stop_words_or_signs_finds_nothing_by_words(
+    document: uuid.UUID,
+) -> None:
+    services.rebuild_index()
+
+    for question in ("the and of", "!!! ((( ::: &&& |||"):
+        hits = selectors.search(question, kind=ChunkKind.DOCUMENT, limit=5, any_word=True)
+        assert all(hit.lexical_rank is None for hit in hits)
+
+
 def test_a_misspelt_question_is_found_by_trigram_similarity(document: uuid.UUID) -> None:
     services.rebuild_index()
 
@@ -122,6 +159,7 @@ def test_a_hostile_question_is_only_ever_a_search(document: uuid.UUID, question:
     services.rebuild_index()
 
     selectors.search(question, kind=ChunkKind.DOCUMENT, limit=5)
+    selectors.search(question, kind=ChunkKind.DOCUMENT, limit=5, any_word=True)
 
     assert RetrievalChunk.objects.count() == 2 + _help_sections()
 
